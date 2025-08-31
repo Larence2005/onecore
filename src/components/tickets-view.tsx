@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { TicketItem } from "./ticket-item";
+import { Avatar } from "./ui/avatar";
 
 type TicketsViewProps = {
     emails: Email[];
@@ -20,10 +21,16 @@ type TicketsViewProps = {
 export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh }: TicketsViewProps) {
     return (
         <div className="flex flex-col h-full bg-background p-4 sm:p-6 lg:p-8">
-            <header className="sticky top-0 bg-background z-10 flex items-center justify-between py-4 border-b mb-4 flex-shrink-0">
-                <div className="flex items-center gap-4">
-                    <Checkbox id="select-all" />
-                    <h1 className="text-xl font-bold">Tickets</h1>
+            <header className="sticky top-0 bg-background z-10 py-4 border-b mb-4 flex-shrink-0">
+                <div className="flex items-start pl-8">
+                    <div className="flex items-center gap-4 flex-shrink-0 pt-1">
+                        <Checkbox id="select-all" />
+                        {/* This invisible avatar is a spacer to align the title */}
+                        <Avatar className="h-8 w-8 invisible" />
+                    </div>
+                    <div className="ml-4 flex items-center h-9">
+                        <h1 className="text-xl font-bold">Tickets</h1>
+                    </div>
                 </div>
             </header>
             <div className="flex-grow overflow-y-auto">
