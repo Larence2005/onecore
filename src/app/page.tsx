@@ -8,9 +8,13 @@ import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { ReadEmails } from '@/components/read-emails';
 import { SettingsForm } from '@/components/settings-form';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Filter, Tag, CircleAlert, CheckCircle2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
@@ -119,6 +123,75 @@ export default function Home() {
         <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
             {renderActiveView()}
         </main>
+        {activeView === 'tickets' && (
+          <Sidebar side="right" className="w-80 border-l">
+            <SidebarContent>
+              <SidebarHeader>
+                <div className="p-4 flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  <h2 className="text-lg font-headline font-bold">
+                      Filters
+                  </h2>
+                </div>
+              </SidebarHeader>
+              <SidebarMenu className="flex-grow px-4 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Status</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="status-open" />
+                        <Label htmlFor="status-open" className="flex items-center gap-2"><CircleAlert className="text-destructive"/>Open</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="status-closed" />
+                        <Label htmlFor="status-closed" className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/>Closed</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Priority</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="priority-high" />
+                        <Label htmlFor="priority-high">High</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="priority-medium" />
+                        <Label htmlFor="priority-medium">Medium</Label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                        <Checkbox id="priority-low" />
+                        <Label htmlFor="priority-low">Low</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Tags</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="tag-bug" />
+                        <Label htmlFor="tag-bug">Bug</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="tag-feature" />
+                        <Label htmlFor="tag-feature">Feature Request</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="tag-billing" />
+                        <Label htmlFor="tag-billing">Billing</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+        )}
       </div>
     </SidebarProvider>
   );
