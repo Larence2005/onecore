@@ -146,13 +146,13 @@ export function ReadEmails() {
                   onClick={() => handleEmailClick(email.id)}
                   disabled={isLoadingEmail}
                 >
-                  <div className="flex justify-between items-start">
-                    <p className="text-sm font-medium truncate text-foreground pr-4">{email.subject}</p>
+                  <p className="text-sm font-medium truncate text-foreground pr-4">{email.subject}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground truncate">From: {email.sender}</p>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {format(parseISO(email.receivedDateTime), 'PP')}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">From: {email.sender}</p>
                 </button>
                 {index < emails.length - 1 && <Separator />}
               </li>
