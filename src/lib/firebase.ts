@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyALrqrk66avVJ6yOJP4icypBL5rsKOGPNM",
-  authDomain: "ticketflow-klvln.firebaseapp.com",
-  projectId: "ticketflow-klvln",
-  storageBucket: "ticketflow-klvln.firebasestorage.app",
-  messagingSenderId: "49607990729",
-  appId: "1:49607990729:web:b33ff86af663e2a273dc18"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
