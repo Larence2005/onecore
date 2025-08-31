@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Button } from "./ui/button";
+import { GripVertical } from 'lucide-react';
+
 
 type TicketItemProps = {
     email: Email;
@@ -18,11 +20,13 @@ type TicketItemProps = {
 const priorities = [
     { value: 'low', label: 'Low', color: 'bg-green-500' },
     { value: 'medium', label: 'Medium', color: 'bg-blue-500' },
-    { value: 'high', label: 'High', color: 'bg-red-500' },
+    { value: 'high', label: 'High', color: 'bg-yellow-500' },
+    { value: 'urgent', label: 'Urgent', color: 'bg-red-500' },
 ];
 
 const statuses = [
     { value: 'open', label: 'Open' },
+    { value: 'pending', label: 'Pending' },
     { value: 'resolved', label: 'Resolved' },
     { value: 'closed', label: 'Closed' },
 ];
@@ -65,8 +69,8 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-4 ml-4 flex-shrink-0 w-64">
-                    <div className="flex-1">
+                <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-48">
+                    <div>
                         <Select defaultValue={priority.value}>
                             <SelectTrigger className="h-8 text-xs">
                                 <SelectValue>
@@ -88,7 +92,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="flex-1">
+                     <div>
                         <Select defaultValue="onecore-su">
                             <SelectTrigger className="h-8 text-xs">
                                 <SelectValue />
@@ -98,7 +102,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="flex-1 pr-4">
+                     <div>
                         <Select defaultValue={status.value}>
                             <SelectTrigger className="h-8 text-xs">
                                 <SelectValue />
