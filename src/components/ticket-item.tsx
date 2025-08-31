@@ -4,7 +4,6 @@
 import type { Email } from "@/app/actions";
 import { format, parseISO } from "date-fns";
 import { Checkbox } from "./ui/checkbox";
-import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { cn } from "@/lib/utils";
@@ -39,20 +38,28 @@ const getStatus = (subject: string) => {
     return statuses[Math.abs(hash) % statuses.length];
 };
 
+const getTicketNumber = (id: string) => {
+    const hash = id.split('').reduce((acc, char) => {
+        acc = ((acc << 5) - acc) + char.charCodeAt(0);
+        return acc & acc;
+    }, 0);
+    return Math.abs(hash).toString().slice(0, 6).padStart(6, '0');
+}
+
+
 export function TicketItem({ email, onClick }: TicketItemProps) {
     const priority = getPriority(email.subject);
     const status = getStatus(email.subject);
-
-    const senderInitial = email.sender?.[0]?.toUpperCase() || 'U';
+    const ticketNumber = getTicketNumber(email.id);
 
     return (
         <li className="border-b last:border-b-0 transition-colors hover:bg-muted/50">
             <div className="flex items-start p-4">
                 <div className="flex items-center gap-4 flex-shrink-0 pt-1">
                     <Checkbox id={`ticket-${email.id}`} />
-                    <Avatar className="h-8 w-8">
-                         <AvatarFallback className="text-xs bg-muted-foreground/20 text-foreground">{senderInitial}</AvatarFallback>
-                    </Avatar>
+                    <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
+                        {ticketNumber}
+                    </div>
                 </div>
 
                 <div className="flex-grow ml-4 min-w-0" onClick={onClick} role="button">
