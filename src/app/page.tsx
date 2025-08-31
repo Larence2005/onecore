@@ -49,11 +49,7 @@ export default function Home() {
       case 'analytics':
         return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Analytics coming soon.</p></div>;
       case 'tickets':
-        return (
-          <div className="w-full max-w-4xl">
-            <ReadEmails />
-          </div>
-        );
+        return <ReadEmails />;
       case 'clients':
         return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Clients coming soon.</p></div>;
       case 'organization':
@@ -67,8 +63,8 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen bg-background text-foreground">
-        <Sidebar className="w-64 border-r">
+      <div className="grid md:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_auto] min-h-screen bg-background text-foreground">
+        <Sidebar className="w-64 border-r hidden md:block">
           <SidebarContent>
             <SidebarHeader>
               <div className="p-4">
@@ -124,25 +120,25 @@ export default function Home() {
             </SidebarFooter>
           </SidebarContent>
         </Sidebar>
+
         <div className="flex-1 flex flex-col">
-          <Header showFilterButton={activeView === 'tickets'} />
-          <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
-              {renderActiveView()}
+          <Header />
+          <main className="flex-1 p-4 sm:p-6 md:p-8 flex justify-center">
+              <div className="w-full max-w-4xl">
+                {renderActiveView()}
+              </div>
           </main>
         </div>
         
         {activeView === 'tickets' && (
-          <Sidebar side="right" className="w-80 border-l" isSecondary>
-            <SidebarContent>
-              <SidebarHeader>
-                <div className="p-4 flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  <h2 className="text-lg font-headline font-bold">
-                      Filters
-                  </h2>
-                </div>
-              </SidebarHeader>
-              <SidebarMenu className="flex-grow px-4 space-y-6">
+          <aside className="hidden lg:block w-80 border-l p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="h-5 w-5" />
+                <h2 className="text-lg font-headline font-bold">
+                    Filters
+                </h2>
+              </div>
+              <div className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Status</CardTitle>
@@ -196,9 +192,8 @@ export default function Home() {
                     </div>
                   </CardContent>
                 </Card>
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
+              </div>
+          </aside>
         )}
       </div>
     </SidebarProvider>
