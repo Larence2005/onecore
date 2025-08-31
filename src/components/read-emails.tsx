@@ -108,7 +108,7 @@ export function ReadEmails() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full">
       <header className="flex items-center justify-between pb-4 border-b mb-4">
         <div className="flex items-center gap-4">
             <Checkbox id="select-all" />
@@ -157,7 +157,7 @@ export function ReadEmails() {
             </Button>
         </div>
       </header>
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow">
         {isLoading ? (
             <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
