@@ -5,15 +5,16 @@ import { useEffect, useState, useCallback } from "react";
 import { useSettings } from "@/providers/settings-provider";
 import { getLatestEmails, getEmail } from "@/app/actions";
 import type { Email, DetailedEmail } from "@/app/actions";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Terminal, RefreshCw, Loader2 } from "lucide-react";
-import { Separator } from "./ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Terminal, Loader2, ChevronLeft, ChevronRight, Download, SlidersHorizontal } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
+import { Checkbox } from "./ui/checkbox";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
+import { TicketItem } from "./ticket-item";
 
 function EmailDetailDialog({ email, onClose }: { email: DetailedEmail; onClose: () => void; }) {
     return (
@@ -107,27 +108,65 @@ export function ReadEmails() {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle className="font-headline">Tickets</CardTitle>
-                <CardDescription>Showing the latest tickets from your inbox.</CardDescription>
+    <div className="w-full h-full flex flex-col">
+      <header className="flex items-center justify-between pb-4 border-b mb-4">
+        <div className="flex items-center gap-4">
+            <Checkbox id="select-all" />
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Sort by:</span>
+                <Select defaultValue="date-created">
+                    <SelectTrigger className="w-auto h-9">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="date-created">Date created</SelectItem>
+                        <SelectItem value="date-updated">Date updated</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
-            <Button variant="outline" size="icon" onClick={fetchEmails} disabled={isLoading}>
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="sr-only">Refresh emails</span>
+        </div>
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Layout:</span>
+                <Select defaultValue="card">
+                    <SelectTrigger className="w-auto h-9">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="list">List</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <Button variant="outline" size="sm" className="h-9">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+            </Button>
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">1 - {emails.length} of {emails.length}</span>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+                 <Button variant="outline" size="icon" className="h-9 w-9">
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+            <Button variant="outline" size="sm" className="h-9 xl:hidden">
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Filters
             </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </header>
+      <div className="flex-grow overflow-y-auto">
         {isLoading ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
-                    <div key={i} className="space-y-2">
+                    <div key={i} className="p-4 border rounded-lg space-y-3">
                         <Skeleton className="h-5 w-3/4 rounded-md" />
-                        <Skeleton className="h-4 w-1/2 rounded-md" />
-                        <Skeleton className="h-4 w-5/6 rounded-md" />
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-4 w-24 rounded-md" />
+                            <Skeleton className="h-4 w-48 rounded-md" />
+                        </div>
                     </div>
                 ))}
             </div>
@@ -138,25 +177,10 @@ export function ReadEmails() {
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
         ) : emails.length > 0 ? (
-            <ul className="space-y-2">
-            {emails.map((email, index) => (
-              <li key={email.id}>
-                <button 
-                  className="w-full text-left p-4 rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50"
-                  onClick={() => handleEmailClick(email.id)}
-                  disabled={isLoadingEmail}
-                >
-                  <p className="text-sm font-medium truncate text-foreground pr-4">{email.subject}</p>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-muted-foreground truncate">From: {email.sender}</p>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {format(parseISO(email.receivedDateTime), 'PP')}
-                    </span>
-                  </div>
-                </button>
-                {index < emails.length - 1 && <Separator />}
-              </li>
-            ))}
+            <ul className="space-y-4">
+                {emails.map((email) => (
+                    <TicketItem key={email.id} email={email} onClick={() => handleEmailClick(email.id)} />
+                ))}
           </ul>
         ) : (
             <div className="text-center py-10">
@@ -166,13 +190,13 @@ export function ReadEmails() {
                 </Button>
             </div>
         )}
+      </div>
         {isLoadingEmail && (
             <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         )}
-      </CardContent>
       {selectedEmail && <EmailDetailDialog email={selectedEmail} onClose={() => setSelectedEmail(null)} />}
-    </Card>
+    </div>
   );
 }

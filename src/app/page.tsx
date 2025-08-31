@@ -5,15 +5,15 @@ import { useState } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, RightSidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { ReadEmails } from '@/components/read-emails';
 import { SettingsForm } from '@/components/settings-form';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Filter, Tag, CircleAlert, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Header } from '@/components/header';
 
 export default function Home() {
@@ -63,136 +63,156 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <div className="grid md:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_auto] min-h-screen bg-background text-foreground">
-        <Sidebar className="w-64 border-r hidden md:block">
-          <SidebarContent>
-            <SidebarHeader>
-              <div className="p-4">
-                <h1 className="text-xl font-headline font-bold">
-                    Mailflow Manager
-                </h1>
-              </div>
+      <div className="grid lg:grid-cols-[auto_1fr_auto] min-h-screen bg-background text-foreground">
+        <Sidebar className="w-16 border-r hidden lg:flex flex-col items-center py-4">
+          <SidebarContent className="flex-grow flex flex-col items-center">
+            <SidebarHeader className="mb-8">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
+                </Button>
             </SidebarHeader>
-            <SidebarMenu className="flex-grow px-4">
+            <SidebarMenu className="flex flex-col items-center gap-4">
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('analytics')} isActive={activeView === 'analytics'}>
+                <SidebarMenuButton onClick={() => setActiveView('analytics')} isActive={activeView === 'analytics'} variant="ghost" size="icon" className="h-10 w-10">
                   <LayoutDashboard />
-                  Analytics
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('tickets')} isActive={activeView === 'tickets'}>
+                <SidebarMenuButton onClick={() => setActiveView('tickets')} isActive={activeView === 'tickets'} variant="ghost" size="icon" className="h-10 w-10">
                   <List />
-                  Tickets
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('clients')} isActive={activeView === 'clients'}>
+                <SidebarMenuButton onClick={() => setActiveView('clients')} isActive={activeView === 'clients'} variant="ghost" size="icon" className="h-10 w-10">
                   <Users />
-                  Clients
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('organization')} isActive={activeView === 'organization'}>
+                <SidebarMenuButton onClick={() => setActiveView('organization')} isActive={activeView === 'organization'} variant="ghost" size="icon" className="h-10 w-10">
                   <Building2 />
-                  Organization
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'}>
+                <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'} variant="ghost" size="icon" className="h-10 w-10">
                   <Settings />
-                  Settings
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-            <SidebarFooter>
-              <div className="flex items-center gap-3 p-3 border-t">
+          </SidebarContent>
+          <SidebarFooter className="mt-auto">
+            <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-9 w-9">
                   <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-medium truncate">{user.email?.split('@')[0]}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log out">
-                  <LogOut className="h-5 w-5" />
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log out" className="h-10 w-10">
+                  <LogOut />
                 </Button>
-              </div>
-            </SidebarFooter>
-          </SidebarContent>
+            </div>
+          </SidebarFooter>
         </Sidebar>
 
         <div className="flex-1 flex flex-col">
           <Header />
-          <main className="flex-1 p-4 sm:p-6 md:p-8 flex justify-center">
-              <div className="w-full max-w-4xl">
-                {renderActiveView()}
-              </div>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            {renderActiveView()}
           </main>
         </div>
         
         {activeView === 'tickets' && (
-          <aside className="hidden lg:block w-80 border-l">
-            <div className="sticky top-0 h-screen overflow-y-auto pl-4 pt-4 pb-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="h-5 w-5" />
-                <h2 className="text-lg font-headline font-bold">
-                    Filters
-                </h2>
-              </div>
+          <aside className="hidden xl:block w-80 border-l">
+            <div className="sticky top-0 h-screen overflow-y-auto p-4">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-bold">Filters</h2>
+                    <Button variant="link" size="sm">Show applied filters</Button>
+                </div>
               <div className="space-y-6">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search fields" className="pl-9" />
+                </div>
+
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Status</CardTitle>
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Agents Include</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="status-open" />
-                        <Label htmlFor="status-open" className="flex items-center gap-2"><CircleAlert className="text-destructive"/>Open</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="status-closed" />
-                        <Label htmlFor="status-closed" className="flex items-center gap-2"><CheckCircle2 className="text-green-500"/>Closed</Label>
-                    </div>
+                  <CardContent className="p-4 pt-0">
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any agent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="agent1">Agent 1</SelectItem>
+                        <SelectItem value="agent2">Agent 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Groups Include</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="group1">Group 1</SelectItem>
+                        <SelectItem value="group2">Group 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Created</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Last 30 days" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="30d">Last 30 days</SelectItem>
+                        <SelectItem value="7d">Last 7 days</SelectItem>
+                        <SelectItem value="24h">Last 24 hours</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Priority</CardTitle>
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Closed at</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="priority-high" />
-                        <Label htmlFor="priority-high">High</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="priority-medium" />
-                        <Label htmlFor="priority-medium">Medium</Label>
-                    </div>
-                     <div className="flex items-center space-x-2">
-                        <Checkbox id="priority-low" />
-                        <Label htmlFor="priority-low">Low</Label>
-                    </div>
+                  <CardContent className="p-4 pt-0">
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any time</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Tags</CardTitle>
+                 <Card>
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Resolved at</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="tag-bug" />
-                        <Label htmlFor="tag-bug">Bug</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="tag-feature" />
-                        <Label htmlFor="tag-feature">Feature Request</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="tag-billing" />
-                        <Label htmlFor="tag-billing">Billing</Label>
-                    </div>
+                  <CardContent className="p-4 pt-0">
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any time</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </CardContent>
                 </Card>
+
               </div>
             </div>
           </aside>
