@@ -54,7 +54,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
 
     return (
         <li className="border-b last:border-b-0 transition-colors hover:bg-muted/50">
-            <div className="flex items-start p-4">
+            <div className="flex p-4">
                 <div className="flex items-center gap-4 flex-shrink-0 pt-1">
                     <Checkbox id={`ticket-${email.id}`} />
                     <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
