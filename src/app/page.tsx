@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <SidebarProvider>
       <div className="grid lg:grid-cols-[auto_1fr_auto] min-h-screen bg-background text-foreground">
-        <Sidebar className="w-14 border-r hidden lg:flex flex-col items-center py-6">
+        <Sidebar variant="sidebar" className="w-14 border-r hidden lg:flex flex-col items-center py-6">
           <SidebarContent className="flex-grow flex flex-col items-center">
             <SidebarHeader className="mb-8">
                 <Button variant="ghost" size="icon">

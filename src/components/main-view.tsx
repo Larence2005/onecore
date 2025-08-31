@@ -28,9 +28,7 @@ export function MainView({ activeView }: MainViewProps) {
 
     return (
         <div className="flex-1 flex flex-col overflow-y-auto">
-            <div className="flex-grow">
-                {renderView()}
-            </div>
+            {renderView()}
         </div>
     );
 }
