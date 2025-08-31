@@ -10,7 +10,7 @@ export interface Settings {
   clientId: string;
   tenantId: string;
   clientSecret: string;
-  userId: string; // This will now be the user's email from Auth
+  userId: string;
 }
 
 interface StoredSettings {
@@ -83,14 +83,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
   
-  const isConfigured = isLoaded && !!(settings.clientId && settings.tenantId && settings.clientSecret && user);
+  const isConfigured = !!(settings.clientId && settings.tenantId && settings.clientSecret && user && user.email);
+
+  const value = {
+    settings,
+    saveSettings,
+    isConfigured,
+  };
 
   if (!isLoaded) {
-    return null;
+    return <div className="flex items-center justify-center min-h-screen"><p>Loading settings...</p></div>;
   }
-
+  
   return (
-    <SettingsContext.Provider value={{ settings, saveSettings, isConfigured }}>
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );

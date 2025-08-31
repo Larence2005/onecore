@@ -51,7 +51,7 @@ export function SettingsForm() {
       <CardHeader>
         <CardTitle className="font-headline">API Settings</CardTitle>
         <CardDescription>
-          Configure your Microsoft Graph API credentials. These are stored securely and associated with your account.
+          Configure your Microsoft Graph API credentials. Your email is automatically set to your login email. These settings are stored securely and associated with your account.
         </CardDescription>
       </CardHeader>
       <CardContent>
