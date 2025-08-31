@@ -153,7 +153,6 @@ export function ReadEmails() {
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">From: {email.sender}</p>
-                  <p className="text-xs text-muted-foreground truncate pt-1">{email.bodyPreview}</p>
                 </button>
                 {index < emails.length - 1 && <Separator />}
               </li>
