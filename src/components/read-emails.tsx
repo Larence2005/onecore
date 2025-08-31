@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSettings } from "@/providers/settings-provider";
-import { getLatestEmails, Email } from "@/lib/graph";
+import { getLatestEmails } from "@/app/actions";
+import type { Email } from "@/app/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";

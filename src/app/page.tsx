@@ -1,6 +1,18 @@
 import { Header } from '@/components/header';
 import { Dashboard } from '@/components/dashboard';
 
+export interface Email {
+    id: string;
+    subject: string;
+    sender: string;
+}
+
+export interface NewEmail {
+    recipient: string;
+    subject: string;
+    body: string;
+}
+
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">

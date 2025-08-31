@@ -18,10 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
-import { sendEmail } from "@/lib/graph";
+import { sendEmailAction } from "@/app/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Terminal, Send } from "lucide-react";
+import { Terminal, Send, RefreshCw } from "lucide-react";
 
 const formSchema = z.object({
   recipient: z.string().email("Invalid email address."),
@@ -54,7 +54,7 @@ export function SendEmailForm() {
     }
     setIsSending(true);
     try {
-      await sendEmail(settings, values);
+      await sendEmailAction(settings, values);
       toast({
         title: "Email Sent!",
         description: `Your email to ${values.recipient} has been sent successfully.`,
