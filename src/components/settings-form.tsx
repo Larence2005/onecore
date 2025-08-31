@@ -48,7 +48,7 @@ export function SettingsForm() {
   }
 
   return (
-    <Card className="max-w-2xl mx-auto w-full">
+    <Card className="max-w-2xl w-full">
       <CardHeader>
         <CardTitle className="font-headline">API Settings</CardTitle>
         <CardDescription>

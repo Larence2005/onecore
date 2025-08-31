@@ -20,7 +20,7 @@ export function MainView({ activeView }: MainViewProps) {
             case 'organization':
                 return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full h-full p-4 sm:p-6 lg:p-8"><p>Organization coming soon.</p></div>;
             case 'settings':
-                return <div className="p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
+                return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
             default:
                 return <p className="p-4 sm:p-6 lg:p-8">Select a view</p>;
         }
