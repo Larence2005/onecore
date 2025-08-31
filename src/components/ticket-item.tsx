@@ -7,9 +7,6 @@ import { Checkbox } from "./ui/checkbox";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Button } from "./ui/button";
-import { GripVertical } from 'lucide-react';
-
 
 type TicketItemProps = {
     email: Email;
@@ -50,7 +47,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
     return (
         <li className="border rounded-lg transition-colors hover:bg-muted/50">
             <div className="flex items-start p-4 pl-8">
-                <div className="flex items-center gap-4 flex-shrink-0">
+                <div className="flex items-center gap-4 flex-shrink-0 pt-1">
                     <Checkbox id={`ticket-${email.id}`} />
                     <Avatar className="h-8 w-8">
                          <AvatarFallback className="text-xs bg-muted-foreground/20 text-foreground">{senderInitial}</AvatarFallback>
@@ -69,7 +66,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </p>
                 </div>
 
-                <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-40">
+                <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-36">
                     <div>
                         <Select defaultValue={priority.value}>
                             <SelectTrigger className="h-8 text-xs">
