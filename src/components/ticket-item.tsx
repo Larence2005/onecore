@@ -78,7 +78,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                 <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-36">
                     <div>
                         <Select defaultValue={priority.value}>
-                            <SelectTrigger className="h-8 text-xs">
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
                                         <span className={cn("h-2 w-2 rounded-full", priority.color)} />
@@ -100,7 +100,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </div>
                      <div>
                         <Select defaultValue="onecore-su">
-                            <SelectTrigger className="h-8 text-xs">
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -110,7 +110,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </div>
                      <div>
                         <Select defaultValue={status.value}>
-                            <SelectTrigger className="h-8 text-xs">
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                              <SelectContent>
