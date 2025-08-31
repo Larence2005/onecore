@@ -107,7 +107,7 @@ export function ReadEmails() {
   }
 
   return (
-    <Card className="max-w-4xl mx-auto w-full">
+    <Card className="w-full">
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>

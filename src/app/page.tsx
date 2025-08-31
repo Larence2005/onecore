@@ -49,7 +49,11 @@ export default function Home() {
       case 'analytics':
         return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Analytics coming soon.</p></div>;
       case 'tickets':
-        return <ReadEmails />;
+        return (
+          <div className="w-full max-w-4xl">
+            <ReadEmails />
+          </div>
+        );
       case 'clients':
         return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Clients coming soon.</p></div>;
       case 'organization':
