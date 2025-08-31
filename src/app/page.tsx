@@ -132,7 +132,7 @@ export default function Home() {
         
         {activeView === 'tickets' && (
           <aside className="hidden lg:block w-80 border-l">
-            <div className="sticky top-0 h-screen overflow-y-auto pl-4 pr-2 pt-4 pb-4">
+            <div className="sticky top-0 h-screen overflow-y-auto pl-4 pt-4 pb-4">
               <div className="flex items-center gap-2 mb-4">
                 <Filter className="h-5 w-5" />
                 <h2 className="text-lg font-headline font-bold">
