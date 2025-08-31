@@ -111,8 +111,8 @@ export function ReadEmails() {
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
-                <CardTitle className="font-headline">Inbox</CardTitle>
-                <CardDescription>Showing the latest emails from your inbox.</CardDescription>
+                <CardTitle className="font-headline">Tickets</CardTitle>
+                <CardDescription>Showing the latest tickets from your inbox.</CardDescription>
             </div>
             <Button variant="outline" size="icon" onClick={fetchEmails} disabled={isLoading}>
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
