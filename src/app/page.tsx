@@ -96,12 +96,12 @@ export default function Home() {
 
         {activeView === 'tickets' && (
           <aside className="hidden xl:block w-80 border-l">
-              <div className="sticky top-0 h-screen overflow-y-auto p-4">
-                  <div className="flex justify-between items-center mb-4">
+              <div className="sticky top-0 h-screen overflow-y-auto p-4 pr-0">
+                  <div className="flex justify-between items-center mb-4 pr-4">
                       <h2 className="text-lg font-bold">Filters</h2>
                       <Button variant="link" size="sm">Show applied filters</Button>
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-6 pr-4">
                       <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input placeholder="Search fields" className="pl-9" />
