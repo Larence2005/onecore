@@ -64,36 +64,36 @@ export default function Home() {
   return (
     <SidebarProvider>
       <div className="grid lg:grid-cols-[auto_1fr_auto] min-h-screen bg-background text-foreground">
-        <Sidebar className="w-16 border-r hidden lg:flex flex-col items-center py-4">
+        <Sidebar className="w-14 border-r hidden lg:flex flex-col items-center py-6">
           <SidebarContent className="flex-grow flex flex-col items-center">
             <SidebarHeader className="mb-8">
-                <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Button variant="ghost" size="icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
                 </Button>
             </SidebarHeader>
-            <SidebarMenu className="flex flex-col items-center gap-4">
+            <SidebarMenu className="flex flex-col items-center gap-2">
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('analytics')} isActive={activeView === 'analytics'} variant="ghost" size="icon" className="h-10 w-10">
+                <SidebarMenuButton onClick={() => setActiveView('analytics')} isActive={activeView === 'analytics'} variant="ghost" size="icon">
                   <LayoutDashboard />
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('tickets')} isActive={activeView === 'tickets'} variant="ghost" size="icon" className="h-10 w-10">
+                <SidebarMenuButton onClick={() => setActiveView('tickets')} isActive={activeView === 'tickets'} variant="ghost" size="icon">
                   <List />
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('clients')} isActive={activeView === 'clients'} variant="ghost" size="icon" className="h-10 w-10">
+                <SidebarMenuButton onClick={() => setActiveView('clients')} isActive={activeView === 'clients'} variant="ghost" size="icon">
                   <Users />
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('organization')} isActive={activeView === 'organization'} variant="ghost" size="icon" className="h-10 w-10">
+                <SidebarMenuButton onClick={() => setActiveView('organization')} isActive={activeView === 'organization'} variant="ghost" size="icon">
                   <Building2 />
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'} variant="ghost" size="icon" className="h-10 w-10">
+                <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'} variant="ghost" size="icon">
                   <Settings />
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -104,7 +104,7 @@ export default function Home() {
                 <Avatar className="h-9 w-9">
                   <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log out" className="h-10 w-10">
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log out">
                   <LogOut />
                 </Button>
             </div>
