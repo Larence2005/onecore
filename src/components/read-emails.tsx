@@ -15,7 +15,8 @@ export function ReadEmails() {
   const { settings, isConfigured } = useSettings();
   const { toast } = useToast();
   const [emails, setEmails] = useState<Email[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchEmails = useCallback(async () => {
     if (!isConfigured) {
@@ -23,14 +24,17 @@ export function ReadEmails() {
         return;
     }
     setIsLoading(true);
+    setError(null);
     try {
       const latestEmails = await getLatestEmails(settings);
       setEmails(latestEmails);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      setError(errorMessage);
       toast({
         variant: "destructive",
         title: "Failed to fetch emails.",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
+        description: errorMessage,
       });
       setEmails([]);
     } finally {
@@ -39,8 +43,10 @@ export function ReadEmails() {
   }, [settings, isConfigured, toast]);
 
   useEffect(() => {
-    fetchEmails();
-  }, [fetchEmails]);
+    if (isConfigured) {
+        fetchEmails();
+    }
+  }, [fetchEmails, isConfigured]);
 
   if (!isConfigured && !isLoading) {
     return (
@@ -78,6 +84,12 @@ export function ReadEmails() {
                     </div>
                 ))}
             </div>
+        ) : error ? (
+            <Alert variant="destructive">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
         ) : emails.length > 0 ? (
             <ul className="space-y-4">
             {emails.map((email, index) => (

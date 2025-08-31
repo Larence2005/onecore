@@ -1,4 +1,10 @@
 import type { Settings } from '@/providers/settings-provider';
+import {
+    ConfidentialClientApplication,
+    Configuration,
+    AuthenticationResult
+} from '@azure/msal-node';
+import fetch from 'node-fetch';
 
 export interface Email {
     id: string;
@@ -12,45 +18,86 @@ export interface NewEmail {
     body: string;
 }
 
-// This is a mock function. A real implementation would require
-// getting an OAuth2 access token and calling the Microsoft Graph API.
-export async function getLatestEmails(settings: Settings): Promise<Email[]> {
-    console.log("Fetching emails with settings:", { ...settings, clientSecret: '[REDACTED]' });
+const getMsalConfig = (settings: Settings): Configuration => ({
+    auth: {
+        clientId: settings.clientId,
+        authority: `https://login.microsoftonline.com/${settings.tenantId}`,
+        clientSecret: settings.clientSecret,
+    },
+});
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Simulate error if credentials are not 'correct' (for demonstration)
-    if (settings.clientId.includes('error')) {
-        throw new Error("Invalid credentials provided. Check your settings.");
-    }
+async function getAccessToken(settings: Settings): Promise<AuthenticationResult | null> {
+    const msalConfig = getMsalConfig(settings);
+    const cca = new ConfidentialClientApplication(msalConfig);
+    const tokenRequest = {
+        scopes: ['https://graph.microsoft.com/.default'],
+    };
 
-    // Return mock data
-    return [
-        { id: '1', subject: 'Project Phoenix: Final Design Review and Next Steps for Q3', sender: 'Katherine Moss' },
-        { id: '2', subject: 'Your weekly summary: 5 tasks due, 2 upcoming meetings', sender: 'ProjectHub' },
-        { id: '3', subject: 'Re: Marketing Campaign Budget - Urgent Approval Needed', sender: 'David Chen' },
-        { id: '4', subject: 'Lunch tomorrow? 🍱', sender: 'Emily Carter' },
-        { id: '5', subject: 'Security Alert: New sign-in to your account', sender: 'Microsoft Security' },
-        { id: '6', subject: 'FW: Important Update on Company-Wide Health Policy', sender: 'HR Department' },
-        { id: '7', subject: 'Your Cloud Services Invoice for May 2024 is ready', sender: 'Cloud Billing' },
-        { id: '8', subject: 'Thanks for your order! Here are the details and tracking information.', sender: 'The Online Store' },
-        { id: '9', subject: 'A very long subject line to test the truncation feature that should definitely be applied to this element because it is just way too long to fit in a single line on the screen', sender: 'Spam Master 3000' },
-        { id: '10', subject: "You're invited: Team Offsite Planning Session", sender: 'Maria Garcia' },
-    ].slice(0, 10);
+    return await cca.acquireTokenByClientCredential(tokenRequest);
 }
 
-// This is a mock function for sending an email.
-export async function sendEmail(settings: Settings, emailData: NewEmail): Promise<{ success: boolean }> {
-    console.log("Sending email with settings:", { ...settings, clientSecret: '[REDACTED]' });
-    console.log("Email data:", emailData);
+export async function getLatestEmails(settings: Settings): Promise<Email[]> {
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token.');
+    }
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulate error
-    if (emailData.recipient.includes('fail')) {
-        throw new Error("Recipient address is blocked by policy.");
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from`, {
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
+    }
+
+    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } } }[] } = await response.json() as any;
+
+    return data.value.map(email => ({
+        id: email.id,
+        subject: email.subject || 'No Subject',
+        sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+    }));
+}
+
+export async function sendEmail(settings: Settings, emailData: NewEmail): Promise<{ success: boolean }> {
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token.');
+    }
+
+    const message = {
+        message: {
+            subject: emailData.subject,
+            body: {
+                contentType: 'Text',
+                content: emailData.body,
+            },
+            toRecipients: [
+                {
+                    emailAddress: {
+                        address: emailData.recipient,
+                    },
+                },
+            ],
+        },
+        saveToSentItems: 'true',
+    };
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/sendMail`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Failed to send email: ${error.error?.message || response.statusText}`);
     }
 
     return { success: true };
