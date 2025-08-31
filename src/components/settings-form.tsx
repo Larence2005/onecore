@@ -23,7 +23,6 @@ const formSchema = z.object({
   clientId: z.string().min(1, "Client ID is required."),
   tenantId: z.string().min(1, "Tenant ID is required."),
   clientSecret: z.string().min(1, "Client Secret is required."),
-  userId: z.string().min(1, "User ID is required."),
 });
 
 export function SettingsForm() {
@@ -32,7 +31,11 @@ export function SettingsForm() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: settings,
+    values: {
+      clientId: settings.clientId,
+      tenantId: settings.tenantId,
+      clientSecret: settings.clientSecret,
+    },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -48,7 +51,7 @@ export function SettingsForm() {
       <CardHeader>
         <CardTitle className="font-headline">API Settings</CardTitle>
         <CardDescription>
-          Configure your Microsoft Graph API credentials. These are stored securely in your browser's local storage.
+          Configure your Microsoft Graph API credentials. These are stored securely and associated with your account.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -90,21 +93,8 @@ export function SettingsForm() {
                     <Input type="password" placeholder="Enter your Client Secret" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Your client secret is sensitive and will be stored locally.
+                    Your client secret is sensitive and will be stored securely.
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="userId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>User ID / Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter the User ID or email for the mailbox" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

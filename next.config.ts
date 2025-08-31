@@ -24,13 +24,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals.push('node-fetch');
-    }
-
-    return config;
-  },
 };
 
 export default nextConfig;
