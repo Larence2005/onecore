@@ -1,8 +1,7 @@
 
 "use client";
 
-import { SidebarTrigger, RightSidebarTrigger } from './ui/sidebar';
-import { Filter } from 'lucide-react';
+import { SidebarTrigger } from './ui/sidebar';
 
 type HeaderProps = {
   children?: React.ReactNode;
@@ -10,12 +9,13 @@ type HeaderProps = {
 
 export function Header({ children }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background px-4">
-        <div className="md:hidden">
-            <SidebarTrigger />
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-background px-4">
+        <div className="flex items-center gap-2">
+            <div className="lg:hidden">
+                <SidebarTrigger />
+            </div>
+            {children}
         </div>
-        {children}
-        {/* The right sidebar trigger is removed as the right sidebar is no longer a sheet on mobile */}
         <div className="w-7 h-7 md:hidden" />
     </header>
   );

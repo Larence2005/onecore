@@ -46,8 +46,8 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
     const senderInitial = email.sender?.[0]?.toUpperCase() || 'U';
 
     return (
-        <li className="border rounded-lg transition-colors hover:bg-muted/50">
-            <div className="flex items-start p-4 pl-8">
+        <li className="border-b last:border-b-0 transition-colors hover:bg-muted/50">
+            <div className="flex items-start p-4">
                 <div className="flex items-center gap-4 flex-shrink-0 pt-1">
                     <Checkbox id={`ticket-${email.id}`} />
                     <Avatar className="h-8 w-8">

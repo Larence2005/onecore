@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { TicketItem } from "./ticket-item";
-import { Avatar } from "./ui/avatar";
 
 type TicketsViewProps = {
     emails: Email[];
@@ -21,19 +20,7 @@ type TicketsViewProps = {
 export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh }: TicketsViewProps) {
     return (
         <div className="flex flex-col h-full bg-background p-4 sm:p-6 lg:p-8">
-            <header className="sticky top-0 bg-background z-10 py-4 border-b mb-4 flex-shrink-0">
-                <div className="flex items-start pl-8">
-                    <div className="flex items-center gap-4 flex-shrink-0 pt-1">
-                        <Checkbox id="select-all" />
-                        {/* This invisible avatar is a spacer to align the title */}
-                        <Avatar className="h-8 w-8 invisible" />
-                    </div>
-                    <div className="ml-4 flex items-center h-9">
-                        <h1 className="text-xl font-bold">Tickets</h1>
-                    </div>
-                </div>
-            </header>
-            <div className="flex-grow overflow-y-auto">
+             <div className="flex-grow overflow-y-auto">
                 {isLoading ? (
                     <div className="space-y-4">
                         {[...Array(5)].map((_, i) => (
@@ -53,11 +40,17 @@ export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh 
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 ) : emails.length > 0 ? (
-                    <ul className="space-y-4">
-                        {emails.map((email) => (
-                            <TicketItem key={email.id} email={email} onClick={() => onEmailClick(email.id)} />
-                        ))}
-                    </ul>
+                     <div className="border rounded-lg">
+                        <div className="flex items-center gap-4 p-4 border-b">
+                            <Checkbox id="select-all" />
+                            <span className="text-sm font-medium text-muted-foreground">Select all</span>
+                        </div>
+                        <ul className="space-y-0">
+                            {emails.map((email) => (
+                                <TicketItem key={email.id} email={email} onClick={() => onEmailClick(email.id)} />
+                            ))}
+                        </ul>
+                    </div>
                 ) : (
                     <div className="text-center py-10">
                         <p className="text-muted-foreground">No emails found.</p>

@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
@@ -102,8 +103,14 @@ export default function Home() {
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex flex-col min-w-0">
-          <Header />
+        <main className="flex-1 flex flex-col min-w-0">
+          <Header>
+            {activeView === 'tickets' && (
+              <div className="flex items-center gap-4">
+                <h1 className="text-xl font-bold">Tickets</h1>
+              </div>
+            )}
+          </Header>
           <MainView activeView={activeView} />
         </main>
         
