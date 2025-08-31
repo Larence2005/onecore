@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,7 +48,7 @@ export function SettingsForm() {
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="max-w-2xl mx-auto w-full">
       <CardHeader>
         <CardTitle className="font-headline">API Settings</CardTitle>
         <CardDescription>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -95,7 +96,7 @@ export function ReadEmails() {
 
   if (!isConfigured && !isLoading) {
     return (
-        <Alert className="max-w-2xl mx-auto">
+        <Alert className="max-w-2xl mx-auto w-full">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Configuration Required</AlertTitle>
             <AlertDescription>
@@ -106,7 +107,7 @@ export function ReadEmails() {
   }
 
   return (
-    <Card className="max-w-4xl mx-auto">
+    <Card className="max-w-4xl mx-auto w-full">
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>

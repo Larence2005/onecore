@@ -43,13 +43,13 @@ export default function Home() {
   const renderActiveView = () => {
     switch (activeView) {
       case 'analytics':
-        return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Analytics coming soon.</p></div>;
+        return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Analytics coming soon.</p></div>;
       case 'tickets':
         return <ReadEmails />;
       case 'clients':
-        return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Clients coming soon.</p></div>;
+        return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Clients coming soon.</p></div>;
       case 'organization':
-        return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Organization coming soon.</p></div>;
+        return <div className="flex flex-1 items-center justify-center text-muted-foreground w-full"><p>Organization coming soon.</p></div>;
       case 'settings':
         return <SettingsForm />;
       default:
@@ -116,7 +116,7 @@ export default function Home() {
             </SidebarFooter>
           </SidebarContent>
         </Sidebar>
-        <main className="flex-1 p-8 flex flex-col">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
             {renderActiveView()}
         </main>
       </div>
