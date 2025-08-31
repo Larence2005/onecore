@@ -7,6 +7,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { cn } from "@/lib/utils";
 
 type TicketItemProps = {
     email: Email;
@@ -54,14 +55,18 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </Avatar>
                 </div>
 
-                <div className="flex-grow ml-4" onClick={onClick} role="button">
+                <div className="flex-grow ml-4 min-w-0" onClick={onClick} role="button">
                     <div className="flex items-center gap-2 mb-1">
                         <Badge variant="destructive">Overdue</Badge>
                         <Badge variant="secondary">Customer responded</Badge>
                         <Badge variant="outline">CHG</Badge>
                     </div>
-                    <p className="font-medium text-foreground truncate">{email.subject}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <div className="relative overflow-hidden">
+                        <p className="font-medium text-foreground whitespace-nowrap pr-6">{email.subject}</p>
+                        <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-card to-transparent pointer-events-none"></div>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground truncate">
                         {email.sender} &bull; Customer responded: {format(parseISO(email.receivedDateTime), 'd')} days ago &bull; Overdue by: {Math.floor(Math.random() * 10) + 1} days
                     </p>
                 </div>
@@ -72,7 +77,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                             <SelectTrigger className="h-8 text-xs">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
-                                        <span className={`h-2 w-2 rounded-full ${priority.color}`} />
+                                        <span className={cn("h-2 w-2 rounded-full", priority.color)} />
                                         {priority.label}
                                     </span>
                                 </SelectValue>
@@ -81,7 +86,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                                 {priorities.map(p => (
                                      <SelectItem key={p.value} value={p.value}>
                                         <span className="flex items-center gap-2">
-                                            <span className={`h-2 w-2 rounded-full ${p.color}`} />
+                                            <span className={cn("h-2 w-2 rounded-full",p.color)} />
                                             {p.label}
                                         </span>
                                     </SelectItem>
