@@ -1,13 +1,23 @@
 
 "use client";
 
-import { SidebarTrigger } from './ui/sidebar';
+import { SidebarTrigger, RightSidebarTrigger } from './ui/sidebar';
+import { Filter } from 'lucide-react';
 
-export function Header() {
+type HeaderProps = {
+  showFilterButton?: boolean;
+}
+
+export function Header({ showFilterButton = false }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
+    <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 md:hidden">
         <SidebarTrigger />
         <h1 className="text-lg font-bold">Mailflow Manager</h1>
+        {showFilterButton ? (
+          <RightSidebarTrigger>
+            <Filter />
+          </RightSidebarTrigger>
+        ) : <div className="w-7 h-7" /> }
     </header>
   );
 }

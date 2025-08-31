@@ -5,16 +5,16 @@ import { useState } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, RightSidebarTrigger } from '@/components/ui/sidebar';
 import { ReadEmails } from '@/components/read-emails';
 import { SettingsForm } from '@/components/settings-form';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Filter, Tag, CircleAlert, CheckCircle2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Header } from '@/components/header';
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
@@ -120,11 +120,15 @@ export default function Home() {
             </SidebarFooter>
           </SidebarContent>
         </Sidebar>
-        <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
-            {renderActiveView()}
-        </main>
+        <div className="flex-1 flex flex-col">
+          <Header showFilterButton={activeView === 'tickets'} />
+          <main className="flex-1 p-4 sm:p-6 md:p-8 flex flex-col items-center">
+              {renderActiveView()}
+          </main>
+        </div>
+        
         {activeView === 'tickets' && (
-          <Sidebar side="right" className="w-80 border-l">
+          <Sidebar side="right" className="w-80 border-l" isSecondary>
             <SidebarContent>
               <SidebarHeader>
                 <div className="p-4 flex items-center gap-2">

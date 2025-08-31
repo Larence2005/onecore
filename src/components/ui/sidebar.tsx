@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -32,8 +33,11 @@ type SidebarContext = {
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
+  openMobileRight: boolean;
+  setOpenMobileRight: (open: boolean) => void;
   isMobile: boolean
   toggleSidebar: () => void
+  toggleRightSidebar: () => void
 }
 
 const SidebarContext = React.createContext<SidebarContext | null>(null)
@@ -69,6 +73,8 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+    const [openMobileRight, setOpenMobileRight] = React.useState(false);
+
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -95,6 +101,10 @@ const SidebarProvider = React.forwardRef<
         ? setOpenMobile((open) => !open)
         : setOpen((open) => !open)
     }, [isMobile, setOpen, setOpenMobile])
+
+    const toggleRightSidebar = React.useCallback(() => {
+        setOpenMobileRight((open) => !open);
+    }, []);
 
     // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
@@ -124,9 +134,12 @@ const SidebarProvider = React.forwardRef<
         isMobile,
         openMobile,
         setOpenMobile,
+        openMobileRight,
+        setOpenMobileRight,
         toggleSidebar,
+        toggleRightSidebar,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [state, open, setOpen, isMobile, openMobile, setOpenMobile, openMobileRight, setOpenMobileRight, toggleSidebar, toggleRightSidebar]
     )
 
     return (
@@ -162,6 +175,7 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+    isSecondary?: boolean;
   }
 >(
   (
@@ -169,13 +183,17 @@ const Sidebar = React.forwardRef<
       side = "left",
       variant = "sidebar",
       collapsible = "offcanvas",
+      isSecondary = false,
       className,
       children,
       ...props
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, openMobile, setOpenMobile, openMobileRight, setOpenMobileRight } = useSidebar();
+    
+    const sheetOpen = isSecondary ? openMobileRight : openMobile;
+    const setSheetOpen = isSecondary ? setOpenMobileRight : setOpenMobile;
 
     if (collapsible === "none") {
       return (
@@ -194,11 +212,11 @@ const Sidebar = React.forwardRef<
 
     if (isMobile) {
       return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen} {...props}>
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className={cn("w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden", isSecondary && 'md:hidden', className)}
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -209,6 +227,25 @@ const Sidebar = React.forwardRef<
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
+      )
+    }
+
+    if (isSecondary) {
+      return (
+         <div
+            ref={ref}
+            className={cn("group hidden md:block text-sidebar-foreground", className)}
+            data-variant={variant}
+            data-side={side}
+            {...props}
+        >
+             <div
+                data-sidebar="sidebar"
+                className="flex h-full w-full flex-col bg-sidebar"
+            >
+                {children}
+            </div>
+        </div>
       )
     }
 
@@ -284,6 +321,31 @@ const SidebarTrigger = React.forwardRef<
   )
 })
 SidebarTrigger.displayName = "SidebarTrigger"
+
+const RightSidebarTrigger = React.forwardRef<
+  React.ElementRef<typeof Button>,
+  React.ComponentProps<typeof Button>
+>(({ className, onClick, ...props }, ref) => {
+  const { toggleRightSidebar } = useSidebar()
+
+  return (
+    <Button
+      ref={ref}
+      data-sidebar="right-trigger"
+      variant="ghost"
+      size="icon"
+      className={cn("h-7 w-7", className)}
+      onClick={(event) => {
+        onClick?.(event)
+        toggleRightSidebar()
+      }}
+      {...props}
+    >
+      <span className="sr-only">Toggle Right Sidebar</span>
+    </Button>
+  )
+})
+RightSidebarTrigger.displayName = "RightSidebarTrigger"
 
 const SidebarRail = React.forwardRef<
   HTMLButtonElement,
@@ -759,5 +821,6 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  RightSidebarTrigger,
   useSidebar,
 }
