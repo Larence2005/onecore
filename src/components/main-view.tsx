@@ -2,10 +2,11 @@
 "use client";
 
 import { ReadEmails } from '@/components/read-emails';
+import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
 
 type MainViewProps = {
-    activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings';
+    activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose';
 }
 
 export function MainView({ activeView }: MainViewProps) {
@@ -21,6 +22,8 @@ export function MainView({ activeView }: MainViewProps) {
                 return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Organization coming soon.</p></div>;
             case 'settings':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
+            case 'compose':
+                return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SendEmailForm /></div>;
             default:
                 return <p className="p-4 sm:p-6 lg:p-8">Select a view</p>;
         }

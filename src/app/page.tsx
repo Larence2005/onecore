@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 export default function Home() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const [activeView, setActiveView] = useState('tickets');
+  const [activeView, setActiveView] = useState<'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose'>('tickets');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -98,7 +98,13 @@ export default function Home() {
         </Sidebar>
 
         <main className="flex flex-col min-w-0">
-          <Header />
+          <Header>
+            <div className="flex-1" />
+            <Button variant="outline" onClick={() => setActiveView('compose')}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Compose
+            </Button>
+          </Header>
           <MainView activeView={activeView} />
         </main>
         
