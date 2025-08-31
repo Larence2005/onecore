@@ -59,6 +59,11 @@ export default function Home() {
             </SidebarHeader>
             <SidebarMenu className="flex flex-col items-center gap-2">
               <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => setActiveView('compose')} isActive={activeView === 'compose'} variant="ghost" size="icon">
+                  <Pencil />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => setActiveView('analytics')} isActive={activeView === 'analytics'} variant="ghost" size="icon">
                   <LayoutDashboard />
                 </SidebarMenuButton>
@@ -98,13 +103,7 @@ export default function Home() {
         </Sidebar>
 
         <main className="flex flex-col min-w-0">
-          <Header>
-            <div className="flex-1" />
-            <Button variant="outline" onClick={() => setActiveView('compose')}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Compose
-            </Button>
-          </Header>
+          <Header />
           <MainView activeView={activeView} />
         </main>
         
