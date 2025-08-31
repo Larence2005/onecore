@@ -5,11 +5,11 @@ import { Header } from '@/components/header';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { ReadEmails } from '@/components/read-emails';
 import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
-import { Inbox, Send, Settings, PanelLeft } from 'lucide-react';
+import { Inbox, Send, Settings } from 'lucide-react';
 
 export interface Email {
     id: string;
@@ -57,36 +57,38 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen bg-muted/40">
         <Header />
-        <div className="flex flex-1">
-          <Sidebar>
-            <SidebarContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setActiveView('inbox')} isActive={activeView === 'inbox'}>
-                    <Inbox />
-                    Inbox
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setActiveView('compose')} isActive={activeView === 'compose'}>
-                    <Send />
-                    Compose
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'}>
-                    <Settings />
-                    Settings
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
-          <main className="flex-1 container mx-auto px-4 py-8">
-            {renderActiveView()}
-          </main>
+        <div className="container mx-auto max-w-screen-xl flex-1 py-8">
+            <div className="flex gap-8">
+                <Sidebar className="w-64">
+                    <SidebarContent>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => setActiveView('inbox')} isActive={activeView === 'inbox'}>
+                            <Inbox />
+                            Inbox
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => setActiveView('compose')} isActive={activeView === 'compose'}>
+                            <Send />
+                            Compose
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'}>
+                            <Settings />
+                            Settings
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                    </SidebarContent>
+                </Sidebar>
+                <main className="flex-1">
+                    {renderActiveView()}
+                </main>
+            </div>
         </div>
       </div>
     </SidebarProvider>
