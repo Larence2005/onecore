@@ -96,7 +96,7 @@ export default function Home() {
         <main className="flex flex-col min-w-0">
           <Header />
           <div className="flex-1 flex flex-col overflow-y-auto">
-              <div className="p-4 sm:p-6 lg:p-8 flex-grow">
+              <div className="flex-grow">
                   <MainView activeView={activeView} />
               </div>
           </div>

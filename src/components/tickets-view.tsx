@@ -19,7 +19,7 @@ type TicketsViewProps = {
 
 export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh }: TicketsViewProps) {
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="flex flex-col h-full bg-background p-4 sm:p-6 lg:p-8">
             <header className="sticky top-0 bg-background z-10 flex items-center justify-between py-4 border-b mb-4 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <Checkbox id="select-all" />
@@ -28,7 +28,7 @@ export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh 
             </header>
             <div className="flex-grow overflow-y-auto">
                 {isLoading ? (
-                    <div className="space-y-4 pr-4">
+                    <div className="space-y-4">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="p-4 border rounded-lg space-y-3">
                                 <Skeleton className="h-5 w-3/4 rounded-md" />
@@ -46,7 +46,7 @@ export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh 
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 ) : emails.length > 0 ? (
-                    <ul className="space-y-4 pr-4">
+                    <ul className="space-y-4">
                         {emails.map((email) => (
                             <TicketItem key={email.id} email={email} onClick={() => onEmailClick(email.id)} />
                         ))}
