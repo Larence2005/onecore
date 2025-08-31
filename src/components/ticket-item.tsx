@@ -61,10 +61,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                         <Badge variant="secondary">Customer responded</Badge>
                         <Badge variant="outline">CHG</Badge>
                     </div>
-                    <div className="relative overflow-hidden">
-                        <p className="font-medium text-foreground whitespace-nowrap pr-6">{email.subject}</p>
-                        <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-card to-transparent pointer-events-none"></div>
-                    </div>
+                    <p className="font-medium text-foreground whitespace-nowrap overflow-hidden text-ellipsis">{email.subject}</p>
 
                     <p className="text-sm text-muted-foreground truncate">
                         {email.sender} &bull; Customer responded: {format(parseISO(email.receivedDateTime), 'd')} days ago &bull; Overdue by: {Math.floor(Math.random() * 10) + 1} days
