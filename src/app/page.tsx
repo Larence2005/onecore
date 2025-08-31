@@ -7,12 +7,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { ReadEmails } from '@/components/read-emails';
-import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Mail } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
@@ -47,32 +45,7 @@ export default function Home() {
       case 'analytics':
         return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Analytics coming soon.</p></div>;
       case 'tickets':
-        return (
-          <Tabs defaultValue="all">
-            <TabsList>
-              <TabsTrigger value="all">All Tickets</TabsTrigger>
-              <TabsTrigger value="open">Open</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="resolved">Resolved</TabsTrigger>
-              <TabsTrigger value="closed">Closed</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all" className="flex flex-1 items-center justify-center text-muted-foreground pt-20">
-              <p>There are no tickets in this category.</p>
-            </TabsContent>
-            <TabsContent value="open" className="flex flex-1 items-center justify-center text-muted-foreground pt-20">
-              <p>There are no tickets in this category.</p>
-            </TabsContent>
-            <TabsContent value="pending" className="flex flex-1 items-center justify-center text-muted-foreground pt-20">
-              <p>There are no tickets in this category.</p>
-            </TabsContent>
-            <TabsContent value="resolved" className="flex flex-1 items-center justify-center text-muted-foreground pt-20">
-              <p>There are no tickets in this category.</p>
-            </TabsContent>
-            <TabsContent value="closed" className="flex flex-1 items-center justify-center text-muted-foreground pt-20">
-              <p>There are no tickets in this category.</p>
-            </TabsContent>
-          </Tabs>
-        );
+        return <ReadEmails />;
       case 'clients':
         return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Clients coming soon.</p></div>;
       case 'organization':
