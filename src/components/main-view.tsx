@@ -25,13 +25,23 @@ export function MainView({ activeView }: MainViewProps) {
             case 'compose':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SendEmailForm /></div>;
             default:
-                return <p className="p-4 sm:p-6 lg:p-8">Select a view</p>;
+                return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Select a view</p></div>;
         }
     };
 
+    if (activeView === 'tickets') {
+        return (
+            <div className="flex-1 flex flex-col overflow-y-auto">
+                {renderView()}
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 flex flex-col overflow-y-auto">
-            {renderView()}
+             <div className="flex flex-1 items-center justify-center">
+                {renderView()}
+            </div>
         </div>
     );
 }
