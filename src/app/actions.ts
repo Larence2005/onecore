@@ -12,6 +12,15 @@ export interface Email {
     id: string;
     subject: string;
     sender: string;
+    bodyPreview: string;
+    receivedDateTime: string;
+}
+
+export interface DetailedEmail extends Email {
+    body: {
+        contentType: string;
+        content: string;
+    };
 }
 
 const getMsalConfig = (settings: Settings): Configuration => ({
@@ -38,7 +47,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         throw new Error('Failed to acquire access token.');
     }
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from,bodyPreview,receivedDateTime&$orderby=receivedDateTime desc`, {
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
         },
@@ -49,14 +58,46 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
     }
 
-    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } } }[] } = await response.json() as any;
+    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string }[] } = await response.json() as any;
 
     return data.value.map(email => ({
         id: email.id,
         subject: email.subject || 'No Subject',
         sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+        bodyPreview: email.bodyPreview,
+        receivedDateTime: email.receivedDateTime,
     }));
 }
+
+export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token.');
+    }
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview`, {
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Failed to fetch email: ${error.error?.message || response.statusText}`);
+    }
+
+    const email: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string } = await response.json() as any;
+
+    return {
+        id: email.id,
+        subject: email.subject || 'No Subject',
+        sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+        body: email.body,
+        receivedDateTime: email.receivedDateTime,
+        bodyPreview: email.bodyPreview,
+    };
+}
+
 
 export async function sendEmailAction(settings: Settings, emailData: NewEmail): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
