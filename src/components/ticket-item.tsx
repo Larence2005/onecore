@@ -54,15 +54,15 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
 
     return (
         <li className="border-b last:border-b-0 transition-colors hover:bg-muted/50">
-            <div className="flex p-4">
-                <div className="flex items-center gap-4 flex-shrink-0 pt-1">
+            <div className="flex items-center p-4">
+                <div className="flex items-center gap-4 flex-shrink-0">
                     <Checkbox id={`ticket-${email.id}`} />
                     <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
                         {ticketNumber}
                     </div>
                 </div>
 
-                <div className="flex-grow ml-4 min-w-0" onClick={onClick} role="button">
+                <div className="flex-grow ml-4 min-w-0 cursor-pointer" onClick={onClick}>
                     <div className="flex items-center gap-2 mb-1">
                         <Badge variant="destructive">Overdue</Badge>
                         <Badge variant="secondary">Customer responded</Badge>
@@ -75,10 +75,10 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </p>
                 </div>
 
-                <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-36">
+                <div className="flex flex-col items-stretch gap-1 ml-4 flex-shrink-0 w-36">
                     <div>
                         <Select defaultValue={priority.value}>
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0">
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
                                         <span className={cn("h-2 w-2 rounded-full", priority.color)} />
@@ -100,7 +100,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </div>
                      <div>
                         <Select defaultValue="onecore-su">
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0">
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -110,7 +110,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </div>
                      <div>
                         <Select defaultValue={status.value}>
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0">
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                              <SelectContent>
