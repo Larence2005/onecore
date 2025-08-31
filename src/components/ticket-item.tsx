@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Button } from "./ui/button";
-import { GripVertical } from "lucide-react";
 
 type TicketItemProps = {
     email: Email;
@@ -99,7 +98,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="flex-1">
+                     <div className="flex-1 pr-4">
                         <Select defaultValue={status.value}>
                             <SelectTrigger className="h-8 text-xs">
                                 <SelectValue />
@@ -111,12 +110,8 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <GripVertical className="h-4 w-4" />
-                    </Button>
                 </div>
             </div>
         </li>
     );
 }
-
