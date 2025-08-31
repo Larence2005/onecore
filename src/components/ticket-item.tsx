@@ -49,7 +49,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
 
     return (
         <li className="border rounded-lg transition-colors hover:bg-muted/50">
-            <div className="flex items-start p-4">
+            <div className="flex items-start p-4 pl-6">
                 <div className="flex items-center gap-4 flex-shrink-0">
                     <Checkbox id={`ticket-${email.id}`} />
                     <Avatar className="h-8 w-8">
@@ -69,7 +69,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </p>
                 </div>
 
-                <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-48">
+                <div className="flex flex-col items-stretch gap-2 ml-4 flex-shrink-0 w-40">
                     <div>
                         <Select defaultValue={priority.value}>
                             <SelectTrigger className="h-8 text-xs">
