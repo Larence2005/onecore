@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction } from '@/app/actions';
 import type { DetailedEmail } from '@/app/actions';
@@ -24,54 +24,18 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 
-function TicketDetailContent({ id }: { id: string }) {
-    const { settings, isConfigured } = useSettings();
-    const { toast } = useToast();
-    const [email, setEmail] = useState<DetailedEmail | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+
+const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const [isReplying, setIsReplying] = useState(false);
-    const [replyContent, setReplyContent] = useState('');
-    const [isSending, setIsSending] = useState(false);
-
-    useEffect(() => {
-        async function fetchEmail() {
-            if (!isConfigured) {
-                setError("Please configure your Microsoft Graph API credentials in Settings.");
-                setIsLoading(false);
-                return;
-            }
-            if (!id) return;
-
-            setIsLoading(true);
-            try {
-                const detailedEmail = await getEmail(settings, id);
-                setEmail(detailedEmail);
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-                setError(errorMessage);
-                toast({
-                    variant: "destructive",
-                    title: "Failed to load email.",
-                    description: errorMessage,
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        fetchEmail();
-    }, [id, settings, isConfigured, toast]);
 
     const handleIframeLoad = () => {
-        if (iframeRef.current) {
-            const body = iframeRef.current.contentWindow?.document.body;
+        if (iframeRef.current && iframeRef.current.contentWindow) {
+            const body = iframeRef.current.contentWindow.document.body;
             if (body) {
                 iframeRef.current.style.height = `${body.scrollHeight}px`;
                 const observer = new MutationObserver(() => {
-                    if (iframeRef.current) {
-                       iframeRef.current.style.height = `${iframeRef.current.contentWindow?.document.body.scrollHeight}px`;
+                    if (iframeRef.current && iframeRef.current.contentWindow) {
+                        iframeRef.current.style.height = `${iframeRef.current.contentWindow.document.body.scrollHeight}px`;
                     }
                 });
                 observer.observe(body, { childList: true, subtree: true, attributes: true });
@@ -79,13 +43,65 @@ function TicketDetailContent({ id }: { id: string }) {
         }
     };
     
-    const styledHtmlContent = email?.body.contentType === 'html' 
-        ? `<style>
-                body { margin: 0; padding: 0; font-family: sans-serif; color: hsl(var(--foreground)); overflow: hidden; }
-                img { max-width: 100% !important; height: auto !important; max-height: 400px; }
-                * { max-width: 100%; }
-           </style>${email.body.content}`
-        : '';
+    const styledHtmlContent = `
+        <style>
+            body { margin: 0; padding: 0; font-family: sans-serif; color: hsl(var(--foreground)); overflow: hidden; background-color: transparent; }
+            img { max-width: 100% !important; height: auto !important; max-height: 400px; }
+            * { max-width: 100%; word-break: break-word; }
+        </style>
+        ${htmlContent}
+    `;
+
+    return (
+        <iframe 
+            ref={iframeRef}
+            srcDoc={styledHtmlContent} 
+            className="w-full border-0" 
+            onLoad={handleIframeLoad}
+            scrolling="no"
+        />
+    );
+};
+
+
+function TicketDetailContent({ id }: { id: string }) {
+    const { settings, isConfigured } = useSettings();
+    const { toast } = useToast();
+    const [email, setEmail] = useState<DetailedEmail | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isReplying, setIsReplying] = useState(false);
+    const [replyContent, setReplyContent] = useState('');
+    const [isSending, setIsSending] = useState(false);
+
+    const fetchEmail = useCallback(async () => {
+        if (!isConfigured) {
+            setError("Please configure your Microsoft Graph API credentials in Settings.");
+            setIsLoading(false);
+            return;
+        }
+        if (!id) return;
+
+        setIsLoading(true);
+        try {
+            const detailedEmail = await getEmail(settings, id);
+            setEmail(detailedEmail);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            setError(errorMessage);
+            toast({
+                variant: "destructive",
+                title: "Failed to load email.",
+                description: errorMessage,
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [id, settings, isConfigured, toast]);
+
+    useEffect(() => {
+        fetchEmail();
+    }, [fetchEmail]);
 
     const handleSendReply = async () => {
         if (!replyContent.trim()) {
@@ -98,6 +114,8 @@ function TicketDetailContent({ id }: { id: string }) {
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setIsReplying(false);
+            // Refresh conversation after sending
+            await fetchEmail();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             toast({
@@ -109,6 +127,26 @@ function TicketDetailContent({ id }: { id: string }) {
             setIsSending(false);
         }
     };
+    
+    const renderMessageCard = (message: DetailedEmail, isFirst: boolean) => (
+        <Card key={message.id}>
+            <CardHeader>
+                {isFirst && <CardTitle className="text-2xl">{message.subject}</CardTitle>}
+                <CardDescription>
+                    From: {message.sender} &bull; Received: {format(parseISO(message.receivedDateTime), 'PPP p')}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="p-4">
+                    {message.body.contentType === 'html' ? (
+                        <EmailIframe htmlContent={message.body.content} />
+                    ) : (
+                        <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
 
     return (
         <div className="flex-1 flex flex-col min-w-0">
@@ -145,35 +183,19 @@ function TicketDetailContent({ id }: { id: string }) {
                     )}
 
                     {!isLoading && !error && email && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-2xl">{email.subject}</CardTitle>
-                                <CardDescription>
-                                    From: {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'PPP p')}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="p-4">
-                                    {email.body.contentType === 'html' ? (
-                                        <iframe 
-                                            ref={iframeRef}
-                                            srcDoc={styledHtmlContent} 
-                                            className="w-full border-0" 
-                                            onLoad={handleIframeLoad}
-                                            scrolling="no"
-                                        />
-                                    ) : (
-                                        <pre className="whitespace-pre-wrap text-sm p-4">{email.body.content}</pre>
-                                    )}
-                                </div>
-                                <Separator className="my-4" />
-                                <div className="flex justify-end">
-                                    <Button onClick={() => setIsReplying(!isReplying)}>
-                                        {isReplying ? 'Cancel' : 'Reply'}
-                                    </Button>
-                                </div>
-                                {isReplying && (
-                                    <div className="mt-4 space-y-4">
+                        <div className="space-y-4">
+                            {email.conversation && email.conversation.length > 0
+                                ? email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
+                                : renderMessageCard(email, true)
+                            }
+                            <div className="flex justify-end">
+                                <Button onClick={() => setIsReplying(!isReplying)}>
+                                    {isReplying ? 'Cancel' : 'Reply'}
+                                </Button>
+                            </div>
+                            {isReplying && (
+                                <Card>
+                                    <CardContent className="p-4 space-y-4">
                                         <Textarea 
                                             placeholder="Type your reply here..."
                                             className="min-h-[150px]"
@@ -195,10 +217,10 @@ function TicketDetailContent({ id }: { id: string }) {
                                                 )}
                                             </Button>
                                         </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
                     )}
                 </div>
                 
@@ -364,5 +386,3 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
-
-    

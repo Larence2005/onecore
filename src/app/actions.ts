@@ -27,6 +27,8 @@ export interface DetailedEmail extends Email {
         contentType: string;
         content: string;
     };
+    conversationId?: string;
+    conversation?: DetailedEmail[];
 }
 
 const getMsalConfig = (settings: Settings): Configuration => ({
@@ -126,7 +128,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error('Failed to acquire access token.');
     }
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
         },
@@ -137,13 +139,13 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error(`Failed to fetch email: ${error.error?.message || response.statusText}`);
     }
 
-    const emailData: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string } = await response.json() as any;
-
+    const emailData: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string, conversationId: string } = await response.json() as any;
+    
     const ticketDocRef = doc(db, 'tickets', id);
     const ticketDoc = await getDoc(ticketDocRef);
     const ticketData = ticketDoc.data();
 
-    return {
+    const baseEmail = {
         id: emailData.id,
         subject: ticketData?.title || emailData.subject || 'No Subject',
         sender: emailData.from?.emailAddress?.name || emailData.from?.emailAddress?.address || 'Unknown Sender',
@@ -153,7 +155,30 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         priority: ticketData?.priority || 'Low',
         assignee: ticketData?.assignee || 'Unassigned',
         status: ticketData?.status || 'Open',
+        conversationId: emailData.conversationId
     };
+
+    if (emailData.conversationId) {
+        const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${emailData.conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview&$orderby=receivedDateTime asc`, {
+            headers: { Authorization: `Bearer ${authResponse.accessToken}` }
+        });
+        if (conversationResponse.ok) {
+            const conversationData: { value: any[] } = await conversationResponse.json() as any;
+            baseEmail.conversation = conversationData.value.map((msg: any) => ({
+                id: msg.id,
+                subject: msg.subject,
+                sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
+                body: msg.body,
+                receivedDateTime: msg.receivedDateTime,
+                bodyPreview: msg.bodyPreview,
+                priority: baseEmail.priority,
+                assignee: baseEmail.assignee,
+                status: baseEmail.status,
+            }));
+        }
+    }
+    
+    return baseEmail;
 }
 
 
