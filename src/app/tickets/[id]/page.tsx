@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail } from '@/app/actions';
 import type { DetailedEmail } from '@/app/actions';
@@ -29,6 +29,7 @@ function TicketDetailContent({ id }: { id: string }) {
     const [email, setEmail] = useState<DetailedEmail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
 
     useEffect(() => {
         async function fetchEmail() {
@@ -59,8 +60,29 @@ function TicketDetailContent({ id }: { id: string }) {
         fetchEmail();
     }, [id, settings, isConfigured, toast]);
 
+    const handleIframeLoad = () => {
+        if (iframeRef.current) {
+            const body = iframeRef.current.contentWindow?.document.body;
+            if (body) {
+                // Set height to content height
+                iframeRef.current.style.height = `${body.scrollHeight}px`;
+                // Add mutation observer to handle dynamic content changes (e.g. images loading)
+                const observer = new MutationObserver(() => {
+                    if (iframeRef.current) {
+                       iframeRef.current.style.height = `${iframeRef.current.contentWindow?.document.body.scrollHeight}px`;
+                    }
+                });
+                observer.observe(body, { childList: true, subtree: true, attributes: true });
+            }
+        }
+    };
+    
     const styledHtmlContent = email?.body.contentType === 'html' 
-        ? `<style>img { max-width: 100%; height: auto; }</style>${email.body.content}`
+        ? `<style>
+                body { margin: 0; padding: 0; font-family: sans-serif; color: hsl(var(--foreground)); overflow: hidden; }
+                img { max-width: 100% !important; height: auto !important; max-height: 400px; }
+                * { max-width: 100%; }
+           </style>${email.body.content}`
         : '';
 
     const pageTitle = email?.subject || 'Ticket Details';
@@ -114,9 +136,15 @@ function TicketDetailContent({ id }: { id: string }) {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[40vh]">
+                             <div className="border rounded-md p-4">
                                 {email.body.contentType === 'html' ? (
-                                    <iframe srcDoc={styledHtmlContent} className="w-full h-full border-0 min-h-[inherit]" />
+                                    <iframe 
+                                        ref={iframeRef}
+                                        srcDoc={styledHtmlContent} 
+                                        className="w-full border-0" 
+                                        onLoad={handleIframeLoad}
+                                        scrolling="no"
+                                    />
                                 ) : (
                                     <pre className="whitespace-pre-wrap text-sm">{email.body.content}</pre>
                                 )}
