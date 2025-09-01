@@ -114,7 +114,7 @@ function TicketDetailContent({ id }: { id: string }) {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[60vh]">
+                            <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[40vh]">
                                 {email.body.contentType === 'html' ? (
                                     <iframe srcDoc={styledHtmlContent} className="w-full h-full border-0 min-h-[inherit]" />
                                 ) : (
