@@ -17,6 +17,9 @@ export interface Email {
     sender: string;
     bodyPreview: string;
     receivedDateTime: string;
+    priority: string;
+    assignee: string;
+    status: string;
 }
 
 export interface DetailedEmail extends Email {
@@ -64,24 +67,36 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
 
     const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string }[] } = await response.json() as any;
 
-    const emails = data.value.map(email => ({
-        id: email.id,
-        subject: email.subject || 'No Subject',
-        sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
-        bodyPreview: email.bodyPreview,
-        receivedDateTime: email.receivedDateTime,
-    }));
+    const emails = await Promise.all(data.value.map(async (email) => {
+        const ticketDocRef = doc(db, 'tickets', email.id);
+        const ticketDoc = await getDoc(ticketDocRef);
 
-    // For each email, try to store its title in Firestore.
-    for (const email of emails) {
-        try {
-            const ticketDocRef = doc(db, 'tickets', email.id);
-            await setDoc(ticketDocRef, { title: email.subject }, { merge: true });
-            console.log(`Successfully created or updated ticket for email: ${email.id}`);
-        } catch (error) {
-            console.error(`Failed to create ticket document for email ${email.id}:`, error);
+        let ticketData;
+
+        if (!ticketDoc.exists()) {
+            const newTicketData = {
+                title: email.subject || 'No Subject',
+                priority: 'Low',
+                assignee: 'Unassigned',
+                status: 'Open',
+            };
+            await setDoc(ticketDocRef, newTicketData);
+            ticketData = newTicketData;
+        } else {
+            ticketData = ticketDoc.data();
         }
-    }
+
+        return {
+            id: email.id,
+            subject: email.subject || 'No Subject',
+            sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+            bodyPreview: email.bodyPreview,
+            receivedDateTime: email.receivedDateTime,
+            priority: ticketData?.priority || 'Low',
+            assignee: ticketData?.assignee || 'Unassigned',
+            status: ticketData?.status || 'Open',
+        };
+    }));
 
 
     return emails;
@@ -105,15 +120,22 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error(`Failed to fetch email: ${error.error?.message || response.statusText}`);
     }
 
-    const email: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string } = await response.json() as any;
+    const emailData: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string } = await response.json() as any;
+
+    const ticketDocRef = doc(db, 'tickets', id);
+    const ticketDoc = await getDoc(ticketDocRef);
+    const ticketData = ticketDoc.data();
 
     return {
-        id: email.id,
-        subject: email.subject || 'No Subject',
-        sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
-        body: email.body,
-        receivedDateTime: email.receivedDateTime,
-        bodyPreview: email.bodyPreview,
+        id: emailData.id,
+        subject: emailData.subject || 'No Subject',
+        sender: emailData.from?.emailAddress?.name || emailData.from?.emailAddress?.address || 'Unknown Sender',
+        body: emailData.body,
+        receivedDateTime: emailData.receivedDateTime,
+        bodyPreview: emailData.bodyPreview,
+        priority: ticketData?.priority || 'Low',
+        assignee: ticketData?.assignee || 'Unassigned',
+        status: ticketData?.status || 'Open',
     };
 }
 

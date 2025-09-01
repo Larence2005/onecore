@@ -14,34 +14,28 @@ type TicketItemProps = {
     email: Email;
 };
 
-// Mock data for additional fields
 const priorities = [
-    { value: 'low', label: 'Low', color: 'bg-green-500' },
-    { value: 'medium', label: 'Medium', color: 'bg-blue-500' },
-    { value: 'high', label: 'High', color: 'bg-yellow-500' },
-    { value: 'urgent', label: 'Urgent', color: 'bg-red-500' },
+    { value: 'Low', label: 'Low', color: 'bg-green-500' },
+    { value: 'Medium', label: 'Medium', color: 'bg-blue-500' },
+    { value: 'High', label: 'High', color: 'bg-yellow-500' },
+    { value: 'Urgent', label: 'Urgent', color: 'bg-red-500' },
 ];
 
 const statuses = [
-    { value: 'open', label: 'Open' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'resolved', label: 'Resolved' },
-    { value: 'closed', label: 'Closed' },
+    { value: 'Open', label: 'Open' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Resolved', label: 'Resolved' },
+    { value: 'Closed', label: 'Closed' },
 ];
 
-const getPriority = (subject: string) => {
-    const hash = subject.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
-    return priorities[Math.abs(hash) % priorities.length];
-};
-
-const getStatus = (subject: string) => {
-    const hash = subject.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
-    return statuses[Math.abs(hash) % statuses.length];
-};
+const assignees = [
+    'Unassigned',
+    'John Doe',
+    'Jane Smith'
+]
 
 export function TicketItem({ email }: TicketItemProps) {
-    const priority = getPriority(email.subject);
-    const status = getStatus(email.subject);
+    const priorityDetails = priorities.find(p => p.value === email.priority) || priorities[0];
 
     return (
         <li className="transition-colors hover:bg-muted/50">
@@ -67,12 +61,12 @@ export function TicketItem({ email }: TicketItemProps) {
 
                 <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-36">
                     <div>
-                        <Select defaultValue={priority.value}>
+                        <Select defaultValue={email.priority}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
-                                        <span className={cn("h-2 w-2 rounded-full", priority.color)} />
-                                        {priority.label}
+                                        <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
+                                        {priorityDetails.label}
                                     </span>
                                 </SelectValue>
                             </SelectTrigger>
@@ -89,17 +83,19 @@ export function TicketItem({ email }: TicketItemProps) {
                         </Select>
                     </div>
                      <div>
-                        <Select defaultValue="onecore-su">
+                        <Select defaultValue={email.assignee}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="onecore-su">-- / Onecore Su...</SelectItem>
+                               {assignees.map(a => (
+                                     <SelectItem key={a} value={a}>{a}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
                      <div>
-                        <Select defaultValue={status.value}>
+                        <Select defaultValue={email.status}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
