@@ -19,7 +19,7 @@ type TicketsViewProps = {
 
 export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh }: TicketsViewProps) {
     return (
-        <div className="flex flex-col h-full bg-background p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
              <div className="flex-grow overflow-y-auto">
                 {isLoading ? (
                     <div className="space-y-4">
@@ -40,8 +40,8 @@ export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh 
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 ) : emails.length > 0 ? (
-                     <div className="border rounded-lg">
-                        <div className="flex items-center gap-4 p-4 border-b">
+                     <div className="border-t">
+                        <div className="flex items-center gap-4 p-4 border-b bg-muted/50">
                             <Checkbox id="select-all" />
                             <span className="text-sm font-medium text-muted-foreground">Select all</span>
                         </div>

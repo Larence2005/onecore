@@ -7,6 +7,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { cn } from "@/lib/utils";
+import { Card } from "./ui/card";
 
 type TicketItemProps = {
     email: Email;
@@ -53,17 +54,18 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
     const ticketNumber = getTicketNumber(email.id);
 
     return (
-        <li className="border-b last:border-b-0 transition-colors hover:bg-muted/50">
-            <div className="flex items-center p-4">
-                <div className="flex items-center gap-4 flex-shrink-0">
+        <li className="transition-colors hover:bg-muted/50">
+           <Card className="m-2 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
+                <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                     <Checkbox id={`ticket-${email.id}`} />
                     <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
                         {ticketNumber}
                     </div>
                 </div>
 
-                <div className="flex-grow ml-4 min-w-0 cursor-pointer" onClick={onClick}>
-                    <div className="flex items-center gap-2 mb-1">
+                <div className="flex-grow min-w-0 cursor-pointer w-full" onClick={onClick}>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Badge variant="destructive">Overdue</Badge>
                         <Badge variant="secondary">Customer responded</Badge>
                         <Badge variant="outline">CHG</Badge>
@@ -75,7 +77,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </p>
                 </div>
 
-                <div className="flex flex-col items-stretch gap-1 ml-4 flex-shrink-0 w-36">
+                <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-36">
                     <div>
                         <Select defaultValue={priority.value}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
@@ -122,6 +124,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </div>
                 </div>
             </div>
+            </Card>
         </li>
     );
 }
