@@ -73,7 +73,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
     }));
 
     // For each email, check if it exists in Firestore and create it if it doesn't.
-    await Promise.all(emails.map(async (email) => {
+    for (const email of emails) {
         try {
             const ticketDocRef = doc(db, 'tickets', email.id);
             const docSnap = await getDoc(ticketDocRef);
@@ -84,11 +84,12 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                     title: email.subject,
                     createdAt: new Date(),
                 });
+                console.log(`Successfully created ticket for email: ${email.id}`);
             }
         } catch (error) {
             console.error(`Failed to create ticket document for email ${email.id}:`, error);
         }
-    }));
+    }
 
 
     return emails;
