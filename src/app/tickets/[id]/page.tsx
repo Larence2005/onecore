@@ -212,7 +212,7 @@ function TicketDetailContent({ id }: { id: string }) {
             setReplyContent('');
             setIsReplying(false);
             await fetchEmail();
-        } catch (err) {
+        } catch (err) => {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             toast({
                 variant: "destructive",
@@ -226,15 +226,23 @@ function TicketDetailContent({ id }: { id: string }) {
     
     const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean, subject: string) => (
         <Card key={message.id} className="overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between p-4 bg-muted/50">
-                 <CardDescription>
-                    From: {message.sender} &bull; Received: {format(parseISO(message.receivedDateTime), 'PPP p')}
-                </CardDescription>
+            <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
+                 <Avatar className="h-10 w-10">
+                    <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 grid gap-1 text-sm">
+                    <div className="font-semibold">{message.sender}</div>
+                     <div className="text-xs text-muted-foreground">
+                        To: {email?.sender === message.sender ? 'Me' : email?.sender}
+                    </div>
+                </div>
+                <div className="text-xs text-muted-foreground text-right">
+                    {format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}
+                </div>
             </CardHeader>
             <CardContent className="p-0">
-                {isFirstInThread && <CardTitle className="px-4 pt-4 pb-2 text-2xl">{subject}</CardTitle>}
-                 {!isFirstInThread && <p className="px-4 pt-4 pb-2 text-lg font-semibold">Re: {subject}</p>}
                 <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{subject}</h2>}
                     {message.body.contentType === 'html' ? (
                         <EmailIframe htmlContent={message.body.content} />
                     ) : (
@@ -254,21 +262,28 @@ function TicketDetailContent({ id }: { id: string }) {
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <h1 className="text-xl font-bold">Ticket Details</h1>
+                    <h1 className="text-xl font-bold truncate">{email?.subject || "Ticket Details"}</h1>
                 </div>
             </Header>
             <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
                 <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4">
                     {isLoading && (
-                        <Card>
-                            <CardHeader>
-                                <Skeleton className="h-8 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                            </CardHeader>
-                            <CardContent>
-                                <Skeleton className="h-48 w-full" />
-                            </CardContent>
-                        </Card>
+                        <div className="space-y-4">
+                            {[...Array(2)].map((_, i) => (
+                                <Card key={i}>
+                                    <CardHeader className="flex flex-row items-center gap-4 p-4">
+                                        <Skeleton className="h-10 w-10 rounded-full" />
+                                        <div className="flex-1 space-y-2">
+                                            <Skeleton className="h-4 w-1/4" />
+                                            <Skeleton className="h-3 w-1/3" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4">
+                                        <Skeleton className="h-24 w-full" />
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
                     )}
 
                     {error && (
@@ -280,7 +295,7 @@ function TicketDetailContent({ id }: { id: string }) {
                     )}
 
                     {!isLoading && !error && email && (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             {email.conversation && email.conversation.length > 0
                                 ? email.conversation.map((msg, index) => renderMessageCard(msg, index === 0, email.subject))
                                 : renderMessageCard(email, true, email.subject)
@@ -344,7 +359,7 @@ function TicketDetailContent({ id }: { id: string }) {
                             </CardHeader>
                             <CardContent className="space-y-4 text-sm">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Sender</span>
+                                    <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Requester</span>
                                     <span className="font-medium text-right">{email.sender}</span>
                                 </div>
                                 <Separator />
