@@ -3,12 +3,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket } from '@/app/actions';
 import type { DetailedEmail } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -19,10 +19,11 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem,
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LayoutDashboard, List, Users, Building2, Settings, Pencil } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
@@ -104,6 +105,30 @@ function TicketDetailContent({ id }: { id: string }) {
     const [replyContent, setReplyContent] = useState('');
     const [isSending, setIsSending] = useState(false);
 
+    const [currentPriority, setCurrentPriority] = useState('');
+    const [currentAssignee, setCurrentAssignee] = useState('');
+    const [currentStatus, setCurrentStatus] = useState('');
+
+    const priorities = [
+        { value: 'Low', label: 'Low' },
+        { value: 'Medium', label: 'Medium' },
+        { value: 'High', label: 'High' },
+        { value: 'Urgent', label: 'Urgent' },
+    ];
+    
+    const statuses = [
+        { value: 'Open', label: 'Open' },
+        { value: 'Pending', label: 'Pending' },
+        { value: 'Resolved', label: 'Resolved' },
+        { value: 'Closed', label: 'Closed' },
+    ];
+    
+    const assignees = [
+        'Unassigned',
+        'John Doe',
+        'Jane Smith'
+    ];
+
     const fetchEmail = useCallback(async () => {
         if (!isConfigured) {
             setError("Please configure your Microsoft Graph API credentials in Settings.");
@@ -116,6 +141,9 @@ function TicketDetailContent({ id }: { id: string }) {
         try {
             const detailedEmail = await getEmail(settings, id);
             setEmail(detailedEmail);
+            setCurrentPriority(detailedEmail.priority);
+            setCurrentAssignee(detailedEmail.assignee);
+            setCurrentStatus(detailedEmail.status);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             setError(errorMessage);
@@ -132,6 +160,43 @@ function TicketDetailContent({ id }: { id: string }) {
     useEffect(() => {
         fetchEmail();
     }, [fetchEmail]);
+    
+    const handleUpdate = async (field: 'priority' | 'assignee' | 'status', value: string) => {
+        if (!email) return;
+
+        const originalState = {
+            priority: currentPriority,
+            assignee: currentAssignee,
+            status: currentStatus,
+        };
+
+        // Optimistic UI update
+        if (field === 'priority') setCurrentPriority(value);
+        if (field === 'assignee') setCurrentAssignee(value);
+        if (field === 'status') setCurrentStatus(value);
+        
+        const ticketIdToUpdate = email.conversation?.[0]?.id || email.id;
+
+        const result = await updateTicket(ticketIdToUpdate, { [field]: value });
+
+        if (!result.success) {
+             if (field === 'priority') setCurrentPriority(originalState.priority);
+             if (field === 'assignee') setCurrentAssignee(originalState.assignee);
+             if (field === 'status') setCurrentStatus(originalState.status);
+
+            toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: result.error,
+            });
+        } else {
+            toast({
+                title: 'Ticket Updated',
+                description: `The ${field} has been changed to ${value}.`,
+            });
+        }
+    };
+
 
     const handleSendReply = async () => {
         if (!replyContent.trim()) {
@@ -159,7 +224,7 @@ function TicketDetailContent({ id }: { id: string }) {
         }
     };
     
-    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => (
+    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean, subject: string) => (
         <Card key={message.id} className="overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between">
                  <CardDescription>
@@ -167,7 +232,7 @@ function TicketDetailContent({ id }: { id: string }) {
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-                {isFirstInThread && <CardTitle className="px-6 pb-4 text-2xl">{message.subject}</CardTitle>}
+                {isFirstInThread && <CardTitle className="px-6 pb-4 text-2xl">{subject}</CardTitle>}
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                     {message.body.contentType === 'html' ? (
                         <EmailIframe htmlContent={message.body.content} />
@@ -216,8 +281,8 @@ function TicketDetailContent({ id }: { id: string }) {
                     {!isLoading && !error && email && (
                         <div className="space-y-4">
                             {email.conversation && email.conversation.length > 0
-                                ? email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
-                                : renderMessageCard(email, true)
+                                ? email.conversation.map((msg, index) => renderMessageCard(msg, index === 0, email.subject))
+                                : renderMessageCard(email, true, email.subject)
                             }
                             <div className="flex justify-end">
                                 <Button onClick={() => setIsReplying(!isReplying)}>
@@ -288,17 +353,48 @@ function TicketDetailContent({ id }: { id: string }) {
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><Shield size={16} /> Priority</span>
-                                    <Badge variant="outline">{email.priority}</Badge>
+                                    <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
+                                        <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
+                                            <SelectValue>
+                                                <Badge variant="outline">{currentPriority}</Badge>
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {priorities.map(p => (
+                                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
-                                     <Badge variant="outline">{email.status}</Badge>
+                                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                                        <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
+                                            <SelectValue>
+                                                <Badge variant="outline">{currentStatus}</Badge>
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {statuses.map(s => (
+                                                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><UserCheck size={16} /> Assignee</span>
-                                    <span className="font-medium">{email.assignee}</span>
+                                    <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                                        <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end font-medium">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                           {assignees.map(a => (
+                                                 <SelectItem key={a} value={a}>{a}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </CardContent>
                         </Card>
@@ -417,3 +513,4 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
+
