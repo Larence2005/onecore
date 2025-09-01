@@ -212,7 +212,7 @@ function TicketDetailContent({ id }: { id: string }) {
             setReplyContent('');
             setIsReplying(false);
             await fetchEmail();
-        } catch (err) => {
+        } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             toast({
                 variant: "destructive",
