@@ -63,7 +63,7 @@ export default function LoginPage() {
         <div className="flex items-center mb-6">
             <Mail className="h-8 w-8 text-primary" />
             <h1 className="ml-3 text-3xl font-headline font-bold text-foreground">
-                Mailflow Manager
+                Onecore
             </h1>
         </div>
         <Card className="w-full max-w-sm">

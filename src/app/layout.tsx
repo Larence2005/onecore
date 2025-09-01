@@ -5,7 +5,7 @@ import { SettingsProvider } from '@/providers/settings-provider';
 import { AuthProvider } from '@/providers/auth-provider';
 
 export const metadata: Metadata = {
-  title: 'Mailflow Manager',
+  title: 'Onecore',
   description: 'Manage your email workflows with ease.',
 };
 
