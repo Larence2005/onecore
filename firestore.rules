@@ -3,24 +3,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Users can only read and write their own settings
+    // Allow users to manage their own settings
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Authenticated users can read and write to tickets and counters
+    // Allow authenticated users to manage tickets and counters
     match /tickets/{ticketId} {
-      allow read, create, update, delete: if isAuthenticated();
+      allow read, create: if request.auth != null;
     }
 
     match /counters/{counterId} {
-      allow read, write: if isAuthenticated();
+        allow read, write: if request.auth != null;
     }
   }
 }
