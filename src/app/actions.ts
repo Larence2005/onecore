@@ -17,7 +17,6 @@ export interface Email {
     sender: string;
     bodyPreview: string;
     receivedDateTime: string;
-    ticketNumber?: number;
 }
 
 export interface DetailedEmail extends Email {
@@ -43,27 +42,6 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
     };
 
     return await cca.acquireTokenByClientCredential(tokenRequest);
-}
-
-async function getNextTicketNumber(): Promise<number> {
-    const counterRef = doc(db, 'counters', 'ticketCounter');
-    try {
-        const ticketNumber = await runTransaction(db, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            if (!counterDoc.exists()) {
-                // Initialize the counter if it doesn't exist.
-                transaction.set(counterRef, { currentNumber: 2 });
-                return 1;
-            }
-            const newNumber = counterDoc.data().currentNumber;
-            transaction.update(counterRef, { currentNumber: newNumber + 1 });
-            return newNumber;
-        });
-        return ticketNumber;
-    } catch (e) {
-        console.error("Transaction failed: ", e);
-        throw new Error("Could not generate ticket number.");
-    }
 }
 
 
@@ -94,38 +72,27 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         receivedDateTime: email.receivedDateTime,
     }));
 
-    const emailsWithTicketNumbers = await Promise.all(emails.map(async (email) => {
+    // For each email, check if it exists in Firestore and create it if it doesn't.
+    await Promise.all(emails.map(async (email) => {
         try {
-            const ticketsRef = collection(db, 'tickets');
-            const q = query(ticketsRef, where("emailId", "==", email.id));
-            const querySnapshot = await getDocs(q);
+            const ticketDocRef = doc(db, 'tickets', email.id);
+            const docSnap = await getDoc(ticketDocRef);
 
-            let ticketNumber: number | undefined;
-
-            if (querySnapshot.empty) {
-                // No ticket exists, create one
-                const newTicketNumber = await getNextTicketNumber();
-                const newTicketRef = doc(collection(db, 'tickets'));
-                await setDoc(newTicketRef, {
+            if (!docSnap.exists()) {
+                // Document doesn't exist, so create it.
+                await setDoc(ticketDocRef, {
                     emailId: email.id,
                     title: email.subject,
                     createdAt: new Date(),
-                    ticketNumber: newTicketNumber,
                 });
-                ticketNumber = newTicketNumber;
-            } else {
-                // Ticket exists, get its number
-                ticketNumber = querySnapshot.docs[0].data().ticketNumber;
             }
-            return { ...email, ticketNumber };
         } catch (error) {
-            console.error(`Failed to process ticket for email ${email.id}:`, error);
-            // Return email without ticket number if there's an error
-            return email;
+            console.error(`Failed to create ticket document for email ${email.id}:`, error);
         }
     }));
 
-    return emailsWithTicketNumbers;
+
+    return emails;
 }
 
 
@@ -148,19 +115,6 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
 
     const email: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string } = await response.json() as any;
 
-    let ticketNumber: number | undefined;
-    try {
-        const ticketsRef = collection(db, 'tickets');
-        const q = query(ticketsRef, where("emailId", "==", id));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            ticketNumber = querySnapshot.docs[0].data().ticketNumber;
-        }
-    } catch (error) {
-        console.error(`Failed to retrieve ticket number for email ${id}:`, error);
-    }
-
     return {
         id: email.id,
         subject: email.subject || 'No Subject',
@@ -168,7 +122,6 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         body: email.body,
         receivedDateTime: email.receivedDateTime,
         bodyPreview: email.bodyPreview,
-        ticketNumber: ticketNumber,
     };
 }
 

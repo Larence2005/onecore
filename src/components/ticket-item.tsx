@@ -51,7 +51,7 @@ export function TicketItem({ email }: TicketItemProps) {
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                     <Checkbox id={`ticket-${email.id}`} />
                     <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
-                        {email.ticketNumber ? `${email.ticketNumber}`.padStart(6, '0') : 'N/A'}
+                        {/* Ticket Number Removed */}
                     </div>
                 </div>
 
