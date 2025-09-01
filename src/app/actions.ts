@@ -67,10 +67,12 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
 
     const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string }[] } = await response.json() as any;
 
-    const emails = await Promise.all(data.value.map(async (email) => {
+    const emails: Email[] = [];
+
+    for (const email of data.value) {
         const ticketDocRef = doc(db, 'tickets', email.id);
         const ticketDoc = await getDoc(ticketDocRef);
-
+        
         let ticketData;
 
         if (!ticketDoc.exists()) {
@@ -80,13 +82,19 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                 assignee: 'Unassigned',
                 status: 'Open',
             };
-            await setDoc(ticketDocRef, newTicketData);
-            ticketData = newTicketData;
+            try {
+                await setDoc(ticketDocRef, newTicketData);
+                ticketData = newTicketData;
+            } catch (error) {
+                console.error("Failed to create ticket in Firestore:", error);
+                // Continue with default data if firestore fails
+                ticketData = newTicketData;
+            }
         } else {
             ticketData = ticketDoc.data();
         }
 
-        return {
+        emails.push({
             id: email.id,
             subject: email.subject || 'No Subject',
             sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
@@ -95,9 +103,8 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
-        };
-    }));
-
+        });
+    }
 
     return emails;
 }
