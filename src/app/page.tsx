@@ -49,7 +49,7 @@ export default function Home() {
     <SidebarProvider>
        <div className={cn(
         "grid min-h-screen bg-background text-foreground",
-        activeView === 'tickets' ? "grid-cols-1 lg:grid-cols-[1fr_320px]" : "grid-cols-1"
+        activeView === 'tickets' ? "lg:grid-cols-[280px_1fr_320px]" : "lg:grid-cols-[280px_1fr]"
       )}>
         <Sidebar variant="inset" className="w-[280px] bg-card hidden lg:flex flex-col py-6">
           <SidebarContent className="flex-grow flex flex-col">
