@@ -296,10 +296,13 @@ function TicketDetailContent({ id }: { id: string }) {
 
                     {!isLoading && !error && email && (
                         <div className="space-y-6">
-                            {email.conversation && email.conversation.length > 0
-                                ? email.conversation.map((msg, index) => renderMessageCard(msg, index === 0, email.subject))
-                                : renderMessageCard(email, true, email.subject)
-                            }
+                            {email.conversation && email.conversation.length > 0 ? (
+                                email.conversation.map((msg, index) =>
+                                    renderMessageCard(msg, index === 0, email.subject)
+                                )
+                            ) : (
+                                renderMessageCard(email, true, email.subject)
+                            )}
 
                             <div className="flex justify-end">
                                 <Button onClick={() => setIsReplying(!isReplying)}>
@@ -530,3 +533,5 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
+
+    
