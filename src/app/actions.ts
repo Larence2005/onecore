@@ -79,9 +79,8 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             const docSnap = await getDoc(ticketDocRef);
 
             if (!docSnap.exists()) {
-                // Document doesn't exist, so create it.
+                // Document doesn't exist, so create it with the title.
                 await setDoc(ticketDocRef, {
-                    emailId: email.id,
                     title: email.subject,
                     createdAt: new Date(),
                 });

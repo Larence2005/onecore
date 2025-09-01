@@ -50,9 +50,6 @@ export function TicketItem({ email }: TicketItemProps) {
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                     <Checkbox id={`ticket-${email.id}`} />
-                    <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
-                        {/* Ticket Number Removed */}
-                    </div>
                 </div>
 
                 <div className="flex-grow min-w-0 w-full">
