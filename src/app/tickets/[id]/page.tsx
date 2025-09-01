@@ -47,7 +47,9 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
                 const observer = new MutationObserver(resizeIframe);
                 observer.observe(body, { childList: true, subtree: true, attributes: true, characterData: true });
                 
-                iframeRef.current.contentWindow.addEventListener('resize', resizeIframe);
+                if (iframeRef.current.contentWindow) {
+                    iframeRef.current.contentWindow.addEventListener('resize', resizeIframe);
+                }
 
                 return () => {
                     observer.disconnect();
@@ -296,9 +298,7 @@ function TicketDetailContent({ id }: { id: string }) {
                     {!isLoading && !error && email && (
                         <div className="space-y-6">
                             {email.conversation && email.conversation.length > 0 ? (
-                                email.conversation.map((msg, index) =>
-                                    renderMessageCard(msg, index === 0)
-                                )
+                                email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
                             ) : (
                                 renderMessageCard(email, true)
                             )}
@@ -532,3 +532,4 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
+
