@@ -28,28 +28,58 @@ import { Textarea } from '@/components/ui/textarea';
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    const handleIframeLoad = () => {
+    const setupIframe = () => {
         if (iframeRef.current && iframeRef.current.contentWindow) {
             const body = iframeRef.current.contentWindow.document.body;
+            const documentElement = iframeRef.current.contentWindow.document.documentElement;
             if (body) {
-                iframeRef.current.style.height = `${body.scrollHeight}px`;
-                const observer = new MutationObserver(() => {
-                    if (iframeRef.current && iframeRef.current.contentWindow) {
-                        iframeRef.current.style.height = `${iframeRef.current.contentWindow.document.body.scrollHeight}px`;
+                const resizeIframe = () => {
+                    if (iframeRef.current) {
+                        const newHeight = Math.max(body.scrollHeight, documentElement.scrollHeight);
+                        iframeRef.current.style.height = `${newHeight}px`;
                     }
-                });
+                };
+
+                // Initial resize
+                resizeIframe();
+
+                // Resize on content change
+                const observer = new MutationObserver(resizeIframe);
                 observer.observe(body, { childList: true, subtree: true, attributes: true });
+
+                // Resize on window resize (for responsive content)
+                iframeRef.current.contentWindow.addEventListener('resize', resizeIframe);
+                
+                return () => {
+                    observer.disconnect();
+                    if(iframeRef.current && iframeRef.current.contentWindow) {
+                       iframeRef.current.contentWindow.removeEventListener('resize', resizeIframe);
+                    }
+                };
             }
         }
     };
     
+    useEffect(() => {
+        const cleanup = setupIframe();
+        return cleanup;
+    }, [htmlContent]);
+    
     const styledHtmlContent = `
         <style>
-            body { margin: 0; padding: 0; font-family: sans-serif; color: hsl(var(--foreground)); overflow: hidden; background-color: transparent; }
-            img { max-width: 100% !important; height: auto !important; max-height: 400px; }
-            * { max-width: 100%; word-break: break-word; }
+            body { 
+                margin: 0; 
+                padding: 1rem;
+                font-family: sans-serif; 
+                color: hsl(var(--foreground)); 
+                overflow: hidden; 
+                background-color: transparent; 
+                word-wrap: break-word;
+            }
+            img { max-width: 100% !important; height: auto !important; }
+            * { max-width: 100%; }
         </style>
-        ${htmlContent}
+        ${htmlContent || ''}
     `;
 
     return (
@@ -57,7 +87,7 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
             ref={iframeRef}
             srcDoc={styledHtmlContent} 
             className="w-full border-0" 
-            onLoad={handleIframeLoad}
+            onLoad={setupIframe}
             scrolling="no"
         />
     );
@@ -110,11 +140,12 @@ function TicketDetailContent({ id }: { id: string }) {
         }
         setIsSending(true);
         try {
-            await replyToEmailAction(settings, id, replyContent);
+            const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
+            if(!latestMessageId) throw new Error("Could not determine message to reply to.");
+            await replyToEmailAction(settings, latestMessageId, replyContent);
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setIsReplying(false);
-            // Refresh conversation after sending
             await fetchEmail();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -128,20 +159,20 @@ function TicketDetailContent({ id }: { id: string }) {
         }
     };
     
-    const renderMessageCard = (message: DetailedEmail, isFirst: boolean) => (
-        <Card key={message.id}>
-            <CardHeader>
-                {isFirst && <CardTitle className="text-2xl">{message.subject}</CardTitle>}
-                <CardDescription>
+    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => (
+        <Card key={message.id} className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between">
+                 <CardDescription>
                     From: {message.sender} &bull; Received: {format(parseISO(message.receivedDateTime), 'PPP p')}
                 </CardDescription>
             </CardHeader>
-            <CardContent>
-                <div className="p-4">
+            <CardContent className="p-0">
+                {isFirstInThread && <CardTitle className="px-6 pb-4 text-2xl">{message.subject}</CardTitle>}
+                <div className="prose prose-sm dark:prose-invert max-w-none">
                     {message.body.contentType === 'html' ? (
                         <EmailIframe htmlContent={message.body.content} />
                     ) : (
-                        <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
+                        <pre className="whitespace-pre-wrap text-sm p-6">{message.body.content}</pre>
                     )}
                 </div>
             </CardContent>

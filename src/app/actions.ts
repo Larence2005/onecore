@@ -20,6 +20,7 @@ export interface Email {
     priority: string;
     assignee: string;
     status: string;
+    conversationId?: string;
 }
 
 export interface DetailedEmail extends Email {
@@ -27,7 +28,6 @@ export interface DetailedEmail extends Email {
         contentType: string;
         content: string;
     };
-    conversationId?: string;
     conversation?: DetailedEmail[];
 }
 
@@ -56,7 +56,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         throw new Error('Failed to acquire access token.');
     }
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from,bodyPreview,receivedDateTime&$orderby=receivedDateTime desc`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
         },
@@ -67,11 +67,19 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
     }
 
-    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string }[] } = await response.json() as any;
+    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
+
+    const conversations = new Map<string, any>();
+    for (const email of data.value) {
+        if (!conversations.has(email.conversationId)) {
+            conversations.set(email.conversationId, email);
+        }
+    }
+    
+    const uniqueEmails = Array.from(conversations.values()).slice(0, 10);
 
     const emails: Email[] = [];
-
-    for (const email of data.value) {
+    for (const email of uniqueEmails) {
         const ticketDocRef = doc(db, 'tickets', email.id);
         const ticketDoc = await getDoc(ticketDocRef);
         
@@ -115,6 +123,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
+            conversationId: email.conversationId,
         });
     }
 
@@ -128,42 +137,41 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error('Failed to acquire access token.');
     }
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
-        headers: {
-            Authorization: `Bearer ${authResponse.accessToken}`,
-        },
+    // First, get the single message to find its conversationId
+    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
+        headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to fetch email: ${error.error?.message || response.statusText}`);
+    if (!messageResponse.ok) {
+        const error = await messageResponse.json();
+        throw new Error(`Failed to fetch email: ${error.error?.message || messageResponse.statusText}`);
     }
+    const mainEmailData: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string, conversationId: string } = await messageResponse.json() as any;
 
-    const emailData: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string, conversationId: string } = await response.json() as any;
-    
-    const ticketDocRef = doc(db, 'tickets', id);
+    const ticketDocRef = doc(db, 'tickets', mainEmailData.id);
     const ticketDoc = await getDoc(ticketDocRef);
     const ticketData = ticketDoc.data();
-
-    const baseEmail = {
-        id: emailData.id,
-        subject: ticketData?.title || emailData.subject || 'No Subject',
-        sender: emailData.from?.emailAddress?.name || emailData.from?.emailAddress?.address || 'Unknown Sender',
-        body: emailData.body,
-        receivedDateTime: emailData.receivedDateTime,
-        bodyPreview: emailData.bodyPreview,
+    
+    const baseEmail: DetailedEmail = {
+        id: mainEmailData.id,
+        subject: ticketData?.title || mainEmailData.subject || 'No Subject',
+        sender: mainEmailData.from?.emailAddress?.name || mainEmailData.from?.emailAddress?.address || 'Unknown Sender',
+        body: mainEmailData.body,
+        receivedDateTime: mainEmailData.receivedDateTime,
+        bodyPreview: mainEmailData.bodyPreview,
         priority: ticketData?.priority || 'Low',
         assignee: ticketData?.assignee || 'Unassigned',
         status: ticketData?.status || 'Open',
-        conversationId: emailData.conversationId
+        conversationId: mainEmailData.conversationId
     };
 
-    if (emailData.conversationId) {
-        const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${emailData.conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview&$orderby=receivedDateTime asc`, {
+    if (mainEmailData.conversationId) {
+        const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${mainEmailData.conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview&$orderby=receivedDateTime asc`, {
             headers: { Authorization: `Bearer ${authResponse.accessToken}` }
         });
         if (conversationResponse.ok) {
             const conversationData: { value: any[] } = await conversationResponse.json() as any;
+            // Map conversation messages
             baseEmail.conversation = conversationData.value.map((msg: any) => ({
                 id: msg.id,
                 subject: msg.subject,
@@ -171,10 +179,13 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
                 body: msg.body,
                 receivedDateTime: msg.receivedDateTime,
                 bodyPreview: msg.bodyPreview,
-                priority: baseEmail.priority,
-                assignee: baseEmail.assignee,
-                status: baseEmail.status,
+                // These properties might not be relevant for each message in a conversation, but we'll include them.
+                priority: ticketData?.priority || 'Low', 
+                assignee: ticketData?.assignee || 'Unassigned',
+                status: ticketData?.status || 'Open'
             }));
+        } else {
+             console.error("Failed to fetch conversation thread.");
         }
     }
     
