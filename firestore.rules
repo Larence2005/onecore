@@ -1,12 +1,13 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /tickets/{ticketId} {
-      allow read, create: if request.auth != null;
+    // TEMPORARY: Open rules for debugging.
+    // This allows all reads and writes to all collections.
+    // This is insecure and should be changed before production.
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

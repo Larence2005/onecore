@@ -72,20 +72,12 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         receivedDateTime: email.receivedDateTime,
     }));
 
-    // For each email, check if it exists in Firestore and create it if it doesn't.
+    // For each email, try to store its title in Firestore.
     for (const email of emails) {
         try {
             const ticketDocRef = doc(db, 'tickets', email.id);
-            const docSnap = await getDoc(ticketDocRef);
-
-            if (!docSnap.exists()) {
-                // Document doesn't exist, so create it with the title.
-                await setDoc(ticketDocRef, {
-                    title: email.subject,
-                    createdAt: new Date(),
-                });
-                console.log(`Successfully created ticket for email: ${email.id}`);
-            }
+            await setDoc(ticketDocRef, { title: email.subject }, { merge: true });
+            console.log(`Successfully created or updated ticket for email: ${email.id}`);
         } catch (error) {
             console.error(`Failed to create ticket document for email ${email.id}:`, error);
         }
