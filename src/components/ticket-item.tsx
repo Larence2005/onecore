@@ -11,6 +11,7 @@ import { Card } from "./ui/card";
 import Link from 'next/link';
 import { updateTicket } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 type TicketItemProps = {
     email: Email;
@@ -37,10 +38,20 @@ const assignees = [
 ]
 
 export function TicketItem({ email }: TicketItemProps) {
-    const priorityDetails = priorities.find(p => p.value === email.priority) || priorities[0];
+    const [currentPriority, setCurrentPriority] = useState(email.priority);
+    const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
+    const [currentStatus, setCurrentStatus] = useState(email.status);
+    
     const { toast } = useToast();
 
+    const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
+
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status', value: string) => {
+        // Optimistic UI update
+        if (field === 'priority') setCurrentPriority(value);
+        if (field === 'assignee') setCurrentAssignee(value);
+        if (field === 'status') setCurrentStatus(value);
+
         const result = await updateTicket(email.id, { [field]: value });
         if (result.success) {
             toast({
@@ -48,6 +59,11 @@ export function TicketItem({ email }: TicketItemProps) {
                 description: `The ${field} has been changed to ${value}.`,
             });
         } else {
+            // Revert UI on failure
+            if (field === 'priority') setCurrentPriority(email.priority);
+            if (field === 'assignee') setCurrentAssignee(email.assignee);
+            if (field === 'status') setCurrentStatus(email.status);
+
             toast({
                 variant: 'destructive',
                 title: 'Update Failed',
@@ -80,7 +96,7 @@ export function TicketItem({ email }: TicketItemProps) {
 
                 <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-36">
                     <div>
-                        <Select defaultValue={email.priority} onValueChange={(value) => handleUpdate('priority', value)}>
+                        <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
@@ -102,7 +118,7 @@ export function TicketItem({ email }: TicketItemProps) {
                         </Select>
                     </div>
                      <div>
-                        <Select defaultValue={email.assignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                        <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
@@ -114,7 +130,7 @@ export function TicketItem({ email }: TicketItemProps) {
                         </Select>
                     </div>
                      <div>
-                        <Select defaultValue={email.status} onValueChange={(value) => handleUpdate('status', value)}>
+                        <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
