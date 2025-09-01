@@ -226,13 +226,14 @@ function TicketDetailContent({ id }: { id: string }) {
     
     const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean, subject: string) => (
         <Card key={message.id} className="overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between p-4">
+            <CardHeader className="flex flex-row items-center justify-between p-4 bg-muted/50">
                  <CardDescription>
                     From: {message.sender} &bull; Received: {format(parseISO(message.receivedDateTime), 'PPP p')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-                {isFirstInThread && <CardTitle className="px-4 pb-4 text-2xl">{subject}</CardTitle>}
+                {isFirstInThread && <CardTitle className="px-4 pt-4 pb-2 text-2xl">{subject}</CardTitle>}
+                 {!isFirstInThread && <p className="px-4 pt-4 pb-2 text-lg font-semibold">Re: {subject}</p>}
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                     {message.body.contentType === 'html' ? (
                         <EmailIframe htmlContent={message.body.content} />
@@ -280,9 +281,10 @@ function TicketDetailContent({ id }: { id: string }) {
 
                     {!isLoading && !error && email && (
                         <div className="space-y-4">
-                            {(email.conversation && email.conversation.length > 0 ? email.conversation : [email]).map((msg, index) =>
-                                renderMessageCard(msg, index === 0, email.subject)
-                            )}
+                            {email.conversation && email.conversation.length > 0
+                                ? email.conversation.map((msg, index) => renderMessageCard(msg, index === 0, email.subject))
+                                : renderMessageCard(email, true, email.subject)
+                            }
 
                             <div className="flex justify-end">
                                 <Button onClick={() => setIsReplying(!isReplying)}>
@@ -513,6 +515,3 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
-
-
-    
