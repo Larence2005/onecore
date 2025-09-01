@@ -224,7 +224,7 @@ function TicketDetailContent({ id }: { id: string }) {
         }
     };
     
-    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean, subject: string) => (
+    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => (
         <Card key={message.id} className="overflow-hidden">
             <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
                  <Avatar className="h-10 w-10">
@@ -242,7 +242,7 @@ function TicketDetailContent({ id }: { id: string }) {
             </CardHeader>
             <CardContent className="p-0">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                    {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{subject}</h2>}
+                    {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
                     {message.body.contentType === 'html' ? (
                         <EmailIframe htmlContent={message.body.content} />
                     ) : (
@@ -298,10 +298,10 @@ function TicketDetailContent({ id }: { id: string }) {
                         <div className="space-y-6">
                             {email.conversation && email.conversation.length > 0 ? (
                                 email.conversation.map((msg, index) =>
-                                    renderMessageCard(msg, index === 0, email.subject)
+                                    renderMessageCard(msg, index === 0)
                                 )
                             ) : (
-                                renderMessageCard(email, true, email.subject)
+                                renderMessageCard(email, true)
                             )}
 
                             <div className="flex justify-end">
@@ -534,4 +534,5 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
     );
 }
 
+    
     
