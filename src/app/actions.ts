@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, runTransaction, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 
 export interface Email {
