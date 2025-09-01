@@ -1,10 +1,9 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/providers/auth-provider';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil } from 'lucide-react';
@@ -17,16 +16,20 @@ import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export default function Home() {
+type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose';
+
+function HomePageContent() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const [activeView, setActiveView] = useState<'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose'>('tickets');
+  const searchParams = useSearchParams();
+  const [activeView, setActiveView] = useState<View>('tickets');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
+    const view = searchParams.get('view') as View;
+    if (view && ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose'].includes(view)) {
+      setActiveView(view);
     }
-  }, [user, loading, router]);
+  }, [searchParams]);
 
   const handleLogout = async () => {
     try {
@@ -36,6 +39,11 @@ export default function Home() {
       console.error("Failed to log out", error);
     }
   };
+  
+  const handleViewChange = (view: View) => {
+    setActiveView(view);
+    router.push(`/?view=${view}`, { scroll: false });
+  }
 
   if (loading || !user) {
     return (
@@ -63,37 +71,37 @@ export default function Home() {
             </SidebarHeader>
             <SidebarMenu className="flex flex-col gap-2 px-4">
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('compose')} isActive={activeView === 'compose'}>
+                <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
                   <Pencil />
                   <span>Compose</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('analytics')} isActive={activeView === 'analytics'}>
+                <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
                   <LayoutDashboard />
                    <span>Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('tickets')} isActive={activeView === 'tickets'}>
+                <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
                   <List />
                    <span>Tickets</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('clients')} isActive={activeView === 'clients'}>
+                <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
                   <Users />
                    <span>Clients</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('organization')} isActive={activeView === 'organization'}>
+                <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
                   <Building2 />
                    <span>Organization</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => setActiveView('settings')} isActive={activeView === 'settings'}>
+                <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
                   <Settings />
                    <span>Settings</span>
                 </SidebarMenuButton>
@@ -120,6 +128,11 @@ export default function Home() {
                 <h1 className="text-xl font-bold">Tickets</h1>
               </div>
             )}
+            {activeView === 'compose' && <h1 className="text-xl font-bold">Compose</h1>}
+            {activeView === 'analytics' && <h1 className="text-xl font-bold">Dashboard</h1>}
+            {activeView === 'clients' && <h1 className="text-xl font-bold">Clients</h1>}
+            {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
+            {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
           </Header>
           <MainView activeView={activeView} />
         </main>
@@ -225,4 +238,29 @@ export default function Home() {
       </div>
     </SidebarProvider>
   );
+}
+
+export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+          <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>}>
+      <HomePageContent />
+    </React.Suspense>
+  )
 }

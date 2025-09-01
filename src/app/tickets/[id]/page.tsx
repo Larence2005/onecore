@@ -8,7 +8,7 @@ import type { DetailedEmail } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LayoutDashboard, List, Users, Building2, Settings, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 
 function TicketDetailContent({ id }: { id: string }) {
@@ -97,59 +98,104 @@ function TicketDetailContent({ id }: { id: string }) {
                     <h1 className="text-xl font-bold">Ticket Details</h1>
                 </div>
             </Header>
-            <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                {isLoading && (
-                    <Card>
-                        <CardHeader>
-                            <Skeleton className="h-8 w-3/4" />
-                            <Skeleton className="h-4 w-1/2" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-64 w-full" />
-                        </CardContent>
-                    </Card>
-                )}
+            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
+                <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4">
+                    {isLoading && (
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-8 w-3/4" />
+                                <Skeleton className="h-4 w-1/2" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-64 w-full" />
+                            </CardContent>
+                        </Card>
+                    )}
 
-                {error && (
-                    <Alert variant="destructive">
-                        <Terminal className="h-4 w-4" />
-                        <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
+                    {error && (
+                        <Alert variant="destructive">
+                            <Terminal className="h-4 w-4" />
+                            <AlertTitle>Error</AlertTitle>
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
 
-                {!isLoading && !error && email && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-2xl">{email.subject}</CardTitle>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>From: {email.sender}</span>
-                                <span>|</span>
-                                <span>Received: {format(parseISO(email.receivedDateTime), 'PPP p')}</span>
-                            </div>
-                            <div className="flex items-center gap-2 pt-2">
-                                <Badge variant="secondary">Priority: {email.priority}</Badge>
-                                <Badge variant="secondary">Status: {email.status}</Badge>
-                                <Badge variant="secondary">Assignee: {email.assignee}</Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="border rounded-md p-4">
-                                {email.body.contentType === 'html' ? (
-                                    <iframe 
-                                        ref={iframeRef}
-                                        srcDoc={styledHtmlContent} 
-                                        className="w-full border-0" 
-                                        onLoad={handleIframeLoad}
-                                        scrolling="no"
-                                    />
-                                ) : (
-                                    <pre className="whitespace-pre-wrap text-sm">{email.body.content}</pre>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                    {!isLoading && !error && email && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-2xl">{email.subject}</CardTitle>
+                                <CardDescription>
+                                    From: {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'PPP p')}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                 <div className="border rounded-md">
+                                    {email.body.contentType === 'html' ? (
+                                        <iframe 
+                                            ref={iframeRef}
+                                            srcDoc={styledHtmlContent} 
+                                            className="w-full border-0" 
+                                            onLoad={handleIframeLoad}
+                                            scrolling="no"
+                                        />
+                                    ) : (
+                                        <pre className="whitespace-pre-wrap text-sm p-4">{email.body.content}</pre>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+                
+                <aside className="w-full lg:w-80 lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+                    {isLoading && (
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-1/2" />
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-full" />
+                            </CardContent>
+                        </Card>
+                    )}
+                     {!isLoading && email && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Properties</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Sender</span>
+                                    <span className="font-medium text-right">{email.sender}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground flex items-center gap-2"><Calendar size={16} /> Date Submitted</span>
+                                    <span className="font-medium">{format(parseISO(email.receivedDateTime), 'PPP')}</span>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground flex items-center gap-2"><Shield size={16} /> Priority</span>
+                                    <Badge variant="outline">{email.priority}</Badge>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
+                                     <Badge variant="outline">{email.status}</Badge>
+                                </div>
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground flex items-center gap-2"><UserCheck size={16} /> Assignee</span>
+                                    <span className="font-medium">{email.assignee}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                     )}
+                </aside>
             </div>
         </div>
     );
@@ -184,10 +230,10 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
     }
 
     const handleMenuClick = (view: string) => {
-        if(view === 'tickets') {
+        if(view === 'tickets' || view === '/') {
             router.push('/');
         } else {
-            router.push('/'); 
+            router.push(`/?view=${view}`); 
         }
     };
 
