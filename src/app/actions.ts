@@ -74,13 +74,19 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         const ticketDoc = await getDoc(ticketDocRef);
         
         let ticketData;
+        const defaults = {
+            priority: 'Low',
+            assignee: 'Unassigned',
+            status: 'Open',
+        };
 
-        if (!ticketDoc.exists()) {
+        if (ticketDoc.exists()) {
+            const existingData = ticketDoc.data();
+            ticketData = { ...defaults, ...existingData };
+        } else {
             const newTicketData = {
                 title: email.subject || 'No Subject',
-                priority: 'Low',
-                assignee: 'Unassigned',
-                status: 'Open',
+                ...defaults
             };
             try {
                 await setDoc(ticketDocRef, newTicketData);
@@ -89,13 +95,20 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                 console.error("Failed to create ticket in Firestore:", error);
                 ticketData = newTicketData;
             }
-        } else {
-            ticketData = ticketDoc.data();
+        }
+        
+        // Ensure that if fields are missing from existing documents, they get added.
+        if (ticketDoc.exists() && (!ticketData.priority || !ticketData.assignee || !ticketData.status)) {
+            try {
+                await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
+            } catch (error) {
+                console.error("Failed to update existing ticket with default properties:", error);
+            }
         }
 
         emails.push({
             id: email.id,
-            subject: email.subject || 'No Subject',
+            subject: ticketData?.title || email.subject || 'No Subject',
             sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
             bodyPreview: email.bodyPreview,
             receivedDateTime: email.receivedDateTime,
@@ -134,7 +147,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
 
     return {
         id: emailData.id,
-        subject: emailData.subject || 'No Subject',
+        subject: ticketData?.title || emailData.subject || 'No Subject',
         sender: emailData.from?.emailAddress?.name || emailData.from?.emailAddress?.address || 'Unknown Sender',
         body: emailData.body,
         receivedDateTime: emailData.receivedDateTime,

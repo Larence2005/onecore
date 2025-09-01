@@ -20,6 +20,7 @@ import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LayoutDashboard, List, Users, Building2, Settings, Pencil } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 
 function TicketDetailContent({ id }: { id: string }) {
@@ -101,9 +102,16 @@ function TicketDetailContent({ id }: { id: string }) {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-2xl">{email.subject}</CardTitle>
-                            <CardDescription>
-                                From: {email.sender} | Received: {format(parseISO(email.receivedDateTime), 'PPP p')}
-                            </CardDescription>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>From: {email.sender}</span>
+                                <span>|</span>
+                                <span>Received: {format(parseISO(email.receivedDateTime), 'PPP p')}</span>
+                            </div>
+                            <div className="flex items-center gap-2 pt-2">
+                                <Badge variant="secondary">Priority: {email.priority}</Badge>
+                                <Badge variant="secondary">Status: {email.status}</Badge>
+                                <Badge variant="secondary">Assignee: {email.assignee}</Badge>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[60vh]">
@@ -153,8 +161,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         if(view === 'tickets') {
             router.push('/');
         } else {
-            // For other views, we can decide where to navigate.
-            // For now, let's just push to home and the main component will handle the view.
             router.push('/'); 
         }
     };
