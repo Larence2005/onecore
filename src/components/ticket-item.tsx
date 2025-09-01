@@ -39,19 +39,9 @@ const getStatus = (subject: string) => {
     return statuses[Math.abs(hash) % statuses.length];
 };
 
-const getTicketNumber = (id: string) => {
-    const hash = id.split('').reduce((acc, char) => {
-        acc = ((acc << 5) - acc) + char.charCodeAt(0);
-        return acc & acc;
-    }, 0);
-    return Math.abs(hash).toString().slice(0, 6).padStart(6, '0');
-}
-
-
 export function TicketItem({ email }: TicketItemProps) {
     const priority = getPriority(email.subject);
     const status = getStatus(email.subject);
-    const ticketNumber = getTicketNumber(email.id);
 
     return (
         <li className="transition-colors hover:bg-muted/50">
@@ -61,7 +51,7 @@ export function TicketItem({ email }: TicketItemProps) {
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                     <Checkbox id={`ticket-${email.id}`} />
                     <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted text-muted-foreground text-xs font-mono">
-                        {ticketNumber}
+                        {email.ticketNumber ? `${email.ticketNumber}`.padStart(6, '0') : 'N/A'}
                     </div>
                 </div>
 

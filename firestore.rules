@@ -1,11 +1,19 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write to their own document in the 'users' collection.
-    // The document ID must match their authentication UID.
+    // Allow users to manage their own settings
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to read/write tickets and counters
+    match /tickets/{ticketId} {
+       allow read, create, update: if request.auth != null;
+    }
+
+    match /counters/{counterId} {
+       allow read, write: if request.auth != null;
     }
   }
 }

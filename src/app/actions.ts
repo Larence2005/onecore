@@ -1,3 +1,4 @@
+
 "use server";
 
 import type { Settings } from '@/providers/settings-provider';
@@ -7,6 +8,9 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import type { NewEmail } from '@/app/page';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, runTransaction, collection, query, where, getDocs } from 'firebase/firestore';
+
 
 export interface Email {
     id: string;
@@ -14,6 +18,7 @@ export interface Email {
     sender: string;
     bodyPreview: string;
     receivedDateTime: string;
+    ticketNumber?: number;
 }
 
 export interface DetailedEmail extends Email {
@@ -41,6 +46,27 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
     return await cca.acquireTokenByClientCredential(tokenRequest);
 }
 
+async function getNextTicketNumber(): Promise<number> {
+    const counterRef = doc(db, 'counters', 'ticketCounter');
+    try {
+        const ticketNumber = await runTransaction(db, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            if (!counterDoc.exists()) {
+                transaction.set(counterRef, { currentNumber: 1 });
+                return 1;
+            }
+            const newNumber = counterDoc.data().currentNumber + 1;
+            transaction.update(counterRef, { currentNumber: newNumber });
+            return newNumber;
+        });
+        return ticketNumber;
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+        throw new Error("Could not generate ticket number.");
+    }
+}
+
+
 export async function getLatestEmails(settings: Settings): Promise<Email[]> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
@@ -60,14 +86,48 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
 
     const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string }[] } = await response.json() as any;
 
-    return data.value.map(email => ({
+    const emails = data.value.map(email => ({
         id: email.id,
         subject: email.subject || 'No Subject',
         sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
         bodyPreview: email.bodyPreview,
         receivedDateTime: email.receivedDateTime,
     }));
+
+    const emailsWithTicketNumbers = await Promise.all(emails.map(async (email) => {
+        try {
+            const ticketsRef = collection(db, 'tickets');
+            const q = query(ticketsRef, where("emailId", "==", email.id));
+            const querySnapshot = await getDocs(q);
+
+            let ticketNumber: number | undefined;
+
+            if (querySnapshot.empty) {
+                // No ticket exists, create one
+                const newTicketNumber = await getNextTicketNumber();
+                const newTicketRef = doc(db, 'tickets', newTicketNumber.toString());
+                await setDoc(newTicketRef, {
+                    emailId: email.id,
+                    title: email.subject,
+                    createdAt: new Date(),
+                    ticketNumber: newTicketNumber,
+                });
+                ticketNumber = newTicketNumber;
+            } else {
+                // Ticket exists, get its number
+                ticketNumber = querySnapshot.docs[0].data().ticketNumber;
+            }
+            return { ...email, ticketNumber };
+        } catch (error) {
+            console.error(`Failed to process ticket for email ${email.id}:`, error);
+            // Return email without ticket number if there's an error
+            return email;
+        }
+    }));
+
+    return emailsWithTicketNumbers;
 }
+
 
 export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
     const authResponse = await getAccessToken(settings);
@@ -88,6 +148,19 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
 
     const email: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string } = await response.json() as any;
 
+    let ticketNumber: number | undefined;
+    try {
+        const ticketsRef = collection(db, 'tickets');
+        const q = query(ticketsRef, where("emailId", "==", id));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            ticketNumber = querySnapshot.docs[0].data().ticketNumber;
+        }
+    } catch (error) {
+        console.error(`Failed to retrieve ticket number for email ${id}:`, error);
+    }
+
     return {
         id: email.id,
         subject: email.subject || 'No Subject',
@@ -95,6 +168,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         body: email.body,
         receivedDateTime: email.receivedDateTime,
         bodyPreview: email.bodyPreview,
+        ticketNumber: ticketNumber,
     };
 }
 

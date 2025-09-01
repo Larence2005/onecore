@@ -59,50 +59,66 @@ function TicketDetailContent({ id }: { id: string }) {
     }, [id, settings, isConfigured, toast]);
 
     const styledHtmlContent = email?.body.contentType === 'html' 
-        ? `<style>img { max-width: 50%; height: auto; }</style>${email.body.content}`
+        ? `<style>img { max-width: 100%; height: auto; }</style>${email.body.content}`
         : '';
 
+    const pageTitle = email?.ticketNumber 
+        ? `Ticket #${`${email.ticketNumber}`.padStart(6, '0')}`
+        : 'Ticket Details';
+
     return (
-        <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
-            {isLoading && (
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-64 w-full" />
-                    </CardContent>
-                </Card>
-            )}
+        <div className="flex-1 flex flex-col min-w-0">
+             <Header>
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" asChild>
+                        <Link href="/">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Link>
+                    </Button>
+                    <h1 className="text-xl font-bold">{pageTitle}</h1>
+                </div>
+            </Header>
+            <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                {isLoading && (
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-8 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-64 w-full" />
+                        </CardContent>
+                    </Card>
+                )}
 
-            {error && (
-                 <Alert variant="destructive">
-                    <Terminal className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            )}
+                {error && (
+                    <Alert variant="destructive">
+                        <Terminal className="h-4 w-4" />
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
 
-            {!isLoading && !error && email && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-2xl">{email.subject}</CardTitle>
-                        <CardDescription>
-                            From: {email.sender} | Received: {format(parseISO(email.receivedDateTime), 'PPP p')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[60vh]">
-                            {email.body.contentType === 'html' ? (
-                                <iframe srcDoc={styledHtmlContent} className="w-full h-full border-0 min-h-[inherit]" />
-                            ) : (
-                                <pre className="whitespace-pre-wrap text-sm">{email.body.content}</pre>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                {!isLoading && !error && email && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-2xl">{email.subject}</CardTitle>
+                            <CardDescription>
+                                From: {email.sender} | Received: {format(parseISO(email.receivedDateTime), 'PPP p')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[60vh]">
+                                {email.body.contentType === 'html' ? (
+                                    <iframe srcDoc={styledHtmlContent} className="w-full h-full border-0 min-h-[inherit]" />
+                                ) : (
+                                    <pre className="whitespace-pre-wrap text-sm">{email.body.content}</pre>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
         </div>
     );
 }
@@ -111,7 +127,6 @@ function TicketDetailContent({ id }: { id: string }) {
 export default function TicketDetailPage({ params }: { params: { id: string } }) {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
-    const [activeView, setActiveView] = useState<'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose'>('tickets');
     
     useEffect(() => {
         if (!loading && !user) {
@@ -136,6 +151,14 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         );
     }
 
+    const handleMenuClick = (view: string) => {
+        if(view === 'tickets') {
+            router.push('/');
+        } else {
+            router.push('/'); 
+        }
+    };
+
     return (
         <SidebarProvider>
             <div className="grid min-h-screen w-full bg-background text-foreground lg:grid-cols-[240px_1fr]">
@@ -151,37 +174,37 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                         </SidebarHeader>
                         <SidebarMenu className="flex flex-col gap-2 px-4">
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => router.push('/')} isActive={activeView === 'compose'}>
+                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
                             <Pencil />
                             <span>Compose</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => router.push('/')} isActive={activeView === 'analytics'}>
+                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
                             <LayoutDashboard />
                             <span>Dashboard</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => router.push('/')} isActive={activeView === 'tickets'}>
+                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
                             <List />
                             <span>Tickets</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => router.push('/')} isActive={activeView === 'clients'}>
+                            <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
                             <Users />
                             <span>Clients</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => router.push('/')} isActive={activeView === 'organization'}>
+                            <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
                             <Building2 />
                             <span>Organization</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => router.push('/')} isActive={activeView === 'settings'}>
+                            <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
                             <Settings />
                             <span>Settings</span>
                             </SidebarMenuButton>
@@ -202,16 +225,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <Header>
-                        <div className="flex items-center gap-4">
-                            <Button variant="outline" size="icon" asChild>
-                                <Link href="/">
-                                    <ArrowLeft className="h-4 w-4" />
-                                </Link>
-                            </Button>
-                            <h1 className="text-xl font-bold">Ticket Details</h1>
-                        </div>
-                    </Header>
                     <TicketDetailContent id={params.id} />
                 </main>
             </div>
