@@ -49,9 +49,9 @@ export default function Home() {
     <SidebarProvider>
        <div className={cn(
         "grid min-h-screen bg-background text-foreground",
-        activeView === 'tickets' ? "grid-cols-1 lg:grid-cols-[280px_1fr_320px]" : "grid-cols-1 lg:grid-cols-[280px_1fr]"
+        activeView === 'tickets' ? "grid-cols-1 lg:grid-cols-[1fr_320px]" : "grid-cols-1"
       )}>
-        <Sidebar variant="inset" className="w-full bg-card hidden lg:flex flex-col py-6">
+        <Sidebar variant="inset" className="w-[280px] bg-card hidden lg:flex flex-col py-6">
           <SidebarContent className="flex-grow flex flex-col">
             <SidebarHeader className="mb-8 px-4">
                  <div className="flex items-center gap-2">
@@ -113,115 +113,117 @@ export default function Home() {
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col min-w-0">
-          <Header>
+        <SidebarInset>
+            <main className="flex-1 flex flex-col min-w-0">
+            <Header>
+                {activeView === 'tickets' && (
+                <div className="flex items-center gap-4">
+                    <h1 className="text-xl font-bold">Tickets</h1>
+                </div>
+                )}
+            </Header>
+            <MainView activeView={activeView} />
+            </main>
+            
             {activeView === 'tickets' && (
-              <div className="flex items-center gap-4">
-                <h1 className="text-xl font-bold">Tickets</h1>
-              </div>
+            <aside className="hidden lg:block w-80 border-l">
+                <div className="sticky top-0 h-screen overflow-y-auto p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-bold">Filters</h2>
+                        <Button variant="link" size="sm">Show applied filters</Button>
+                    </div>
+                    <div className="space-y-6">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Search fields" className="pl-9" />
+                        </div>
+
+                        <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-base">Agents Include</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                                <Select>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Any agent" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="agent1">Agent 1</SelectItem>
+                                    <SelectItem value="agent2">Agent 2</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-base">Groups Include</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                                <Select>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Any group" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="group1">Group 1</SelectItem>
+                                    <SelectItem value="group2">Group 2</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-base">Created</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                                <Select>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Last 30 days" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="30d">Last 30 days</SelectItem>
+                                    <SelectItem value="7d">Last 7 days</SelectItem>
+                                    <SelectItem value="24h">Last 24 hours</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-base">Closed at</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                                <Select>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Any time" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="any">Any time</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4">
+                                <CardTitle className="text-base">Resolved at</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                                <Select>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Any time" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="any">Any time</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            </aside>
             )}
-          </Header>
-          <MainView activeView={activeView} />
-        </main>
-        
-        {activeView === 'tickets' && (
-          <aside className="hidden lg:block w-80 border-l">
-              <div className="sticky top-0 h-screen overflow-y-auto p-4">
-                  <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-lg font-bold">Filters</h2>
-                      <Button variant="link" size="sm">Show applied filters</Button>
-                  </div>
-                  <div className="space-y-6">
-                      <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input placeholder="Search fields" className="pl-9" />
-                      </div>
-
-                      <Card>
-                          <CardHeader className="p-4">
-                              <CardTitle className="text-base">Agents Include</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0">
-                              <Select>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Any agent" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="agent1">Agent 1</SelectItem>
-                                  <SelectItem value="agent2">Agent 2</SelectItem>
-                              </SelectContent>
-                              </Select>
-                          </CardContent>
-                      </Card>
-
-                      <Card>
-                          <CardHeader className="p-4">
-                              <CardTitle className="text-base">Groups Include</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0">
-                              <Select>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Any group" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="group1">Group 1</SelectItem>
-                                  <SelectItem value="group2">Group 2</SelectItem>
-                              </SelectContent>
-                              </Select>
-                          </CardContent>
-                      </Card>
-
-                      <Card>
-                          <CardHeader className="p-4">
-                              <CardTitle className="text-base">Created</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0">
-                              <Select>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Last 30 days" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="30d">Last 30 days</SelectItem>
-                                  <SelectItem value="7d">Last 7 days</SelectItem>
-                                  <SelectItem value="24h">Last 24 hours</SelectItem>
-                              </SelectContent>
-                              </Select>
-                          </CardContent>
-                      </Card>
-                      <Card>
-                          <CardHeader className="p-4">
-                              <CardTitle className="text-base">Closed at</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0">
-                              <Select>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Any time" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="any">Any time</SelectItem>
-                              </SelectContent>
-                              </Select>
-                          </CardContent>
-                      </Card>
-                      <Card>
-                          <CardHeader className="p-4">
-                              <CardTitle className="text-base">Resolved at</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0">
-                              <Select>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Any time" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="any">Any time</SelectItem>
-                              </SelectContent>
-                              </Select>
-                          </CardContent>
-                      </Card>
-                  </div>
-              </div>
-          </aside>
-        )}
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
