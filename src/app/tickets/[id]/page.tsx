@@ -29,10 +29,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    const setupIframe = () => {
+    const setupIframe = useCallback(() => {
         if (iframeRef.current && iframeRef.current.contentWindow) {
-            const body = iframeRef.current.contentWindow.document.body;
-            const documentElement = iframeRef.current.contentWindow.document.documentElement;
+            const doc = iframeRef.current.contentWindow.document;
+            const body = doc.body;
+            const documentElement = doc.documentElement;
             if (body) {
                 const resizeIframe = () => {
                     if (iframeRef.current) {
@@ -41,16 +42,13 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
                     }
                 };
 
-                // Initial resize
                 resizeIframe();
 
-                // Resize on content change
                 const observer = new MutationObserver(resizeIframe);
-                observer.observe(body, { childList: true, subtree: true, attributes: true });
-
-                // Resize on window resize (for responsive content)
-                iframeRef.current.contentWindow.addEventListener('resize', resizeIframe);
+                observer.observe(body, { childList: true, subtree: true, attributes: true, characterData: true });
                 
+                iframeRef.current.contentWindow.addEventListener('resize', resizeIframe);
+
                 return () => {
                     observer.disconnect();
                     if(iframeRef.current && iframeRef.current.contentWindow) {
@@ -59,12 +57,12 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
                 };
             }
         }
-    };
+    }, []);
     
     useEffect(() => {
         const cleanup = setupIframe();
         return cleanup;
-    }, [htmlContent]);
+    }, [htmlContent, setupIframe]);
     
     const styledHtmlContent = `
         <style>
@@ -73,9 +71,10 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
                 padding: 1rem;
                 font-family: sans-serif; 
                 color: hsl(var(--foreground)); 
-                overflow: hidden; 
                 background-color: transparent; 
                 word-wrap: break-word;
+                overflow-wrap: break-word;
+                overflow: hidden;
             }
             img { max-width: 100% !important; height: auto !important; }
             * { max-width: 100%; }
@@ -533,6 +532,3 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
-
-    
-    
