@@ -83,6 +83,13 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         if (ticketDoc.exists()) {
             const existingData = ticketDoc.data();
             ticketData = { ...defaults, ...existingData };
+             if (!existingData.priority || !existingData.assignee || !existingData.status) {
+                try {
+                    await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
+                } catch (error) {
+                    console.error("Failed to update existing ticket with default properties:", error);
+                }
+            }
         } else {
             const newTicketData = {
                 title: email.subject || 'No Subject',
@@ -94,14 +101,6 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             } catch (error) {
                 console.error("Failed to create ticket in Firestore:", error);
                 ticketData = newTicketData;
-            }
-        }
-        
-        if (ticketDoc.exists() && (!ticketData.priority || !ticketData.assignee || !ticketData.status)) {
-            try {
-                await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
-            } catch (error) {
-                console.error("Failed to update existing ticket with default properties:", error);
             }
         }
 
@@ -198,6 +197,34 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
 
     return { success: true };
 }
+
+export async function replyToEmailAction(settings: Settings, messageId: string, comment: string): Promise<{ success: boolean }> {
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token.');
+    }
+
+    const reply = {
+        comment: comment,
+    };
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reply),
+    });
+    
+    if (response.status !== 202) {
+        const error = await response.json();
+        throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
+    }
+
+    return { success: true };
+}
+
 
 export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string }) {
     const ticketDocRef = doc(db, 'tickets', id);

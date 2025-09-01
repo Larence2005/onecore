@@ -3,12 +3,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail } from '@/app/actions';
+import { getEmail, replyToEmailAction } from '@/app/actions';
 import type { DetailedEmail } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LayoutDashboard, List, Users, Building2, Settings, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-
+import { Textarea } from '@/components/ui/textarea';
 
 function TicketDetailContent({ id }: { id: string }) {
     const { settings, isConfigured } = useSettings();
@@ -31,6 +31,9 @@ function TicketDetailContent({ id }: { id: string }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [isReplying, setIsReplying] = useState(false);
+    const [replyContent, setReplyContent] = useState('');
+    const [isSending, setIsSending] = useState(false);
 
     useEffect(() => {
         async function fetchEmail() {
@@ -65,9 +68,7 @@ function TicketDetailContent({ id }: { id: string }) {
         if (iframeRef.current) {
             const body = iframeRef.current.contentWindow?.document.body;
             if (body) {
-                // Set height to content height
                 iframeRef.current.style.height = `${body.scrollHeight}px`;
-                // Add mutation observer to handle dynamic content changes (e.g. images loading)
                 const observer = new MutationObserver(() => {
                     if (iframeRef.current) {
                        iframeRef.current.style.height = `${iframeRef.current.contentWindow?.document.body.scrollHeight}px`;
@@ -85,6 +86,29 @@ function TicketDetailContent({ id }: { id: string }) {
                 * { max-width: 100%; }
            </style>${email.body.content}`
         : '';
+
+    const handleSendReply = async () => {
+        if (!replyContent.trim()) {
+            toast({ variant: "destructive", title: "Cannot send empty reply." });
+            return;
+        }
+        setIsSending(true);
+        try {
+            await replyToEmailAction(settings, id, replyContent);
+            toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
+            setReplyContent('');
+            setIsReplying(false);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            toast({
+                variant: "destructive",
+                title: "Failed to send reply.",
+                description: errorMessage,
+            });
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     return (
         <div className="flex-1 flex flex-col min-w-0">
@@ -107,7 +131,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 <Skeleton className="h-4 w-1/2" />
                             </CardHeader>
                             <CardContent>
-                                <Skeleton className="h-64 w-full" />
+                                <Skeleton className="h-48 w-full" />
                             </CardContent>
                         </Card>
                     )}
@@ -129,7 +153,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                 <div className="rounded-md p-4">
+                                <div className="rounded-md p-4">
                                     {email.body.contentType === 'html' ? (
                                         <iframe 
                                             ref={iframeRef}
@@ -142,6 +166,37 @@ function TicketDetailContent({ id }: { id: string }) {
                                         <pre className="whitespace-pre-wrap text-sm p-4">{email.body.content}</pre>
                                     )}
                                 </div>
+                                <Separator className="my-4" />
+                                <div className="flex justify-end">
+                                    <Button onClick={() => setIsReplying(!isReplying)}>
+                                        {isReplying ? 'Cancel' : 'Reply'}
+                                    </Button>
+                                </div>
+                                {isReplying && (
+                                    <div className="mt-4 space-y-4">
+                                        <Textarea 
+                                            placeholder="Type your reply here..."
+                                            className="min-h-[150px]"
+                                            value={replyContent}
+                                            onChange={(e) => setReplyContent(e.target.value)}
+                                        />
+                                        <div className="flex justify-end">
+                                            <Button onClick={handleSendReply} disabled={isSending}>
+                                                {isSending ? (
+                                                    <>
+                                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                        Sending...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Send className="mr-2 h-4 w-4" />
+                                                        Send Reply
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     )}
@@ -309,7 +364,3 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
-
-    
-
-    
