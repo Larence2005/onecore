@@ -3,12 +3,14 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users can only read and write to their own settings document.
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Authenticated users can read and write to tickets and counters.
     match /tickets/{ticketId} {
-      allow read, create: if request.auth != null;
+      allow read, create, update, delete: if request.auth != null;
     }
 
     match /counters/{counterId} {

@@ -105,7 +105,8 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             if (querySnapshot.empty) {
                 // No ticket exists, create one
                 const newTicketNumber = await getNextTicketNumber();
-                const newTicketRef = doc(db, 'tickets', newTicketNumber.toString());
+                // Use a string for the document ID, as ticket numbers can be queried later.
+                const newTicketRef = doc(ticketsRef); 
                 await setDoc(newTicketRef, {
                     emailId: email.id,
                     title: email.subject,

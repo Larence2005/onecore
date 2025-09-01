@@ -155,6 +155,8 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         if(view === 'tickets') {
             router.push('/');
         } else {
+            // For other views, we can decide where to navigate.
+            // For now, let's just push to home and the main component will handle the view.
             router.push('/'); 
         }
     };
