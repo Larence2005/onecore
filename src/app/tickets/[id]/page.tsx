@@ -85,8 +85,6 @@ function TicketDetailContent({ id }: { id: string }) {
            </style>${email.body.content}`
         : '';
 
-    const pageTitle = email?.subject || 'Ticket Details';
-
     return (
         <div className="flex-1 flex flex-col min-w-0">
              <Header>
@@ -96,7 +94,7 @@ function TicketDetailContent({ id }: { id: string }) {
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <h1 className="text-xl font-bold">{pageTitle}</h1>
+                    <h1 className="text-xl font-bold">Ticket Details</h1>
                 </div>
             </Header>
             <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
