@@ -153,7 +153,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="rounded-md p-4">
+                                <div className="p-4">
                                     {email.body.contentType === 'html' ? (
                                         <iframe 
                                             ref={iframeRef}
@@ -364,3 +364,5 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         </SidebarProvider>
     );
 }
+
+    
