@@ -7,7 +7,6 @@ import {
     Configuration,
     AuthenticationResult
 } from '@azure/msal-node';
-import type { NewEmail } from '@/app/page';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, runTransaction, collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -52,11 +51,12 @@ async function getNextTicketNumber(): Promise<number> {
         const ticketNumber = await runTransaction(db, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
             if (!counterDoc.exists()) {
-                transaction.set(counterRef, { currentNumber: 1 });
+                // Initialize the counter if it doesn't exist.
+                transaction.set(counterRef, { currentNumber: 2 });
                 return 1;
             }
-            const newNumber = counterDoc.data().currentNumber + 1;
-            transaction.update(counterRef, { currentNumber: newNumber });
+            const newNumber = counterDoc.data().currentNumber;
+            transaction.update(counterRef, { currentNumber: newNumber + 1 });
             return newNumber;
         });
         return ticketNumber;
@@ -105,6 +105,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             if (querySnapshot.empty) {
                 // No ticket exists, create one
                 const newTicketNumber = await getNextTicketNumber();
+                // Use a string for the document ID
                 const newTicketRef = doc(db, 'tickets', newTicketNumber.toString());
                 await setDoc(newTicketRef, {
                     emailId: email.id,
@@ -173,7 +174,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
 }
 
 
-export async function sendEmailAction(settings: Settings, emailData: NewEmail): Promise<{ success: boolean }> {
+export async function sendEmailAction(settings: Settings, emailData: {recipient: string, subject: string, body: string}): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token.');
