@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 
 export interface Email {
@@ -97,7 +97,6 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             }
         }
         
-        // Ensure that if fields are missing from existing documents, they get added.
         if (ticketDoc.exists() && (!ticketData.priority || !ticketData.assignee || !ticketData.status)) {
             try {
                 await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
@@ -198,4 +197,15 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
     }
 
     return { success: true };
+}
+
+export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string }) {
+    const ticketDocRef = doc(db, 'tickets', id);
+    try {
+        await updateDoc(ticketDocRef, data);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update ticket:", error);
+        return { success: false, error: "Failed to update ticket." };
+    }
 }

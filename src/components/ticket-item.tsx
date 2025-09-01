@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cn } from "@/lib/utils";
 import { Card } from "./ui/card";
 import Link from 'next/link';
+import { updateTicket } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
 
 type TicketItemProps = {
     email: Email;
@@ -36,17 +38,34 @@ const assignees = [
 
 export function TicketItem({ email }: TicketItemProps) {
     const priorityDetails = priorities.find(p => p.value === email.priority) || priorities[0];
+    const { toast } = useToast();
+
+    const handleUpdate = async (field: 'priority' | 'assignee' | 'status', value: string) => {
+        const result = await updateTicket(email.id, { [field]: value });
+        if (result.success) {
+            toast({
+                title: 'Ticket Updated',
+                description: `The ${field} has been changed to ${value}.`,
+            });
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: result.error,
+            });
+        }
+    };
+
 
     return (
         <li className="transition-colors hover:bg-muted/50">
-          <Link href={`/tickets/${email.id}`} className="block">
            <Card className="m-2 rounded-lg shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                     <Checkbox id={`ticket-${email.id}`} />
                 </div>
-
-                <div className="flex-grow min-w-0 w-full">
+                
+                <Link href={`/tickets/${email.id}`} className="flex-grow min-w-0 w-full cursor-pointer">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Badge variant="destructive">Overdue</Badge>
                         <Badge variant="secondary">Customer responded</Badge>
@@ -57,11 +76,11 @@ export function TicketItem({ email }: TicketItemProps) {
                     <p className="text-sm text-muted-foreground truncate">
                         {email.sender} &bull; Customer responded: {format(parseISO(email.receivedDateTime), 'd')} days ago &bull; Overdue by: {Math.floor(Math.random() * 10) + 1} days
                     </p>
-                </div>
+                </Link>
 
                 <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-36">
                     <div>
-                        <Select defaultValue={email.priority}>
+                        <Select defaultValue={email.priority} onValueChange={(value) => handleUpdate('priority', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
@@ -83,7 +102,7 @@ export function TicketItem({ email }: TicketItemProps) {
                         </Select>
                     </div>
                      <div>
-                        <Select defaultValue={email.assignee}>
+                        <Select defaultValue={email.assignee} onValueChange={(value) => handleUpdate('assignee', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
@@ -95,7 +114,7 @@ export function TicketItem({ email }: TicketItemProps) {
                         </Select>
                     </div>
                      <div>
-                        <Select defaultValue={email.status}>
+                        <Select defaultValue={email.status} onValueChange={(value) => handleUpdate('status', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
@@ -109,7 +128,6 @@ export function TicketItem({ email }: TicketItemProps) {
                 </div>
             </div>
             </Card>
-           </Link>
         </li>
     );
 }
