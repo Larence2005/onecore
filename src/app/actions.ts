@@ -87,7 +87,6 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                 ticketData = newTicketData;
             } catch (error) {
                 console.error("Failed to create ticket in Firestore:", error);
-                // Continue with default data if firestore fails
                 ticketData = newTicketData;
             }
         } else {
