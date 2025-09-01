@@ -60,15 +60,6 @@ function TicketDetailContent({ id }: { id: string }) {
 
     return (
         <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
-            <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" asChild>
-                    <Link href="/">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Link>
-                </Button>
-                <h1 className="text-xl font-bold">Ticket Details</h1>
-            </div>
-            
             {isLoading && (
                 <Card>
                     <CardHeader>
@@ -207,7 +198,16 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <Header />
+                    <Header>
+                        <div className="flex items-center gap-4">
+                            <Button variant="outline" size="icon" asChild>
+                                <Link href="/">
+                                    <ArrowLeft className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <h1 className="text-xl font-bold">Ticket Details</h1>
+                        </div>
+                    </Header>
                     <TicketDetailContent id={params.id} />
                 </main>
             </div>
