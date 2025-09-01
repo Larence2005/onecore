@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export default function TicketDetailPage({ params }: { params: { id: string } }) {
+export default function TicketDetailPage({ params: { id } }: { params: { id: string } }) {
     const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
     const [email, setEmail] = useState<DetailedEmail | null>(null);
@@ -29,11 +29,11 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                 setIsLoading(false);
                 return;
             }
-            if (!params.id) return;
+            if (!id) return;
 
             setIsLoading(true);
             try {
-                const detailedEmail = await getEmail(settings, params.id);
+                const detailedEmail = await getEmail(settings, id);
                 setEmail(detailedEmail);
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -49,7 +49,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
         }
 
         fetchEmail();
-    }, [params.id, settings, isConfigured, toast]);
+    }, [id, settings, isConfigured, toast]);
 
     return (
         <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
