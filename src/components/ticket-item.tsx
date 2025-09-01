@@ -8,10 +8,10 @@ import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { cn } from "@/lib/utils";
 import { Card } from "./ui/card";
+import Link from 'next/link';
 
 type TicketItemProps = {
     email: Email;
-    onClick: () => void;
 };
 
 // Mock data for additional fields
@@ -48,13 +48,14 @@ const getTicketNumber = (id: string) => {
 }
 
 
-export function TicketItem({ email, onClick }: TicketItemProps) {
+export function TicketItem({ email }: TicketItemProps) {
     const priority = getPriority(email.subject);
     const status = getStatus(email.subject);
     const ticketNumber = getTicketNumber(email.id);
 
     return (
         <li className="transition-colors hover:bg-muted/50">
+          <Link href={`/tickets/${email.id}`} className="block">
            <Card className="m-2 rounded-lg shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
@@ -64,7 +65,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                     </div>
                 </div>
 
-                <div className="flex-grow min-w-0 cursor-pointer w-full" onClick={onClick}>
+                <div className="flex-grow min-w-0 w-full">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Badge variant="destructive">Overdue</Badge>
                         <Badge variant="secondary">Customer responded</Badge>
@@ -125,6 +126,7 @@ export function TicketItem({ email, onClick }: TicketItemProps) {
                 </div>
             </div>
             </Card>
+           </Link>
         </li>
     );
 }

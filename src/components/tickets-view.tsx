@@ -13,11 +13,10 @@ type TicketsViewProps = {
     emails: Email[];
     isLoading: boolean;
     error: string | null;
-    onEmailClick: (id: string) => void;
     onRefresh: () => void;
 };
 
-export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh }: TicketsViewProps) {
+export function TicketsView({ emails, isLoading, error, onRefresh }: TicketsViewProps) {
     return (
         <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
              <div className="flex-grow overflow-y-auto">
@@ -47,7 +46,7 @@ export function TicketsView({ emails, isLoading, error, onEmailClick, onRefresh 
                         </div>
                         <ul className="space-y-0">
                             {emails.map((email) => (
-                                <TicketItem key={email.id} email={email} onClick={() => onEmailClick(email.id)} />
+                                <TicketItem key={email.id} email={email} />
                             ))}
                         </ul>
                     </div>
