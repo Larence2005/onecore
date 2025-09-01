@@ -58,6 +58,10 @@ function TicketDetailContent({ id }: { id: string }) {
         fetchEmail();
     }, [id, settings, isConfigured, toast]);
 
+    const styledHtmlContent = email?.body.contentType === 'html' 
+        ? `<style>img { max-width: 50%; height: auto; }</style>${email.body.content}`
+        : '';
+
     return (
         <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
             {isLoading && (
@@ -91,7 +95,7 @@ function TicketDetailContent({ id }: { id: string }) {
                     <CardContent>
                          <div className="flex-grow overflow-auto border rounded-md p-4 min-h-[60vh]">
                             {email.body.contentType === 'html' ? (
-                                <iframe srcDoc={email.body.content} className="w-full h-full border-0 min-h-[inherit]" />
+                                <iframe srcDoc={styledHtmlContent} className="w-full h-full border-0 min-h-[inherit]" />
                             ) : (
                                 <pre className="whitespace-pre-wrap text-sm">{email.body.content}</pre>
                             )}
