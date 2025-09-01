@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export default function TicketDetailPage({ params: { id } }: { params: { id: string } }) {
+export default function TicketDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
     const [email, setEmail] = useState<DetailedEmail | null>(null);
