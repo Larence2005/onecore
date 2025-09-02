@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSettings } from "@/providers/settings-provider";
-import { getLatestEmails } from "@/app/actions";
+import { getLatestEmails, getTicketsFromDB } from "@/app/actions";
 import type { Email } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
@@ -32,10 +32,18 @@ export function ReadEmails() {
       setError(errorMessage);
       toast({
         variant: "destructive",
-        title: "Failed to fetch emails.",
+        title: "Failed to fetch emails. Loading from database.",
         description: errorMessage,
       });
-      setEmails([]);
+      // Fallback to fetching from DB
+      try {
+        const dbEmails = await getTicketsFromDB();
+        setEmails(dbEmails);
+      } catch (dbError) {
+        const dbErrorMessage = dbError instanceof Error ? dbError.message : "An unknown database error occurred.";
+        setError(dbErrorMessage);
+        setEmails([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -74,3 +82,5 @@ export function ReadEmails() {
     </div>
   );
 }
+
+    

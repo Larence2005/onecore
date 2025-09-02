@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 
 
 export interface Email {
@@ -51,87 +51,117 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
 
 
 export async function getLatestEmails(settings: Settings): Promise<Email[]> {
-    const authResponse = await getAccessToken(settings);
-    if (!authResponse?.accessToken) {
-        throw new Error('Failed to acquire access token.');
-    }
-
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId,toRecipients,inReplyTo&$orderby=receivedDateTime desc`, {
-        headers: {
-            Authorization: `Bearer ${authResponse.accessToken}`,
-        },
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
-    }
-
-    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string, toRecipients: { emailAddress: { address: string, name: string } }[], inReplyTo?: string }[] } = await response.json() as any;
-
-    const conversations = new Map<string, any>();
-    for (const email of data.value) {
-        if (!conversations.has(email.conversationId)) {
-            conversations.set(email.conversationId, email);
+    try {
+        const authResponse = await getAccessToken(settings);
+        if (!authResponse?.accessToken) {
+            throw new Error('Failed to acquire access token.');
         }
-    }
-    
-    const uniqueEmails = Array.from(conversations.values()).slice(0, 10);
 
-    const emails: Email[] = [];
-    for (const email of uniqueEmails) {
-        const ticketDocRef = doc(db, 'tickets', email.id);
-        const ticketDoc = await getDoc(ticketDocRef);
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId,toRecipients,inReplyTo&$orderby=receivedDateTime desc`, {
+            headers: {
+                Authorization: `Bearer ${authResponse.accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
+        }
+
+        const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string, toRecipients: { emailAddress: { address: string, name: string } }[], inReplyTo?: string }[] } = await response.json() as any;
+
+        const conversations = new Map<string, any>();
+        for (const email of data.value) {
+            if (!conversations.has(email.conversationId)) {
+                conversations.set(email.conversationId, email);
+            }
+        }
         
-        let ticketData;
-        const defaults = {
-            priority: 'Low',
-            assignee: 'Unassigned',
-            status: 'Open',
-        };
+        const uniqueEmails = Array.from(conversations.values()).slice(0, 10);
 
-        if (ticketDoc.exists()) {
-            const existingData = ticketDoc.data();
-            ticketData = { ...defaults, ...existingData };
-             if (!existingData.priority || !existingData.assignee || !existingData.status) {
+        const emails: Email[] = [];
+        for (const email of uniqueEmails) {
+            const ticketDocRef = doc(db, 'tickets', email.id);
+            const ticketDoc = await getDoc(ticketDocRef);
+            
+            let ticketData;
+            const defaults = {
+                priority: 'Low',
+                assignee: 'Unassigned',
+                status: 'Open',
+            };
+
+            if (ticketDoc.exists()) {
+                const existingData = ticketDoc.data();
+                ticketData = { ...defaults, ...existingData };
+                if (!existingData.priority || !existingData.assignee || !existingData.status) {
+                    try {
+                        await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
+                    } catch (error) {
+                        console.error("Failed to update existing ticket with default properties:", error);
+                    }
+                }
+            } else {
+                const newTicketData = {
+                    title: email.subject || 'No Subject',
+                    sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+                    bodyPreview: email.bodyPreview,
+                    receivedDateTime: email.receivedDateTime,
+                    receiver: email.toRecipients?.map(r => r.emailAddress.address).join(', ') || '',
+                    inReplyTo: email.inReplyTo || '',
+                    ...defaults
+                };
                 try {
-                    await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
+                    await setDoc(ticketDocRef, newTicketData);
+                    ticketData = newTicketData;
                 } catch (error) {
-                    console.error("Failed to update existing ticket with default properties:", error);
+                    console.error("Failed to create ticket in Firestore:", error);
+                    ticketData = newTicketData;
                 }
             }
-        } else {
-            const newTicketData = {
-                title: email.subject || 'No Subject',
-                sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
-                bodyPreview: email.bodyPreview,
-                receivedDateTime: email.receivedDateTime,
-                receiver: email.toRecipients?.map(r => r.emailAddress.address).join(', ') || '',
-                inReplyTo: email.inReplyTo || '',
-                ...defaults
-            };
-            try {
-                await setDoc(ticketDocRef, newTicketData);
-                ticketData = newTicketData;
-            } catch (error) {
-                console.error("Failed to create ticket in Firestore:", error);
-                ticketData = newTicketData;
-            }
+
+            emails.push({
+                id: email.id,
+                subject: ticketData?.title || email.subject || 'No Subject',
+                sender: ticketData?.sender || email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+                bodyPreview: ticketData?.bodyPreview || email.bodyPreview,
+                receivedDateTime: ticketData?.receivedDateTime || email.receivedDateTime,
+                priority: ticketData?.priority || 'Low',
+                assignee: ticketData?.assignee || 'Unassigned',
+                status: ticketData?.status || 'Open',
+                conversationId: email.conversationId,
+            });
         }
-
-        emails.push({
-            id: email.id,
-            subject: ticketData?.title || email.subject || 'No Subject',
-            sender: ticketData?.sender || email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
-            bodyPreview: ticketData?.bodyPreview || email.bodyPreview,
-            receivedDateTime: ticketData?.receivedDateTime || email.receivedDateTime,
-            priority: ticketData?.priority || 'Low',
-            assignee: ticketData?.assignee || 'Unassigned',
-            status: ticketData?.status || 'Open',
-            conversationId: email.conversationId,
-        });
+        return emails;
+    } catch (error) {
+        console.error("API call failed, falling back to database:", error);
+        return getTicketsFromDB();
     }
+}
 
+
+export async function getTicketsFromDB(): Promise<Email[]> {
+    const ticketsCollectionRef = collection(db, 'tickets');
+    const querySnapshot = await getDocs(ticketsCollectionRef);
+    
+    const emails: Email[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            subject: data.title || 'No Subject',
+            sender: data.sender || 'Unknown Sender',
+            bodyPreview: data.bodyPreview || '',
+            receivedDateTime: data.receivedDateTime || new Date().toISOString(),
+            priority: data.priority || 'Low',
+            assignee: data.assignee || 'Unassigned',
+            status: data.status || 'Open',
+            conversationId: data.conversationId, // This might not exist on all ticket docs
+        };
+    });
+    
+    // Sort by receivedDateTime descending, similar to API
+    emails.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+    
     return emails;
 }
 
@@ -277,3 +307,5 @@ export async function updateTicket(id: string, data: { priority?: string, assign
         return { success: false, error: "Failed to update ticket." };
     }
 }
+
+    
