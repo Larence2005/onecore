@@ -321,6 +321,12 @@ export async function replyToEmailAction(settings: Settings, messageId: string, 
 
     const reply = {
         comment: comment,
+        message: {
+            body: {
+                contentType: 'HTML',
+                content: comment,
+            }
+        }
     };
 
     const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`, {

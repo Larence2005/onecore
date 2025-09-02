@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -18,13 +18,12 @@ import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { Header } from '@/components/header';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LayoutDashboard, List, Users, Building2, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import parse, { domToReact, HTMLReactParserOptions, Element } from 'html-react-parser';
+import RichTextEditor from './rich-text-editor';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
@@ -425,11 +424,9 @@ export function TicketDetailContent({ id }: { id: string }) {
                                     {isReplying && (
                                         <Card>
                                             <CardContent className="p-4 space-y-4">
-                                                <Textarea 
-                                                    placeholder="Type your reply here..."
-                                                    className="min-h-[150px]"
+                                                <RichTextEditor
                                                     value={replyContent}
-                                                    onChange={(e) => setReplyContent(e.target.value)}
+                                                    onChange={setReplyContent}
                                                 />
                                                 <div className="flex justify-end gap-2">
                                                     <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
