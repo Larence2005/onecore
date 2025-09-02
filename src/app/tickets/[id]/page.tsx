@@ -8,3 +8,5 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
     // The client-side logic is encapsulated in TicketDetailContent.
     return <TicketDetailContent id={params.id} />;
 }
+
+    
