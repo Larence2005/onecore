@@ -4,11 +4,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction, updateTicket } from '@/app/actions';
-import type { DetailedEmail, Attachment } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [attachments, setAttachments] = useState<File[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
 
     const [currentPriority, setCurrentPriority] = useState('');
@@ -196,19 +198,50 @@ export function TicketDetailContent({ id }: { id: string }) {
         }
     };
 
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            setAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+        }
+    };
+
+    const removeAttachment = (fileToRemove: File) => {
+        setAttachments(prev => prev.filter(file => file !== fileToRemove));
+    };
+
+    const convertFileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const base64String = (reader.result as string).split(',')[1];
+                resolve(base64String);
+            };
+            reader.onerror = error => reject(error);
+        });
+    };
 
     const handleSendReply = async () => {
-        if (!replyContent.trim()) {
-            toast({ variant: "destructive", title: "Cannot send empty reply." });
+        if (!replyContent.trim() && attachments.length === 0) {
+            toast({ variant: "destructive", title: "Cannot send an empty reply." });
             return;
         }
         setIsSending(true);
         try {
             const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
             if(!latestMessageId) throw new Error("Could not determine message to reply to.");
-            await replyToEmailAction(settings, latestMessageId, replyContent, email?.conversationId);
+            
+            const attachmentPayloads: NewAttachment[] = await Promise.all(
+                attachments.map(async (file) => ({
+                    name: file.name,
+                    contentType: file.type,
+                    contentBytes: await convertFileToBase64(file),
+                }))
+            );
+
+            await replyToEmailAction(settings, latestMessageId, replyContent, email?.conversationId, attachmentPayloads);
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
+            setAttachments([]);
             setIsReplying(false);
             await fetchEmail();
         } catch (err) {
@@ -230,6 +263,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const handleCancelReply = () => {
         setIsReplying(false);
         setReplyContent('');
+        setAttachments([]);
     };
 
     
@@ -427,7 +461,36 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <RichTextEditor
                                                     value={replyContent}
                                                     onChange={setReplyContent}
+                                                    onAttachmentClick={() => fileInputRef.current?.click()}
                                                 />
+                                                <input
+                                                    type="file"
+                                                    ref={fileInputRef}
+                                                    multiple
+                                                    onChange={handleFileChange}
+                                                    className="hidden"
+                                                />
+                                                 {attachments.length > 0 && (
+                                                    <div className="space-y-2">
+                                                        <h4 className="text-sm font-medium">Attachments</h4>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {attachments.map((file, index) => (
+                                                                <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                                                                    <span>{file.name}</span>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-4 w-4 rounded-full"
+                                                                        onClick={() => removeAttachment(file)}
+                                                                    >
+                                                                        <X className="h-3 w-3" />
+                                                                        <span className="sr-only">Remove attachment</span>
+                                                                    </Button>
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-end gap-2">
                                                     <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
                                                     <Button onClick={handleSendReply} disabled={isSending}>

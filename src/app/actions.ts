@@ -32,6 +32,12 @@ export interface Attachment {
     contentBytes: string; // Base64 encoded content
 }
 
+export interface NewAttachment {
+    name: string;
+    contentBytes: string; // Base64 encoded content
+    contentType: string;
+}
+
 
 export interface DetailedEmail extends Email {
     body: {
@@ -313,7 +319,13 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
     return { success: true };
 }
 
-export async function replyToEmailAction(settings: Settings, messageId: string, comment: string, conversationId: string | undefined): Promise<{ success: boolean }> {
+export async function replyToEmailAction(
+    settings: Settings,
+    messageId: string,
+    comment: string,
+    conversationId: string | undefined,
+    attachments: NewAttachment[]
+): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token.');
@@ -324,8 +336,14 @@ export async function replyToEmailAction(settings: Settings, messageId: string, 
             body: {
                 contentType: 'HTML',
                 content: comment,
-            }
-        }
+            },
+            attachments: attachments.map(att => ({
+                '@odata.type': '#microsoft.graph.fileAttachment',
+                name: att.name,
+                contentBytes: att.contentBytes,
+                contentType: att.contentType,
+            })),
+        },
     };
 
     const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`, {
@@ -338,8 +356,14 @@ export async function replyToEmailAction(settings: Settings, messageId: string, 
     });
     
     if (response.status !== 202) {
-        const error = await response.json();
-        throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
+        const errorText = await response.text();
+        console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
+        try {
+            const error = JSON.parse(errorText);
+            throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
+        } catch (e) {
+            throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
+        }
     }
 
     // After successfully sending a reply, invalidate the cache
@@ -355,6 +379,7 @@ export async function replyToEmailAction(settings: Settings, messageId: string, 
 
     return { success: true };
 }
+
 
 
 export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string }) {

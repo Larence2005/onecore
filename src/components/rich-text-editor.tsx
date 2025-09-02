@@ -1,6 +1,6 @@
 "use client";
 
-import { Bold, Italic, Link, List, ListOrdered, Image as ImageIcon, Code } from "lucide-react";
+import { Bold, Italic, Link, List, ListOrdered, Image as ImageIcon, Code, Paperclip } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
@@ -8,10 +8,11 @@ import { useRef, useEffect } from "react";
 interface RichTextEditorProps {
     value: string; // Now expects HTML string
     onChange: (value: string) => void;
+    onAttachmentClick: () => void;
     className?: string;
 }
 
-const RichTextEditor = ({ value, onChange, className }: RichTextEditorProps) => {
+const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichTextEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
 
     // Keep internal state in sync with the prop, but only when it changes from the outside
@@ -68,6 +69,9 @@ const RichTextEditor = ({ value, onChange, className }: RichTextEditorProps) => 
                 </Button>
             ))}
         </div>
+         <Button variant="ghost" size="icon" className="h-8 w-8" type="button" onClick={onAttachmentClick} title="Attach files">
+            <Paperclip className="h-4 w-4" />
+        </Button>
       </div>
       <div
         ref={editorRef}
