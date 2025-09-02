@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef, useCallback, use } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction, updateTicket } from '@/app/actions';
 import type { DetailedEmail } from '@/app/actions';
@@ -459,7 +459,6 @@ function TicketDetailContent({ id }: { id: string }) {
 function TicketDetailPage({ params }: { params: { id: string } }) {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
-    const resolvedParams = use(Promise.resolve(params));
     
     useEffect(() => {
         if (!loading && !user) {
@@ -557,7 +556,7 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <TicketDetailContent id={resolvedParams.id} />
+                    <TicketDetailContent id={params.id} />
                 </main>
             </div>
         </SidebarProvider>
@@ -569,3 +568,4 @@ export default TicketDetailPage;
     
 
     
+
