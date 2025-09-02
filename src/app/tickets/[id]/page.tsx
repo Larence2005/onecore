@@ -101,6 +101,8 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
 function TicketDetailContent({ id }: { id: string }) {
     const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
+    const { user, loading, logout } = useAuth();
+    const router = useRouter();
     const [email, setEmail] = useState<DetailedEmail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -133,6 +135,13 @@ function TicketDetailContent({ id }: { id: string }) {
         'John Doe',
         'Jane Smith'
     ];
+
+    useEffect(() => {
+        if (!loading && !user) {
+        router.push('/login');
+        }
+    }, [user, loading, router]);
+
 
     const fetchEmail = useCallback(async () => {
         if (!isConfigured) {
@@ -271,201 +280,6 @@ function TicketDetailContent({ id }: { id: string }) {
         </Card>
     );
 
-    return (
-        <div className="flex-1 flex flex-col min-w-0">
-             <Header>
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
-                        <Link href="/">
-                            <ArrowLeft className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <h1 className="text-xl font-bold truncate">{email?.subject || "Ticket Details"}</h1>
-                </div>
-            </Header>
-            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
-                <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4">
-                    {isLoading && (
-                        <div className="space-y-4">
-                            {[...Array(2)].map((_, i) => (
-                                <Card key={i}>
-                                    <CardHeader className="flex flex-row items-center gap-4 p-4">
-                                        <Skeleton className="h-10 w-10 rounded-full" />
-                                        <div className="flex-1 space-y-2">
-                                            <Skeleton className="h-4 w-1/4" />
-                                            <Skeleton className="h-3 w-1/3" />
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-4">
-                                        <Skeleton className="h-24 w-full" />
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-
-                    {error && (
-                        <Alert variant="destructive">
-                            <Terminal className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    )}
-
-                    {!isLoading && !error && email && (
-                         <div className="space-y-6">
-                            <Collapsible open={isThreadVisible} onOpenChange={setIsThreadVisible}>
-                                <CollapsibleContent className="space-y-6">
-                                    {email.conversation && email.conversation.length > 0 ? (
-                                        email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
-                                    ) : (
-                                        renderMessageCard(email, true)
-                                    )}
-                                </CollapsibleContent>
-                            </Collapsible>
-                            
-
-                            <div className="flex justify-between items-center">
-                                {!isReplying && (
-                                    <Button onClick={handleReplyClick}>
-                                        Reply
-                                    </Button>
-                                )}
-                                 {isReplying && !isThreadVisible && (
-                                    <CollapsibleTrigger asChild>
-                                        <Button variant="ghost">Show conversation</Button>
-                                    </CollapsibleTrigger>
-                                )}
-                            </div>
-
-                            {isReplying && (
-                                <Card>
-                                    <CardContent className="p-4 space-y-4">
-                                        <Textarea 
-                                            placeholder="Type your reply here..."
-                                            className="min-h-[150px]"
-                                            value={replyContent}
-                                            onChange={(e) => setReplyContent(e.target.value)}
-                                        />
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
-                                            <Button onClick={handleSendReply} disabled={isSending}>
-                                                {isSending ? (
-                                                    <>
-                                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                                        Sending...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Send className="mr-2 h-4 w-4" />
-                                                        Send Reply
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </div>
-                    )}
-                </div>
-                
-                <aside className="w-full lg:w-80 lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
-                    {isLoading && (
-                        <Card>
-                            <CardHeader>
-                                <Skeleton className="h-6 w-1/2" />
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                            </CardContent>
-                        </Card>
-                    )}
-                     {!isLoading && email && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Properties</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4 text-sm">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Requester</span>
-                                    <span className="font-medium text-right">{email.sender}</span>
-                                </div>
-                                <Separator />
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground flex items-center gap-2"><Calendar size={16} /> Date Submitted</span>
-                                    <span className="font-medium">{format(parseISO(email.receivedDateTime), 'PPP')}</span>
-                                </div>
-                                <Separator />
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground flex items-center gap-2"><Shield size={16} /> Priority</span>
-                                    <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
-                                        <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
-                                            <SelectValue>
-                                                <Badge variant="outline">{currentPriority}</Badge>
-                                            </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {priorities.map(p => (
-                                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Separator />
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
-                                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
-                                        <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
-                                            <SelectValue>
-                                                <Badge variant="outline">{currentStatus}</Badge>
-                                            </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {statuses.map(s => (
-                                                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Separator />
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground flex items-center gap-2"><UserCheck size={16} /> Assignee</span>
-                                    <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
-                                        <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end font-medium">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                           {assignees.map(a => (
-                                                 <SelectItem key={a} value={a}>{a}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </CardContent>
-                        </Card>
-                     )}
-                </aside>
-            </div>
-        </div>
-    );
-}
-
-
-function TicketDetailPage({ params }: { params: { id: string } }) {
-    const { user, loading, logout } = useAuth();
-    const router = useRouter();
-    
-    useEffect(() => {
-        if (!loading && !user) {
-        router.push('/login');
-        }
-    }, [user, loading, router]);
-
     const handleLogout = async () => {
         try {
         await logout();
@@ -482,7 +296,7 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
         </div>
         );
     }
-
+    
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
             router.push('/');
@@ -556,16 +370,191 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <TicketDetailContent id={params.id} />
+                     <Header>
+                        <div className="flex items-center gap-4">
+                            <Button variant="outline" size="icon" asChild>
+                                <Link href="/">
+                                    <ArrowLeft className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <h1 className="text-xl font-bold truncate">{email?.subject || "Ticket Details"}</h1>
+                        </div>
+                    </Header>
+                    <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
+                        <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4">
+                            {isLoading && (
+                                <div className="space-y-4">
+                                    {[...Array(2)].map((_, i) => (
+                                        <Card key={i}>
+                                            <CardHeader className="flex flex-row items-center gap-4 p-4">
+                                                <Skeleton className="h-10 w-10 rounded-full" />
+                                                <div className="flex-1 space-y-2">
+                                                    <Skeleton className="h-4 w-1/4" />
+                                                    <Skeleton className="h-3 w-1/3" />
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="p-4">
+                                                <Skeleton className="h-24 w-full" />
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
+
+                            {error && (
+                                <Alert variant="destructive">
+                                    <Terminal className="h-4 w-4" />
+                                    <AlertTitle>Error</AlertTitle>
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
+
+                            {!isLoading && !error && email && (
+                                <div className="space-y-6">
+                                    <Collapsible open={isThreadVisible} onOpenChange={setIsThreadVisible}>
+                                        <CollapsibleContent className="space-y-6">
+                                            {email.conversation && email.conversation.length > 0 ? (
+                                                email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
+                                            ) : (
+                                                renderMessageCard(email, true)
+                                            )}
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                    
+
+                                    <div className="flex justify-between items-center">
+                                        {!isReplying && (
+                                            <Button onClick={handleReplyClick}>
+                                                Reply
+                                            </Button>
+                                        )}
+                                        {isReplying && !isThreadVisible && (
+                                            <CollapsibleTrigger asChild>
+                                                <Button variant="ghost">Show conversation</Button>
+                                            </CollapsibleTrigger>
+                                        )}
+                                    </div>
+
+                                    {isReplying && (
+                                        <Card>
+                                            <CardContent className="p-4 space-y-4">
+                                                <Textarea 
+                                                    placeholder="Type your reply here..."
+                                                    className="min-h-[150px]"
+                                                    value={replyContent}
+                                                    onChange={(e) => setReplyContent(e.target.value)}
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
+                                                    <Button onClick={handleSendReply} disabled={isSending}>
+                                                        {isSending ? (
+                                                            <>
+                                                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                Sending...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Send className="mr-2 h-4 w-4" />
+                                                                Send Reply
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <aside className="w-full lg:w-80 lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+                            {isLoading && (
+                                <Card>
+                                    <CardHeader>
+                                        <Skeleton className="h-6 w-1/2" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                    </CardContent>
+                                </Card>
+                            )}
+                            {!isLoading && email && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Properties</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 text-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Requester</span>
+                                            <span className="font-medium text-right">{email.sender}</span>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-2"><Calendar size={16} /> Date Submitted</span>
+                                            <span className="font-medium">{format(parseISO(email.receivedDateTime), 'PPP')}</span>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-2"><Shield size={16} /> Priority</span>
+                                            <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
+                                                <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
+                                                    <SelectValue>
+                                                        <Badge variant="outline">{currentPriority}</Badge>
+                                                    </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {priorities.map(p => (
+                                                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
+                                            <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                                                <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
+                                                    <SelectValue>
+                                                        <Badge variant="outline">{currentStatus}</Badge>
+                                                    </SelectValue>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {statuses.map(s => (
+                                                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-2"><UserCheck size={16} /> Assignee</span>
+                                            <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                                                <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end font-medium">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                {assignees.map(a => (
+                                                        <SelectItem key={a} value={a}>{a}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </aside>
+                    </div>
                 </main>
             </div>
         </SidebarProvider>
     );
 }
 
-export default TicketDetailPage;
-
-    
-
-    
-
+// This is the main page component, now a Server Component
+export default function TicketDetailPage({ params }: { params: { id: string } }) {
+    return <TicketDetailContent id={params.id} />;
+}
