@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, use } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction, updateTicket } from '@/app/actions';
 import type { DetailedEmail } from '@/app/actions';
@@ -25,7 +25,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { use } from 'react';
 
 
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
@@ -536,6 +535,3 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
 }
 
 export default TicketDetailPage;
-
-    
-    
