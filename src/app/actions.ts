@@ -320,7 +320,6 @@ export async function replyToEmailAction(settings: Settings, messageId: string, 
     }
 
     const reply = {
-        comment: comment,
         message: {
             body: {
                 contentType: 'HTML',
