@@ -18,44 +18,44 @@ export function ReadEmails() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchEmails = useCallback(async () => {
-    if (!isConfigured) {
-        setIsLoading(false);
-        return;
-    }
     setIsLoading(true);
     setError(null);
+
+    // Immediately fetch from the database to show existing data
     try {
-      const latestEmails = await getLatestEmails(settings);
-      setEmails(latestEmails);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Failed to fetch emails. Loading from database.",
-        description: errorMessage,
-      });
-      // Fallback to fetching from DB
-      try {
         const dbEmails = await getTicketsFromDB();
         setEmails(dbEmails);
-      } catch (dbError) {
+    } catch (dbError) {
         const dbErrorMessage = dbError instanceof Error ? dbError.message : "An unknown database error occurred.";
         setError(dbErrorMessage);
         setEmails([]);
-      }
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
+    }
+
+    // Then, trigger the API sync in the background if configured
+    if (isConfigured) {
+        try {
+            await getLatestEmails(settings);
+            // After sync, refresh data from DB to show any new emails
+            const updatedDbEmails = await getTicketsFromDB();
+            setEmails(updatedDbEmails);
+        } catch (syncError) {
+            const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
+            // We can choose to show a non-blocking toast notification here
+            toast({
+                variant: "destructive",
+                title: "Failed to sync with email server.",
+                description: syncErrorMessage,
+            });
+        }
     }
   }, [settings, isConfigured, toast]);
 
   useEffect(() => {
-    if (isConfigured) {
-        fetchEmails();
-    } else {
-        setIsLoading(false);
-    }
-  }, [fetchEmails, isConfigured]);
+    fetchEmails();
+  }, [fetchEmails]);
+
 
   if (!isConfigured && !isLoading) {
     return (
@@ -82,5 +82,3 @@ export function ReadEmails() {
     </div>
   );
 }
-
-    
