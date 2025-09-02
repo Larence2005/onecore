@@ -296,13 +296,9 @@ function TicketDetailContent({ id }: { id: string }) {
                     )}
 
                     {!isLoading && !error && email && (
-                        <div className="space-y-6">
+                         <div className="space-y-6">
                             {email.conversation && email.conversation.length > 0 ? (
-                                email.conversation.map((msg, index) => (
-                                    <div key={msg.id}>
-                                        {renderMessageCard(msg, index === 0)}
-                                    </div>
-                                ))
+                                email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
                             ) : (
                                 renderMessageCard(email, true)
                             )}
@@ -367,7 +363,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Requester</span>
                                     <span className="font-medium text-right">{email.sender}</span>
-                                </div>
+                                d</div>
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><Calendar size={16} /> Date Submitted</span>
