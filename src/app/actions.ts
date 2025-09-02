@@ -15,6 +15,7 @@ export interface Email {
     id: string;
     subject: string;
     sender: string;
+    senderEmail?: string;
     bodyPreview: string;
     receivedDateTime: string;
     priority: string;
@@ -111,6 +112,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                 const newTicketData = {
                     title: email.subject || 'No Subject',
                     sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+                    senderEmail: email.from?.emailAddress?.address || 'Unknown Email',
                     bodyPreview: email.bodyPreview,
                     receivedDateTime: email.receivedDateTime,
                     ...defaults
@@ -129,6 +131,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                 id: email.id,
                 subject: ticketData?.title || email.subject || 'No Subject',
                 sender: ticketData?.sender || email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+                senderEmail: ticketData?.senderEmail || email.from?.emailAddress?.address,
                 bodyPreview: ticketData?.bodyPreview || email.bodyPreview,
                 receivedDateTime: ticketData?.receivedDateTime || email.receivedDateTime,
                 priority: ticketData?.priority || 'Low',
@@ -155,6 +158,7 @@ export async function getTicketsFromDB(): Promise<Email[]> {
             id: doc.id,
             subject: data.title || 'No Subject',
             sender: data.sender || 'Unknown Sender',
+            senderEmail: data.senderEmail || 'Unknown Email',
             bodyPreview: data.bodyPreview || '',
             receivedDateTime: data.receivedDateTime || new Date().toISOString(),
             priority: data.priority || 'Low',
@@ -196,6 +200,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         id: mainEmailData.id,
         subject: ticketData?.title || mainEmailData.subject || 'No Subject',
         sender: mainEmailData.from?.emailAddress?.name || mainEmailData.from?.emailAddress?.address || 'Unknown Sender',
+        senderEmail: ticketData?.senderEmail || mainEmailData.from?.emailAddress?.address,
         body: mainEmailData.body,
         receivedDateTime: mainEmailData.receivedDateTime,
         bodyPreview: mainEmailData.bodyPreview,
@@ -216,6 +221,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
                 id: msg.id,
                 subject: msg.subject,
                 sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
+                senderEmail: msg.from?.emailAddress?.address,
                 body: msg.body,
                 receivedDateTime: msg.receivedDateTime,
                 bodyPreview: msg.bodyPreview,
