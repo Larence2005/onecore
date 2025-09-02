@@ -56,7 +56,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         throw new Error('Failed to acquire access token.');
     }
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId,toRecipients,inReplyTo&$orderby=receivedDateTime desc`, {
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
         },
@@ -67,7 +67,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
     }
 
-    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
+    const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string, toRecipients: { emailAddress: { address: string, name: string } }[], inReplyTo?: string }[] } = await response.json() as any;
 
     const conversations = new Map<string, any>();
     for (const email of data.value) {
@@ -103,6 +103,11 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         } else {
             const newTicketData = {
                 title: email.subject || 'No Subject',
+                sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+                bodyPreview: email.bodyPreview,
+                receivedDateTime: email.receivedDateTime,
+                receiver: email.toRecipients?.map(r => r.emailAddress.address).join(', ') || '',
+                inReplyTo: email.inReplyTo || '',
                 ...defaults
             };
             try {
@@ -117,9 +122,9 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         emails.push({
             id: email.id,
             subject: ticketData?.title || email.subject || 'No Subject',
-            sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
-            bodyPreview: email.bodyPreview,
-            receivedDateTime: email.receivedDateTime,
+            sender: ticketData?.sender || email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
+            bodyPreview: ticketData?.bodyPreview || email.bodyPreview,
+            receivedDateTime: ticketData?.receivedDateTime || email.receivedDateTime,
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
