@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
@@ -106,6 +107,8 @@ function TicketDetailContent({ id }: { id: string }) {
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [isThreadVisible, setIsThreadVisible] = useState(true);
+
 
     const [currentPriority, setCurrentPriority] = useState('');
     const [currentAssignee, setCurrentAssignee] = useState('');
@@ -213,6 +216,7 @@ function TicketDetailContent({ id }: { id: string }) {
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setIsReplying(false);
+            setIsThreadVisible(true);
             await fetchEmail();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -225,6 +229,18 @@ function TicketDetailContent({ id }: { id: string }) {
             setIsSending(false);
         }
     };
+
+    const handleReplyClick = () => {
+        setIsReplying(true);
+        setIsThreadVisible(false);
+    };
+
+    const handleCancelReply = () => {
+        setIsReplying(false);
+        setIsThreadVisible(true);
+        setReplyContent('');
+    };
+
     
     const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => (
         <Card key={message.id} className="overflow-hidden">
@@ -298,17 +314,30 @@ function TicketDetailContent({ id }: { id: string }) {
 
                     {!isLoading && !error && email && (
                          <div className="space-y-6">
-                            {email.conversation && email.conversation.length > 0 ? (
-                                email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
-                            ) : (
-                                renderMessageCard(email, true)
-                            )}
+                            <Collapsible open={isThreadVisible} onOpenChange={setIsThreadVisible}>
+                                <CollapsibleContent className="space-y-6">
+                                    {email.conversation && email.conversation.length > 0 ? (
+                                        email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
+                                    ) : (
+                                        renderMessageCard(email, true)
+                                    )}
+                                </CollapsibleContent>
+                            </Collapsible>
+                            
 
-                            <div className="flex justify-end">
-                                <Button onClick={() => setIsReplying(!isReplying)}>
-                                    {isReplying ? 'Cancel' : 'Reply'}
-                                </Button>
+                            <div className="flex justify-between items-center">
+                                {!isReplying && (
+                                    <Button onClick={handleReplyClick}>
+                                        Reply
+                                    </Button>
+                                )}
+                                 {isReplying && !isThreadVisible && (
+                                    <CollapsibleTrigger asChild>
+                                        <Button variant="ghost">Show conversation</Button>
+                                    </CollapsibleTrigger>
+                                )}
                             </div>
+
                             {isReplying && (
                                 <Card>
                                     <CardContent className="p-4 space-y-4">
@@ -318,7 +347,8 @@ function TicketDetailContent({ id }: { id: string }) {
                                             value={replyContent}
                                             onChange={(e) => setReplyContent(e.target.value)}
                                         />
-                                        <div className="flex justify-end">
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
                                             <Button onClick={handleSendReply} disabled={isSending}>
                                                 {isSending ? (
                                                     <>
@@ -535,3 +565,5 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
 }
 
 export default TicketDetailPage;
+
+    
