@@ -57,7 +57,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             throw new Error('Failed to acquire access token.');
         }
 
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId,toRecipients,inReplyTo&$orderby=receivedDateTime desc`, {
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
             },
@@ -68,10 +68,23 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
         }
 
-        const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string, toRecipients: { emailAddress: { address: string, name: string } }[], inReplyTo?: string }[] } = await response.json() as any;
+        const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
         const emails: Email[] = [];
-        for (const email of data.value) {
+        // Using a map to ensure we only have one entry per conversation, based on the most recent email.
+        const conversationMap = new Map<string, any>();
+
+        // The API returns emails sorted by most recent first.
+        // We iterate in reverse to process oldest first, so the map ends up with the newest email for each conversation.
+        for (const email of data.value.reverse()) {
+           conversationMap.set(email.conversationId, email);
+        }
+        
+        const uniqueEmails = Array.from(conversationMap.values()).sort((a,b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+        const latestTenEmails = uniqueEmails.slice(0, 10);
+
+
+        for (const email of latestTenEmails) {
             const ticketDocRef = doc(db, 'tickets', email.id);
             const ticketDoc = await getDoc(ticketDocRef);
             
@@ -85,6 +98,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             if (ticketDoc.exists()) {
                 const existingData = ticketDoc.data();
                 ticketData = { ...defaults, ...existingData };
+                // If existing ticket is missing any of the default properties, update it.
                 if (!existingData.priority || !existingData.assignee || !existingData.status) {
                     try {
                         await setDoc(ticketDocRef, { ...ticketData }, { merge: true });
@@ -93,19 +107,19 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
                     }
                 }
             } else {
+                // Ticket doesn't exist, create it with all necessary data including defaults.
                 const newTicketData = {
                     title: email.subject || 'No Subject',
                     sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
                     bodyPreview: email.bodyPreview,
                     receivedDateTime: email.receivedDateTime,
-                    receiver: email.toRecipients?.map(r => r.emailAddress.address).join(', ') || '',
-                    inReplyTo: email.inReplyTo || '',
                     ...defaults
                 };
                 try {
                     await setDoc(ticketDocRef, newTicketData);
                     ticketData = newTicketData;
                 } catch (error) {
+                    // If creation fails, we still build a temporary ticketData object to avoid crashing the UI
                     console.error("Failed to create ticket in Firestore:", error);
                     ticketData = newTicketData;
                 }
