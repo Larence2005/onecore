@@ -424,11 +424,6 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     Reply
                                                 </Button>
                                             )}
-                                            {isReplying && (
-                                                <CollapsibleTrigger asChild>
-                                                    <Button variant="ghost">Show conversation</Button>
-                                                </CollapsibleTrigger>
-                                            )}
                                         </div>
                                     </Collapsible>
 
@@ -550,5 +545,3 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
