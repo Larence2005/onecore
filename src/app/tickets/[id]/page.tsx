@@ -419,7 +419,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
-                                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                                     <Select value={currentStatus} onValuecha nge={(value) => handleUpdate('status', value)}>
                                         <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
                                             <SelectValue>
                                                 <Badge variant="outline">{currentStatus}</Badge>
@@ -456,7 +456,7 @@ function TicketDetailContent({ id }: { id: string }) {
 }
 
 
-function TicketDetailPage({ params }: { params: { id: string } }) {
+function TicketDetailPage({ params: { id } }: { params: { id: string } }) {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
     
@@ -550,14 +550,13 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
                             </Avatar>
                             <div className="flex flex-col">
                                 <span className="font-medium text-sm">{user.email}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
-                            </div>
+                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>                            </div>
                         </div>
                     </SidebarFooter>
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <TicketDetailContent id={params.id} />
+                    <TicketDetailContent id={id} />
                 </main>
             </div>
         </SidebarProvider>
@@ -565,5 +564,7 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
 }
 
 export default TicketDetailPage;
+
+    
 
     
