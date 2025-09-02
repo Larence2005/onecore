@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -527,7 +528,7 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <TicketDetailContent id={use(Promise.resolve(params.id))} />
+                    <TicketDetailContent id={params.id} />
                 </main>
             </div>
         </SidebarProvider>
@@ -536,4 +537,5 @@ function TicketDetailPage({ params }: { params: { id: string } }) {
 
 export default TicketDetailPage;
 
+    
     
