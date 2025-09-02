@@ -24,6 +24,15 @@ export interface Email {
     conversationId?: string;
 }
 
+export interface Attachment {
+    id: string;
+    name: string;
+    contentType: string;
+    size: number;
+    contentBytes: string; // Base64 encoded content
+}
+
+
 export interface DetailedEmail extends Email {
     body: {
         contentType: string;
@@ -31,6 +40,8 @@ export interface DetailedEmail extends Email {
     };
     conversation?: DetailedEmail[];
     inReplyToId?: string;
+    attachments?: Attachment[];
+    hasAttachments?: boolean;
 }
 
 const getMsalConfig = (settings: Settings): Configuration => ({
@@ -140,7 +151,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         throw new Error('Failed to acquire access token.');
     }
 
-    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments&$expand=attachments`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
@@ -163,6 +174,8 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         priority: 'Low',
         assignee: 'Unassigned',
         status: 'Open',
+        hasAttachments: msg.hasAttachments,
+        attachments: msg.attachments,
     }));
 
     // Sort messages by date client-side
@@ -181,7 +194,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error('Failed to acquire access token.');
     }
 
-    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
+    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments&$expand=attachments`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
@@ -206,6 +219,8 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
             priority: 'Low',
             assignee: 'Unassigned',
             status: 'Open',
+            hasAttachments: msg.hasAttachments,
+            attachments: msg.attachments,
          };
          const ticketDocRef = doc(db, 'tickets', msg.id);
          const ticketDoc = await getDoc(ticketDocRef);
