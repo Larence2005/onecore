@@ -419,7 +419,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
-                                     <Select value={currentStatus} onValuecha nge={(value) => handleUpdate('status', value)}>
+                                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
                                         <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
                                             <SelectValue>
                                                 <Badge variant="outline">{currentStatus}</Badge>
@@ -456,9 +456,10 @@ function TicketDetailContent({ id }: { id: string }) {
 }
 
 
-function TicketDetailPage({ params: { id } }: { params: { id: string } }) {
+function TicketDetailPage({ params }: { params: { id: string } }) {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
+    const resolvedParams = use(Promise.resolve(params));
     
     useEffect(() => {
         if (!loading && !user) {
@@ -556,7 +557,7 @@ function TicketDetailPage({ params: { id } }: { params: { id: string } }) {
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <TicketDetailContent id={id} />
+                    <TicketDetailContent id={resolvedParams.id} />
                 </main>
             </div>
         </SidebarProvider>
