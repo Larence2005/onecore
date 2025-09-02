@@ -148,7 +148,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         throw new Error('Failed to acquire access token.');
     }
 
-    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,inReplyToId&$orderby=receivedDateTime asc`, {
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview&$orderby=receivedDateTime asc`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
@@ -166,7 +166,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         body: msg.body,
         receivedDateTime: msg.receivedDateTime,
         bodyPreview: msg.bodyPreview,
-        inReplyToId: msg.inReplyToId,
         priority: 'Low',
         assignee: 'Unassigned',
         status: 'Open',
@@ -347,5 +346,3 @@ export async function updateTicket(id: string, data: { priority?: string, assign
         return { success: false, error: "Failed to update ticket." };
     }
 }
-
-    
