@@ -418,21 +418,19 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 renderMessageCard(email, true)
                                             )}
                                         </CollapsibleContent>
+                                        <div className="flex justify-between items-center mt-4">
+                                            {!isReplying && (
+                                                <Button onClick={handleReplyClick}>
+                                                    Reply
+                                                </Button>
+                                            )}
+                                            {isReplying && (
+                                                <CollapsibleTrigger asChild>
+                                                    <Button variant="ghost">Show conversation</Button>
+                                                </CollapsibleTrigger>
+                                            )}
+                                        </div>
                                     </Collapsible>
-                                    
-
-                                    <div className="flex justify-between items-center">
-                                        {!isReplying && (
-                                            <Button onClick={handleReplyClick}>
-                                                Reply
-                                            </Button>
-                                        )}
-                                        {isReplying && !isThreadVisible && (
-                                            <CollapsibleTrigger asChild>
-                                                <Button variant="ghost">Show conversation</Button>
-                                            </CollapsibleTrigger>
-                                        )}
-                                    </div>
 
                                     {isReplying && (
                                         <Card>
