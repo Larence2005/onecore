@@ -59,7 +59,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
             throw new Error('Failed to acquire access token.');
         }
 
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
             },
@@ -72,43 +72,35 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
-        const emailsToProcess = data.value.slice(0, 10);
+        for (const email of data.value) {
+            if (!email.conversationId) continue; // Skip emails not in a conversation
 
+            const conversationThread = await fetchAndStoreFullConversation(settings, email.conversationId);
+            if (conversationThread.length === 0) continue;
 
-        for (const email of emailsToProcess) {
-            const ticketDocRef = doc(db, 'tickets', email.id);
+            const firstMessage = conversationThread[0];
+            const ticketId = firstMessage.id; // Use first message's ID as the stable ticket ID
+
+            const ticketDocRef = doc(db, 'tickets', ticketId);
             const ticketDoc = await getDoc(ticketDocRef);
-            
-            const defaults = {
-                priority: 'Low',
-                assignee: 'Unassigned',
-                status: 'Open',
-            };
 
             if (ticketDoc.exists()) {
-                const existingData = ticketDoc.data();
-                if (!existingData.priority || !existingData.assignee || !existingData.status) {
-                    try {
-                        await setDoc(ticketDocRef, { ...defaults, ...existingData }, { merge: true });
-                    } catch (error) {
-                        console.error("Failed to update existing ticket with default properties:", error);
-                    }
-                }
+                // Ticket already exists, maybe update timestamp or other properties
+                await updateDoc(ticketDocRef, { receivedDateTime: email.receivedDateTime });
             } else {
+                // New ticket, create it with details from the first message
                 const newTicketData = {
-                    title: email.subject || 'No Subject',
-                    sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
-                    senderEmail: email.from?.emailAddress?.address || 'Unknown Email',
-                    bodyPreview: email.bodyPreview,
-                    receivedDateTime: email.receivedDateTime,
-                    conversationId: email.conversationId,
-                    ...defaults
+                    title: firstMessage.subject || 'No Subject',
+                    sender: firstMessage.sender || 'Unknown Sender',
+                    senderEmail: firstMessage.senderEmail || 'Unknown Email',
+                    bodyPreview: firstMessage.bodyPreview,
+                    receivedDateTime: firstMessage.receivedDateTime,
+                    conversationId: firstMessage.conversationId,
+                    priority: 'Low',
+                    assignee: 'Unassigned',
+                    status: 'Open',
                 };
-                try {
-                    await setDoc(ticketDocRef, newTicketData);
-                } catch (error) {
-                    console.error("Failed to create ticket in Firestore:", error);
-                }
+                await setDoc(ticketDocRef, newTicketData);
             }
         }
     } catch (error) {
@@ -148,7 +140,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         throw new Error('Failed to acquire access token.');
     }
 
-    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview`, {
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
@@ -167,6 +159,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         body: msg.body,
         receivedDateTime: msg.receivedDateTime,
         bodyPreview: msg.bodyPreview,
+        conversationId: msg.conversationId,
         priority: 'Low',
         assignee: 'Unassigned',
         status: 'Open',
@@ -188,20 +181,20 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error('Failed to acquire access token.');
     }
 
-    // Get the initial message to find its conversationId
-    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=conversationId`, {
+    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
-    if (!messageResponse.ok) throw new Error('Failed to fetch initial email to get conversation ID.');
-    const { conversationId } = await messageResponse.json();
+
+    if (!messageResponse.ok) {
+        const error = await messageResponse.json();
+        throw new Error(`Failed to fetch email details: ${error.error?.message || messageResponse.statusText}`);
+    }
+
+    const msg = await messageResponse.json();
+    const conversationId = msg.conversationId;
 
     if (!conversationId) {
         // Handle single email not part of a conversation
-        const singleMessageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview`, {
-            headers: { Authorization: `Bearer ${authResponse.accessToken}` }
-        });
-         if (!singleMessageResponse.ok) throw new Error('Failed to fetch single email.');
-         const msg = await singleMessageResponse.json();
          const emailDetail: DetailedEmail = {
             id: msg.id,
             subject: msg.subject,
@@ -213,6 +206,12 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
             priority: 'Low',
             assignee: 'Unassigned',
             status: 'Open',
+         };
+         const ticketDocRef = doc(db, 'tickets', msg.id);
+         const ticketDoc = await getDoc(ticketDocRef);
+         if (ticketDoc.exists()) {
+            const ticketData = ticketDoc.data();
+            return {...emailDetail, ...ticketData};
          }
          return emailDetail;
     }
@@ -238,25 +237,23 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
     const ticketDoc = await getDoc(ticketDocRef);
     const ticketData = ticketDoc.data();
 
-    // The "main" email is the one the user clicked on, which might not be the first one.
-    const mainEmail = conversationMessages.find(msg => msg.id === id) || conversationMessages[0];
+    // The "main" email is the one the user clicked on.
+    const mainEmail = conversationMessages.find(m => m.id === id) || conversationMessages[0];
 
-    const baseEmail: DetailedEmail = {
+    return {
         ...mainEmail,
         subject: ticketData?.title || mainEmail.subject || 'No Subject',
         priority: ticketData?.priority || 'Low',
         assignee: ticketData?.assignee || 'Unassigned',
         status: ticketData?.status || 'Open',
         conversationId: conversationId,
-        conversation: conversationMessages.map(msg => ({
-            ...msg,
+        conversation: conversationMessages.map(convMsg => ({
+            ...convMsg,
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
         })),
     };
-    
-    return baseEmail;
 }
 
 
