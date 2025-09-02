@@ -148,7 +148,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         throw new Error('Failed to acquire access token.');
     }
 
-    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview&$orderby=receivedDateTime asc`, {
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
@@ -158,6 +158,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
     }
 
     const conversationData: { value: any[] } = await conversationResponse.json() as any;
+    
     const conversationMessages: DetailedEmail[] = conversationData.value.map(msg => ({
         id: msg.id,
         subject: msg.subject,
@@ -170,6 +171,9 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         assignee: 'Unassigned',
         status: 'Open',
     }));
+
+    // Sort messages by date client-side
+    conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
 
     const conversationDocRef = doc(db, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: conversationMessages });
