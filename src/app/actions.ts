@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 
 
 export interface Email {
@@ -30,6 +30,7 @@ export interface DetailedEmail extends Email {
         content: string;
     };
     conversation?: DetailedEmail[];
+    inReplyToId?: string;
 }
 
 const getMsalConfig = (settings: Settings): Configuration => ({
@@ -86,7 +87,6 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 
             if (ticketDoc.exists()) {
                 const existingData = ticketDoc.data();
-                // If existing ticket is missing any of the default properties, update it.
                 if (!existingData.priority || !existingData.assignee || !existingData.status) {
                     try {
                         await setDoc(ticketDocRef, { ...defaults, ...existingData }, { merge: true });
@@ -95,7 +95,6 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
                     }
                 }
             } else {
-                // Ticket doesn't exist, create it with all necessary data including defaults.
                 const newTicketData = {
                     title: email.subject || 'No Subject',
                     sender: email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Unknown Sender',
@@ -114,7 +113,6 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
         }
     } catch (error) {
         console.error("API call failed, continuing with data from DB:", error);
-        // We no longer return from this function, just log the error. The frontend will fetch from DB.
     }
 }
 
@@ -144,6 +142,42 @@ export async function getTicketsFromDB(): Promise<Email[]> {
     return emails.slice(0, 10);
 }
 
+export async function fetchAndStoreFullConversation(settings: Settings, conversationId: string): Promise<DetailedEmail[]> {
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token.');
+    }
+
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,inReplyToId&$orderby=receivedDateTime asc`, {
+        headers: { Authorization: `Bearer ${authResponse.accessToken}` }
+    });
+
+    if (!conversationResponse.ok) {
+        const error = await conversationResponse.json();
+        throw new Error(`Failed to fetch conversation thread: ${error.error?.message || conversationResponse.statusText}`);
+    }
+
+    const conversationData: { value: any[] } = await conversationResponse.json() as any;
+    const conversationMessages: DetailedEmail[] = conversationData.value.map(msg => ({
+        id: msg.id,
+        subject: msg.subject,
+        sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
+        senderEmail: msg.from?.emailAddress?.address,
+        body: msg.body,
+        receivedDateTime: msg.receivedDateTime,
+        bodyPreview: msg.bodyPreview,
+        inReplyToId: msg.inReplyToId,
+        priority: 'Low',
+        assignee: 'Unassigned',
+        status: 'Open',
+    }));
+
+    const conversationDocRef = doc(db, 'conversations', conversationId);
+    await setDoc(conversationDocRef, { messages: conversationMessages });
+
+    return conversationMessages;
+}
+
 
 export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
     const authResponse = await getAccessToken(settings);
@@ -151,73 +185,73 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         throw new Error('Failed to acquire access token.');
     }
 
-    // First, get the single message to find its conversationId
-    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId`, {
+    // Get the initial message to find its conversationId
+    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=conversationId`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
+    if (!messageResponse.ok) throw new Error('Failed to fetch initial email to get conversation ID.');
+    const { conversationId } = await messageResponse.json();
 
-    if (!messageResponse.ok) {
-        const error = await messageResponse.json();
-        throw new Error(`Failed to fetch email: ${error.error?.message || messageResponse.statusText}`);
-    }
-    const mainEmailData: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, body: { contentType: string, content: string }, receivedDateTime: string, bodyPreview: string, conversationId: string } = await messageResponse.json() as any;
-
-    // Use the first message of the conversation to look up ticket data
-    let firstMessageId = mainEmailData.id;
-    if (mainEmailData.conversationId) {
-        const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${mainEmailData.conversationId}'&$select=id&$orderby=receivedDateTime asc&$top=1`, {
+    if (!conversationId) {
+        // Handle single email not part of a conversation
+        const singleMessageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview`, {
             headers: { Authorization: `Bearer ${authResponse.accessToken}` }
         });
-        if(conversationResponse.ok) {
-            const conversationData: { value: {id: string}[]} = await conversationResponse.json() as any;
-            if (conversationData.value.length > 0) {
-                firstMessageId = conversationData.value[0].id;
-            }
-        }
+         if (!singleMessageResponse.ok) throw new Error('Failed to fetch single email.');
+         const msg = await singleMessageResponse.json();
+         const emailDetail: DetailedEmail = {
+            id: msg.id,
+            subject: msg.subject,
+            sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
+            senderEmail: msg.from?.emailAddress?.address,
+            body: msg.body,
+            receivedDateTime: msg.receivedDateTime,
+            bodyPreview: msg.bodyPreview,
+            priority: 'Low',
+            assignee: 'Unassigned',
+            status: 'Open',
+         }
+         return emailDetail;
+    }
+
+    // Check Firestore cache first
+    const conversationDocRef = doc(db, 'conversations', conversationId);
+    const conversationDoc = await getDoc(conversationDocRef);
+    let conversationMessages: DetailedEmail[];
+
+    if (conversationDoc.exists()) {
+        conversationMessages = conversationDoc.data().messages as DetailedEmail[];
+    } else {
+        // If not in cache, fetch from API and store it
+        conversationMessages = await fetchAndStoreFullConversation(settings, conversationId);
     }
     
+    if (!conversationMessages || conversationMessages.length === 0) {
+        throw new Error('Conversation could not be found or fetched, even after a fallback attempt.');
+    }
+
+    const firstMessageId = conversationMessages[0].id;
     const ticketDocRef = doc(db, 'tickets', firstMessageId);
     const ticketDoc = await getDoc(ticketDocRef);
     const ticketData = ticketDoc.data();
-    
+
+    // The "main" email is the one the user clicked on, which might not be the first one.
+    const mainEmail = conversationMessages.find(msg => msg.id === id) || conversationMessages[0];
+
     const baseEmail: DetailedEmail = {
-        id: mainEmailData.id,
-        subject: ticketData?.title || mainEmailData.subject || 'No Subject',
-        sender: mainEmailData.from?.emailAddress?.name || mainEmailData.from?.emailAddress?.address || 'Unknown Sender',
-        senderEmail: ticketData?.senderEmail || mainEmailData.from?.emailAddress?.address,
-        body: mainEmailData.body,
-        receivedDateTime: mainEmailData.receivedDateTime,
-        bodyPreview: mainEmailData.bodyPreview,
+        ...mainEmail,
+        subject: ticketData?.title || mainEmail.subject || 'No Subject',
         priority: ticketData?.priority || 'Low',
         assignee: ticketData?.assignee || 'Unassigned',
         status: ticketData?.status || 'Open',
-        conversationId: mainEmailData.conversationId
+        conversationId: conversationId,
+        conversation: conversationMessages.map(msg => ({
+            ...msg,
+            priority: ticketData?.priority || 'Low',
+            assignee: ticketData?.assignee || 'Unassigned',
+            status: ticketData?.status || 'Open',
+        })),
     };
-
-    if (mainEmailData.conversationId) {
-        const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${mainEmailData.conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview&$orderby=receivedDateTime asc`, {
-            headers: { Authorization: `Bearer ${authResponse.accessToken}` }
-        });
-        if (conversationResponse.ok) {
-            const conversationData: { value: any[] } = await conversationResponse.json() as any;
-            // Map conversation messages
-            baseEmail.conversation = conversationData.value.map((msg: any) => ({
-                id: msg.id,
-                subject: msg.subject,
-                sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
-                senderEmail: msg.from?.emailAddress?.address,
-                body: msg.body,
-                receivedDateTime: msg.receivedDateTime,
-                bodyPreview: msg.bodyPreview,
-                // These properties might not be relevant for each message in a conversation, but we'll include them.
-                priority: ticketData?.priority || 'Low', 
-                assignee: ticketData?.assignee || 'Unassigned',
-                status: ticketData?.status || 'Open'
-            }));
-        } else {
-             console.error("Failed to fetch conversation thread.");
-        }
-    }
     
     return baseEmail;
 }
@@ -264,7 +298,7 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
     return { success: true };
 }
 
-export async function replyToEmailAction(settings: Settings, messageId: string, comment: string): Promise<{ success: boolean }> {
+export async function replyToEmailAction(settings: Settings, messageId: string, comment: string, conversationId: string | undefined): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token.');
@@ -288,6 +322,17 @@ export async function replyToEmailAction(settings: Settings, messageId: string, 
         throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
     }
 
+    // After successfully sending a reply, invalidate the cache
+    if (conversationId) {
+        const conversationDocRef = doc(db, 'conversations', conversationId);
+        try {
+            await deleteDoc(conversationDocRef);
+        } catch (error) {
+            console.error("Failed to delete conversation cache:", error);
+            // Don't throw, just log. The cache will expire or be overwritten eventually.
+        }
+    }
+
     return { success: true };
 }
 
@@ -302,3 +347,5 @@ export async function updateTicket(id: string, data: { priority?: string, assign
         return { success: false, error: "Failed to update ticket." };
     }
 }
+
+    

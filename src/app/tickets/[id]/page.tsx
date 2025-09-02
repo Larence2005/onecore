@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { use } from 'react';
 
 
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
@@ -208,7 +209,7 @@ function TicketDetailContent({ id }: { id: string }) {
         try {
             const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
             if(!latestMessageId) throw new Error("Could not determine message to reply to.");
-            await replyToEmailAction(settings, latestMessageId, replyContent);
+            await replyToEmailAction(settings, latestMessageId, replyContent, email?.conversationId);
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setIsReplying(false);
@@ -363,7 +364,7 @@ function TicketDetailContent({ id }: { id: string }) {
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Requester</span>
                                     <span className="font-medium text-right">{email.sender}</span>
-                                d</div>
+                                </div>
                                 <Separator />
                                 <div className="flex items-center justify-between">
                                     <span className="text-muted-foreground flex items-center gap-2"><Calendar size={16} /> Date Submitted</span>
@@ -425,7 +426,7 @@ function TicketDetailContent({ id }: { id: string }) {
 }
 
 
-export default function TicketDetailPage({ params }: { params: { id: string } }) {
+function TicketDetailPage({ params }: { params: { id: string } }) {
     const { user, loading, logout } = useAuth();
     const router = useRouter();
     
@@ -526,9 +527,13 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <TicketDetailContent id={params.id} />
+                    <TicketDetailContent id={use(Promise.resolve(params.id))} />
                 </main>
             </div>
         </SidebarProvider>
     );
 }
+
+export default TicketDetailPage;
+
+    
