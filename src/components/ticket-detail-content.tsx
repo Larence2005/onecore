@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -17,14 +17,12 @@ import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { Header } from '@/components/header';
-import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { LayoutDashboard, List, Users, Building2, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
@@ -108,7 +106,6 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [isThreadVisible, setIsThreadVisible] = useState(true);
 
 
     const [currentPriority, setCurrentPriority] = useState('');
@@ -224,7 +221,6 @@ export function TicketDetailContent({ id }: { id: string }) {
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setIsReplying(false);
-            setIsThreadVisible(true);
             await fetchEmail();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -240,12 +236,10 @@ export function TicketDetailContent({ id }: { id: string }) {
 
     const handleReplyClick = () => {
         setIsReplying(true);
-        setIsThreadVisible(false);
     };
 
     const handleCancelReply = () => {
         setIsReplying(false);
-        setIsThreadVisible(true);
         setReplyContent('');
     };
 
@@ -410,22 +404,20 @@ export function TicketDetailContent({ id }: { id: string }) {
 
                             {!isLoading && !error && email && (
                                 <div className="space-y-6">
-                                    <Collapsible open={isThreadVisible} onOpenChange={setIsThreadVisible}>
-                                        <CollapsibleContent className="space-y-6">
-                                            {email.conversation && email.conversation.length > 0 ? (
-                                                email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
-                                            ) : (
-                                                renderMessageCard(email, true)
-                                            )}
-                                        </CollapsibleContent>
-                                        <div className="flex justify-between items-center mt-4">
-                                            {!isReplying && (
-                                                <Button onClick={handleReplyClick}>
-                                                    Reply
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </Collapsible>
+                                    <div className="space-y-6">
+                                        {email.conversation && email.conversation.length > 0 ? (
+                                            email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
+                                        ) : (
+                                            renderMessageCard(email, true)
+                                        )}
+                                    </div>
+                                    <div className="flex justify-between items-center mt-4">
+                                        {!isReplying && (
+                                            <Button onClick={handleReplyClick}>
+                                                Reply
+                                            </Button>
+                                        )}
+                                    </div>
 
                                     {isReplying && (
                                         <Card>
@@ -477,7 +469,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                             {!isLoading && email && (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="text-lg">Properties</CardTitle>
+                                        <h2 className="text-lg font-bold">Properties</h2>
                                     </CardHeader>
                                     <CardContent className="space-y-4 text-sm">
                                         <div className="flex items-center justify-between">
@@ -545,3 +537,5 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
