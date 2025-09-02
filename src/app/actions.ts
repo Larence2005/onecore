@@ -57,7 +57,7 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
             throw new Error('Failed to acquire access token.');
         }
 
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=50&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId,toRecipients,inReplyTo&$orderby=receivedDateTime desc`, {
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId,toRecipients,inReplyTo&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
             },
@@ -69,18 +69,9 @@ export async function getLatestEmails(settings: Settings): Promise<Email[]> {
         }
 
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string, toRecipients: { emailAddress: { address: string, name: string } }[], inReplyTo?: string }[] } = await response.json() as any;
-
-        const conversations = new Map<string, any>();
-        for (const email of data.value) {
-            if (!conversations.has(email.conversationId)) {
-                conversations.set(email.conversationId, email);
-            }
-        }
         
-        const uniqueEmails = Array.from(conversations.values()).slice(0, 10);
-
         const emails: Email[] = [];
-        for (const email of uniqueEmails) {
+        for (const email of data.value) {
             const ticketDocRef = doc(db, 'tickets', email.id);
             const ticketDoc = await getDoc(ticketDocRef);
             
@@ -307,5 +298,3 @@ export async function updateTicket(id: string, data: { priority?: string, assign
         return { success: false, error: "Failed to update ticket." };
     }
 }
-
-    
