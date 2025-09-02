@@ -8,7 +8,7 @@ import type { DetailedEmail } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -23,59 +23,40 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import parse, { domToReact, HTMLReactParserOptions, Element } from 'html-react-parser';
 
 
-const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
-    const iframeRef = useRef<HTMLIFrameElement>(null);
-
-    const setupIframe = useCallback(() => {
-        if (iframeRef.current && iframeRef.current.contentWindow) {
-            const doc = iframeRef.current.contentWindow.document;
-            const body = doc.body;
-            const documentElement = doc.documentElement;
-            if (body) {
-                const resizeIframe = () => {
-                    if (iframeRef.current) {
-                        const newHeight = Math.max(body.scrollHeight, documentElement.scrollHeight);
-                        iframeRef.current.style.height = `${newHeight}px`;
-                    }
-                };
-
-                resizeIframe();
-
-                const observer = new MutationObserver(resizeIframe);
-                observer.observe(body, { childList: true, subtree: true, attributes: true, characterData: true });
-                
-                if (iframeRef.current.contentWindow) {
-                    iframeRef.current.contentWindow.addEventListener('resize', resizeIframe);
-                }
-
-                return () => {
-                    observer.disconnect();
-                    if(iframeRef.current && iframeRef.current.contentWindow) {
-                       iframeRef.current.contentWindow.removeEventListener('resize', resizeIframe);
-                    }
-                };
+const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
+    const options: HTMLReactParserOptions = {
+        replace: (domNode) => {
+            if (domNode instanceof Element && domNode.name === 'blockquote') {
+                return (
+                    <Accordion type="single" collapsible className="my-4">
+                        <AccordionItem value="item-1" className="border-l pl-4">
+                            <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start">
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                {domToReact(domNode.children, options)}
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                );
             }
-        }
-    }, []);
-    
-    useEffect(() => {
-        const cleanup = setupIframe();
-        return cleanup;
-    }, [htmlContent, setupIframe]);
-    
-    const styledHtmlContent = `
+        },
+    };
+
+    const styledHtml = `
         <style>
-            body { 
-                margin: 0; 
-                padding: 1rem;
+            body {
                 font-family: sans-serif; 
                 color: hsl(var(--foreground)); 
                 background-color: transparent; 
                 word-wrap: break-word;
                 overflow-wrap: break-word;
-                overflow: hidden;
             }
             img { max-width: 100% !important; height: auto !important; }
             * { max-width: 100%; }
@@ -83,15 +64,7 @@ const EmailIframe = ({ htmlContent }: { htmlContent: string }) => {
         ${htmlContent || ''}
     `;
 
-    return (
-        <iframe 
-            ref={iframeRef}
-            srcDoc={styledHtmlContent} 
-            className="w-full border-0" 
-            onLoad={setupIframe}
-            scrolling="no"
-        />
-    );
+    return <div className="p-4">{parse(styledHtml, options)}</div>;
 };
 
 
@@ -264,7 +237,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                     {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
                     {message.body.contentType === 'html' ? (
-                        <EmailIframe htmlContent={message.body.content} />
+                        <CollapsibleEmailContent htmlContent={message.body.content} />
                     ) : (
                         <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
                     )}
