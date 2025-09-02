@@ -331,20 +331,31 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token.');
     }
 
-    const reply = {
-        message: {
-            body: {
-                contentType: 'HTML',
-                content: comment,
+    let replyPayload: any;
+
+    if (attachments && attachments.length > 0) {
+        // Use the 'message' object for replies with attachments
+        replyPayload = {
+            message: {
+                body: {
+                    contentType: 'HTML',
+                    content: comment,
+                },
+                attachments: attachments.map(att => ({
+                    '@odata.type': '#microsoft.graph.fileAttachment',
+                    name: att.name,
+                    contentBytes: att.contentBytes,
+                    contentType: att.contentType,
+                })),
             },
-            attachments: attachments.map(att => ({
-                '@odata.type': '#microsoft.graph.fileAttachment',
-                name: att.name,
-                contentBytes: att.contentBytes,
-                contentType: att.contentType,
-            })),
-        },
-    };
+        };
+    } else {
+        // Use the simpler 'comment' for replies without attachments
+        replyPayload = {
+            comment: comment,
+        };
+    }
+
 
     const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`, {
         method: 'POST',
@@ -352,7 +363,7 @@ export async function replyToEmailAction(
             Authorization: `Bearer ${authResponse.accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(reply),
+        body: JSON.stringify(replyPayload),
     });
     
     if (response.status !== 202) {
@@ -392,3 +403,5 @@ export async function updateTicket(id: string, data: { priority?: string, assign
         return { success: false, error: "Failed to update ticket." };
     }
 }
+
+    
