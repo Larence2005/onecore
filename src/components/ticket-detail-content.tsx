@@ -573,7 +573,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                             )}
                         </div>
                         
-                        <aside className="w-full lg:w-80 lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+                        <aside className="w-full lg:w-[340px] lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto flex-shrink-0">
                             {isLoading && (
                                 <Card>
                                     <CardHeader>
@@ -594,82 +594,75 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <h2 className="text-lg font-bold">Properties</h2>
                                     </CardHeader>
                                     <CardContent className="space-y-4 text-sm">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground flex items-center gap-2"><User size={16} /> Requester</span>
-                                            <span className="font-medium text-right">{email.sender}</span>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Requester</span>
+                                                <span className="font-medium text-sm truncate block" title={email.sender}>{email.sender}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Calendar size={14} /> Submitted</span>
+                                                <span className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'PPP')}</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
+                                                <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
+                                                    <SelectTrigger className="h-8 text-sm">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {priorities.map(p => (
+                                                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
+                                                <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                                                    <SelectTrigger className="h-8 text-sm">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {statuses.map(s => (
+                                                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                                                    <SelectTrigger className="h-8 text-sm">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                    {assignees.map(a => (
+                                                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="outline" size="sm" className="font-normal w-full justify-start text-sm h-8">
+                                                            {currentDeadline ? format(currentDeadline, 'PPP') : 'Set deadline'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <CalendarIcon
+                                                            mode="single"
+                                                            selected={currentDeadline}
+                                                            onSelect={handleDeadlineChange}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
                                         </div>
                                         <Separator />
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground flex items-center gap-2"><Calendar size={16} /> Date Submitted</span>
-                                            <span className="font-medium">{format(parseISO(email.receivedDateTime), 'PPP')}</span>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground flex items-center gap-2"><Shield size={16} /> Priority</span>
-                                            <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
-                                                <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
-                                                    <SelectValue>
-                                                        <Badge variant="outline">{currentPriority}</Badge>
-                                                    </SelectValue>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {priorities.map(p => (
-                                                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground flex items-center gap-2"><CheckCircle size={16} /> Status</span>
-                                            <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
-                                                <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end">
-                                                    <SelectValue>
-                                                        <Badge variant="outline">{currentStatus}</Badge>
-                                                    </SelectValue>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {statuses.map(s => (
-                                                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground flex items-center gap-2"><UserCheck size={16} /> Assignee</span>
-                                            <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
-                                                <SelectTrigger className="h-auto border-0 bg-transparent shadow-none focus:ring-0 p-0 w-auto justify-end font-medium">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                {assignees.map(a => (
-                                                        <SelectItem key={a} value={a}>{a}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground flex items-center gap-2"><CalendarClock size={16} /> Deadline</span>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button variant="outline" size="sm" className="font-normal">
-                                                        {currentDeadline ? format(currentDeadline, 'PPP') : 'Set deadline'}
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <CalendarIcon
-                                                        mode="single"
-                                                        selected={currentDeadline}
-                                                        onSelect={handleDeadlineChange}
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                        <Separator />
-                                        <div className="space-y-2">
-                                            <span className="text-muted-foreground flex items-center gap-2"><Tag size={16} /> Tags</span>
+                                        <div className="space-y-2 col-span-2">
+                                            <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
                                             <div className="flex flex-wrap gap-2">
                                                 {currentTags.map(tag => (
                                                     <Badge key={tag} variant="secondary">
@@ -684,8 +677,8 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 value={tagInput}
                                                 onChange={(e) => setTagInput(e.target.value)}
                                                 onKeyDown={handleTagKeyDown}
-                                                placeholder="Add a tag and press Enter"
-                                                className="h-8"
+                                                placeholder="Add tag and press Enter"
+                                                className="h-8 text-sm"
                                             />
                                         </div>
                                     </CardContent>
