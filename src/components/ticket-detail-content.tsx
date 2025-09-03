@@ -27,28 +27,44 @@ import RichTextEditor from './rich-text-editor';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
-    const options: HTMLReactParserOptions = {
-        replace: (domNode) => {
-            if (domNode instanceof Element && domNode.name === 'blockquote') {
-                return (
-                    <Accordion type="single" collapsible className="my-4">
-                        <AccordionItem value="item-1" className="border-l pl-4">
-                            <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </AccordionTrigger>
-                            <AccordionContent>
-                                {domToReact(domNode.children, options)}
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                );
-            }
-        },
+    // Regex to find common reply headers
+    const replyHeaderRegex = /(<br\s*\/?>\s*)?(On\s.*wrote:|From:.*|Sent:.*|To:.*|Subject:.*)/is;
+    const blockquoteRegex = /<blockquote.*?>/is;
+
+    const findSplitIndex = (content: string) => {
+        const headerMatch = content.match(replyHeaderRegex);
+        const blockquoteMatch = content.match(blockquoteRegex);
+
+        const headerIndex = headerMatch ? headerMatch.index : -1;
+        const blockquoteIndex = blockquoteMatch ? blockquoteMatch.index : -1;
+
+        if (headerIndex !== -1 && blockquoteIndex !== -1) {
+            return Math.min(headerIndex, blockquoteIndex);
+        }
+        if (headerIndex !== -1) {
+            return headerIndex;
+        }
+        if (blockquoteIndex !== -1) {
+            return blockquoteIndex;
+        }
+        return -1;
     };
 
-    const styledHtml = `
+    const splitIndex = findSplitIndex(htmlContent);
+
+    let mainContent, quotedContent;
+
+    if (splitIndex !== -1) {
+        mainContent = htmlContent.substring(0, splitIndex);
+        quotedContent = htmlContent.substring(splitIndex);
+    } else {
+        mainContent = htmlContent;
+        quotedContent = null;
+    }
+
+    const styledHtml = (content: string) => `
         <style>
-            body {
+            body { 
                 font-family: sans-serif; 
                 color: hsl(var(--foreground)); 
                 background-color: transparent; 
@@ -58,10 +74,26 @@ const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
             img { max-width: 100% !important; height: auto !important; }
             * { max-width: 100%; }
         </style>
-        ${htmlContent || ''}
+        ${content || ''}
     `;
 
-    return <div className="p-4">{parse(styledHtml, options)}</div>;
+    return (
+        <div className="p-4">
+            {parse(styledHtml(mainContent))}
+            {quotedContent && (
+                 <Accordion type="single" collapsible className="my-4 border-0">
+                    <AccordionItem value="item-1" className="border-l pl-4">
+                        <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           {parse(styledHtml(quotedContent))}
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            )}
+        </div>
+    );
 };
 
 const downloadAttachment = (attachment: Attachment) => {
@@ -255,6 +287,14 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
 
     const handleReplyClick = () => {
+        const latestMessage = email?.conversation ? email.conversation[email.conversation.length - 1] : email;
+        const sender = latestMessage?.senderEmail || '';
+        const receivedDate = latestMessage ? format(parseISO(latestMessage.receivedDateTime), 'eee, MMM d, yyyy h:mm a') : '';
+        
+        const quoteHeader = `On ${receivedDate}, ${sender} wrote:`;
+        const quotedContent = `<br><br><blockquote>${quoteHeader}<br>${latestMessage?.body.content}</blockquote>`;
+
+        setReplyContent(`<p><br></p>${quotedContent}`);
         setIsReplying(true);
     };
 
@@ -598,5 +638,3 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
