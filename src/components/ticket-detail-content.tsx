@@ -33,10 +33,8 @@ const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
                 return (
                     <Accordion type="single" collapsible className="my-4">
                         <AccordionItem value="item-1" className="border-l pl-4">
-                            <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start">
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
+                            <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
+                                <MoreHorizontal className="h-4 w-4" />
                             </AccordionTrigger>
                             <AccordionContent>
                                 {domToReact(domNode.children, options)}
