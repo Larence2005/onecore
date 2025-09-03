@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import parse, { domToReact, HTMLReactParserOptions, Element } from 'html-react-parser';
+import parse from 'html-react-parser';
 import RichTextEditor from './rich-text-editor';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
@@ -132,6 +135,10 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentPriority, setCurrentPriority] = useState('');
     const [currentAssignee, setCurrentAssignee] = useState('');
     const [currentStatus, setCurrentStatus] = useState('');
+    const [currentDeadline, setCurrentDeadline] = useState<Date | undefined>(undefined);
+    const [currentTags, setCurrentTags] = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState('');
+
 
     const priorities = [
         { value: 'Low', label: 'Low' },
@@ -175,6 +182,8 @@ export function TicketDetailContent({ id }: { id: string }) {
             setCurrentPriority(detailedEmail.priority);
             setCurrentAssignee(detailedEmail.assignee);
             setCurrentStatus(detailedEmail.status);
+            setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
+            setCurrentTags(detailedEmail.tags || []);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             setError(errorMessage);
@@ -192,41 +201,53 @@ export function TicketDetailContent({ id }: { id: string }) {
         fetchEmail();
     }, [fetchEmail]);
     
-    const handleUpdate = async (field: 'priority' | 'assignee' | 'status', value: string) => {
+    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'deadline' | 'tags', value: any) => {
         if (!email) return;
 
-        const originalState = {
-            priority: currentPriority,
-            assignee: currentAssignee,
-            status: currentStatus,
-        };
-
-        // Optimistic UI update
-        if (field === 'priority') setCurrentPriority(value);
-        if (field === 'assignee') setCurrentAssignee(value);
-        if (field === 'status') setCurrentStatus(value);
-        
         const ticketIdToUpdate = email.conversation?.[0]?.id || email.id;
 
         const result = await updateTicket(ticketIdToUpdate, { [field]: value });
 
         if (!result.success) {
-             if (field === 'priority') setCurrentPriority(originalState.priority);
-             if (field === 'assignee') setCurrentAssignee(originalState.assignee);
-             if (field === 'status') setCurrentStatus(originalState.status);
-
-            toast({
+             toast({
                 variant: 'destructive',
                 title: 'Update Failed',
                 description: result.error,
             });
+            // Re-fetch to revert optimistic updates
+            fetchEmail();
         } else {
             toast({
                 title: 'Ticket Updated',
-                description: `The ${field} has been changed to ${value}.`,
+                description: `The ${field} has been changed.`,
             });
         }
     };
+    
+    const handleDeadlineChange = (date: Date | undefined) => {
+        setCurrentDeadline(date);
+        handleUpdate('deadline', date ? date.toISOString() : null);
+    }
+    
+    const handleTagKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && tagInput.trim()) {
+            e.preventDefault();
+            const newTag = tagInput.trim();
+            if (!currentTags.includes(newTag)) {
+                const updatedTags = [...currentTags, newTag];
+                setCurrentTags(updatedTags); // Optimistic update
+                await handleUpdate('tags', updatedTags);
+                setTagInput('');
+            }
+        }
+    };
+
+    const removeTag = async (tagToRemove: string) => {
+        const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+        setCurrentTags(updatedTags); // Optimistic update
+        await handleUpdate('tags', updatedTags);
+    };
+
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -627,6 +648,45 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground flex items-center gap-2"><CalendarClock size={16} /> Deadline</span>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline" size="sm" className="font-normal">
+                                                        {currentDeadline ? format(currentDeadline, 'PPP') : 'Set deadline'}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <CalendarIcon
+                                                        mode="single"
+                                                        selected={currentDeadline}
+                                                        onSelect={handleDeadlineChange}
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <Separator />
+                                        <div className="space-y-2">
+                                            <span className="text-muted-foreground flex items-center gap-2"><Tag size={16} /> Tags</span>
+                                            <div className="flex flex-wrap gap-2">
+                                                {currentTags.map(tag => (
+                                                    <Badge key={tag} variant="secondary">
+                                                        {tag}
+                                                        <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                            <Input
+                                                value={tagInput}
+                                                onChange={(e) => setTagInput(e.target.value)}
+                                                onKeyDown={handleTagKeyDown}
+                                                placeholder="Add a tag and press Enter"
+                                                className="h-8"
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>

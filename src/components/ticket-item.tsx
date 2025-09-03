@@ -2,7 +2,7 @@
 "use client";
 
 import type { Email } from "@/app/actions";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast, differenceInDays } from "date-fns";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -46,6 +46,9 @@ export function TicketItem({ email }: TicketItemProps) {
 
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
 
+    const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
+    const isLate = email.deadline && email.closedAt && isPast(parseISO(email.deadline), parseISO(email.closedAt));
+
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status', value: string) => {
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
@@ -83,14 +86,17 @@ export function TicketItem({ email }: TicketItemProps) {
                 
                 <Link href={`/tickets/${email.id}`} className="flex-grow min-w-0 w-full cursor-pointer">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Badge variant="destructive">Overdue</Badge>
-                        <Badge variant="secondary">Customer responded</Badge>
-                        <Badge variant="outline">CHG</Badge>
+                        {isOverdue && <Badge variant="destructive">Overdue</Badge>}
+                        {isLate && <Badge variant="destructive" className="bg-orange-500">Late</Badge>}
+                        {email.tags?.map(tag => (
+                           <Badge key={tag} variant="outline">{tag}</Badge>
+                        ))}
                     </div>
                     <p className="font-medium text-foreground whitespace-nowrap overflow-hidden text-ellipsis">{email.subject}</p>
 
                     <p className="text-sm text-muted-foreground truncate">
-                        {email.sender} &bull; Customer responded: {format(parseISO(email.receivedDateTime), 'd')} days ago &bull; Overdue by: {Math.floor(Math.random() * 10) + 1} days
+                        {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'PPP')}
+                        {email.deadline && ` • Deadline: ${format(parseISO(email.deadline), 'PPP')}`}
                     </p>
                 </Link>
 

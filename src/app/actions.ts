@@ -22,6 +22,9 @@ export interface Email {
     assignee: string;
     status: string;
     conversationId?: string;
+    deadline?: string;
+    tags?: string[];
+    closedAt?: string;
 }
 
 export interface Attachment {
@@ -116,6 +119,9 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
                     priority: 'Low',
                     assignee: 'Unassigned',
                     status: 'Open',
+                    tags: [],
+                    deadline: null,
+                    closedAt: null,
                 };
                 await setDoc(ticketDocRef, newTicketData);
             }
@@ -143,6 +149,9 @@ export async function getTicketsFromDB(): Promise<Email[]> {
             assignee: data.assignee || 'Unassigned',
             status: data.status || 'Open',
             conversationId: data.conversationId,
+            tags: data.tags || [],
+            deadline: data.deadline,
+            closedAt: data.closedAt,
         };
     });
     
@@ -227,6 +236,8 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
             status: 'Open',
             hasAttachments: msg.hasAttachments,
             attachments: msg.attachments,
+            tags: [],
+            deadline: undefined,
          };
          const ticketDocRef = doc(db, 'tickets', msg.id);
          const ticketDoc = await getDoc(ticketDocRef);
@@ -267,6 +278,9 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         priority: ticketData?.priority || 'Low',
         assignee: ticketData?.assignee || 'Unassigned',
         status: ticketData?.status || 'Open',
+        tags: ticketData?.tags || [],
+        deadline: ticketData?.deadline,
+        closedAt: ticketData?.closedAt,
         conversationId: conversationId,
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
@@ -393,15 +407,28 @@ export async function replyToEmailAction(
 
 
 
-export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string }) {
+export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
     const ticketDocRef = doc(db, 'tickets', id);
     try {
-        await updateDoc(ticketDocRef, data);
+        const updateData: any = { ...data };
+
+        // If status is being updated to Resolved or Closed, set closedAt
+        if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
+            const docSnap = await getDoc(ticketDocRef);
+            if(docSnap.exists() && docSnap.data().status !== 'Resolved' && docSnap.data().status !== 'Closed') {
+                updateData.closedAt = new Date().toISOString();
+            }
+        }
+        
+        // If status is changed back to Open/Pending, clear closedAt
+        if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
+            updateData.closedAt = null;
+        }
+
+        await updateDoc(ticketDocRef, updateData);
         return { success: true };
     } catch (error) {
         console.error("Failed to update ticket:", error);
         return { success: false, error: "Failed to update ticket." };
     }
 }
-
-    
