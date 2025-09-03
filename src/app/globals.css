@@ -81,3 +81,28 @@ body {
 .text-ellipsis {
     text-overflow: ellipsis;
 }
+
+/* Image resize styles */
+.prose img {
+  position: relative;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.prose img.resizable {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: hsl(var(--ring));
+  border: 2px solid hsl(var(--background));
+  border-radius: 50%;
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+  z-index: 10;
+}

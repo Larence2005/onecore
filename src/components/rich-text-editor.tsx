@@ -1,9 +1,10 @@
+
 "use client";
 
 import { Bold, Italic, Link, List, ListOrdered, Image as ImageIcon, Code, Paperclip } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
 interface RichTextEditorProps {
     value: string; // Now expects HTML string
@@ -14,25 +15,119 @@ interface RichTextEditorProps {
 
 const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichTextEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
+    const isResizing = useRef(false);
 
-    // Keep internal state in sync with the prop, but only when it changes from the outside
+    const cleanupResizeHandles = useCallback(() => {
+        editorRef.current?.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
+        editorRef.current?.querySelectorAll('img.resizable').forEach(img => img.classList.remove('resizable'));
+    }, []);
+
+    const makeImagesResizable = useCallback(() => {
+        if (!editorRef.current) return;
+        cleanupResizeHandles();
+
+        editorRef.current.querySelectorAll('img').forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                cleanupResizeHandles();
+
+                img.classList.add('resizable');
+
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle';
+                img.parentElement?.appendChild(resizeHandle);
+                
+                const startResize = (e: MouseEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isResizing.current = true;
+                    const startX = e.pageX;
+                    const startY = e.pageY;
+                    const startWidth = img.offsetWidth;
+                    const startHeight = img.offsetHeight;
+
+                    const doResize = (e: MouseEvent) => {
+                        if (!isResizing.current) return;
+                        const newWidth = startWidth + (e.pageX - startX);
+                        const newHeight = startHeight + (e.pageY - startY);
+                        img.style.width = `${newWidth}px`;
+                        img.style.height = `auto`; // Maintain aspect ratio
+                    };
+
+                    const stopResize = () => {
+                        if (isResizing.current) {
+                            isResizing.current = false;
+                            document.removeEventListener('mousemove', doResize);
+                            document.removeEventListener('mouseup', stopResize);
+                            handleInput(); // Update parent component with new HTML
+                        }
+                    };
+
+                    document.addEventListener('mousemove', doResize);
+                    document.addEventListener('mouseup', stopResize);
+                };
+                
+                resizeHandle.addEventListener('mousedown', startResize);
+            });
+        });
+    }, [cleanupResizeHandles]);
+    
     useEffect(() => {
         if (editorRef.current && editorRef.current.innerHTML !== value) {
             editorRef.current.innerHTML = value;
+            makeImagesResizable();
         }
-    }, [value]);
+    }, [value, makeImagesResizable]);
 
     const handleInput = () => {
-        if (editorRef.current) {
+        if (editorRef.current && !isResizing.current) {
             onChange(editorRef.current.innerHTML);
         }
     };
+    
+    const insertImageFromDataUrl = (dataUrl: string) => {
+        const html = `<img src="${dataUrl}" style="max-width: 100%; height: auto;" />`;
+        document.execCommand('insertHTML', false, html);
+        // We must call makeImagesResizable after the DOM has had a chance to update
+        setTimeout(makeImagesResizable, 0);
+    };
 
+    const handleFile = (file: File) => {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result) {
+                    insertImageFromDataUrl(e.target.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+            return true;
+        }
+        return false;
+    }
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+            e.dataTransfer.clearData();
+        }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+        if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+            if (handleFile(e.clipboardData.files[0])) {
+                e.preventDefault();
+            }
+        }
+    };
+    
     const applyFormat = (command: string, value?: string) => {
         if (editorRef.current) {
              editorRef.current.focus();
              document.execCommand(command, false, value);
-             onChange(editorRef.current.innerHTML); // Notify parent of the change
+             handleInput(); // Notify parent of the change
         }
     };
 
@@ -54,10 +149,26 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
         { icon: Bold, tooltip: "Bold", onClick: () => applyFormat('bold') },
         { icon: Italic, tooltip: "Italic", onClick: () => applyFormat('italic') },
         { icon: Link, tooltip: "Insert Link", onClick: handleLink },
-        { icon: ImageIcon, tooltip: "Insert Image", onClick: handleImage },
+        { icon: ImageIcon, tooltip: "Insert Image URL", onClick: handleImage },
         { icon: List, tooltip: "Unordered List", onClick: () => applyFormat('insertUnorderedList') },
         { icon: ListOrdered, tooltip: "Ordered List", onClick: () => applyFormat('insertOrderedList') },
     ];
+    
+    useEffect(() => {
+        const currentEditor = editorRef.current;
+        if (currentEditor) {
+            const handleClickOutside = (event: MouseEvent) => {
+                if (!currentEditor.contains(event.target as Node)) {
+                    cleanupResizeHandles();
+                }
+            };
+            document.addEventListener('click', handleClickOutside);
+            return () => {
+                document.removeEventListener('click', handleClickOutside);
+            };
+        }
+    }, [cleanupResizeHandles]);
+
 
   return (
     <div className={cn("rounded-md border border-input focus-within:ring-2 focus-within:ring-ring", className)}>
@@ -77,6 +188,9 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
         ref={editorRef}
         contentEditable
         onInput={handleInput}
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        onPaste={handlePaste}
         className="prose dark:prose-invert max-w-none w-full rounded-b-md bg-background p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none min-h-[150px]"
       />
     </div>
