@@ -110,65 +110,57 @@ export function TicketItem({ email }: TicketItemProps) {
                     </p>
                 </Link>
 
-                <div className="flex flex-row sm:flex-col items-stretch ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
-                    <div>
-                        <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
-                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
-                                <SelectValue>
+                <div className="flex flex-col items-stretch ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
+                    <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
+                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectValue>
+                                <span className="flex items-center gap-2">
+                                    <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
+                                    {priorityDetails.label}
+                                </span>
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {priorities.map(p => (
+                                 <SelectItem key={p.value} value={p.value}>
                                     <span className="flex items-center gap-2">
-                                        <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
-                                        {priorityDetails.label}
+                                        <span className={cn("h-2 w-2 rounded-full",p.color)} />
+                                        {p.label}
                                     </span>
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {priorities.map(p => (
-                                     <SelectItem key={p.value} value={p.value}>
-                                        <span className="flex items-center gap-2">
-                                            <span className={cn("h-2 w-2 rounded-full",p.color)} />
-                                            {p.label}
-                                        </span>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div>
-                        <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
-                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                               {assignees.map(a => (
-                                     <SelectItem key={a} value={a}>{a}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div>
-                        <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
-                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
-                                <SelectValue />
-                            </SelectTrigger>
-                             <SelectContent>
-                                {statuses.map(s => (
-                                     <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
-                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
-                                <SelectValue />
-                            </SelectTrigger>
-                             <SelectContent>
-                                {types.map(t => (
-                                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                           {assignees.map(a => (
+                                 <SelectItem key={a} value={a}>{a}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectValue />
+                        </SelectTrigger>
+                         <SelectContent>
+                            {statuses.map(s => (
+                                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
+                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectValue />
+                        </SelectTrigger>
+                         <SelectContent>
+                            {types.map(t => (
+                                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
             </Card>
