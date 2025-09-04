@@ -160,14 +160,14 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                     </Alert>
                 ) : filteredEmails.length > 0 ? (
                      <div className="border-t">
-                        <div className="flex items-center gap-4 p-4 border-b bg-muted/50">
-                            <Checkbox 
-                                id="select-all" 
-                                onCheckedChange={handleSelectAll}
-                                checked={isAllSelected}
-                            />
+                        <div className="flex items-center gap-4 p-4 border-b bg-muted/50 min-h-[58px]">
                             {selectedTickets.length > 0 ? (
                                 <>
+                                    <Checkbox 
+                                        id="select-all" 
+                                        onCheckedChange={handleSelectAll}
+                                        checked={isAllSelected}
+                                    />
                                     <span className="text-sm font-medium text-muted-foreground">{selectedTickets.length} selected</span>
                                     <Button variant="outline" size="sm" onClick={handleArchive}>
                                         <Archive className="mr-2 h-4 w-4" />
@@ -175,7 +175,7 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                                     </Button>
                                 </>
                             ) : (
-                                <span className="text-sm font-medium text-muted-foreground">Select all</span>
+                                <div className="w-4 h-4" /> // Placeholder to maintain layout
                             )}
                         </div>
                         <ul className="space-y-0">
@@ -201,5 +201,3 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
         </div>
     );
 }
-
-    
