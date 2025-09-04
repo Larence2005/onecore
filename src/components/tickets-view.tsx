@@ -23,19 +23,36 @@ type TicketsViewProps = {
 
 const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
     return emails.filter(email => {
-        // Search filter
+        // Search filter (Subject, Sender)
         if (filters.search) {
             const searchTerm = filters.search.toLowerCase();
             const subjectMatch = email.subject.toLowerCase().includes(searchTerm);
             const senderMatch = email.sender.toLowerCase().includes(searchTerm);
-            const tagMatch = email.tags?.some(tag => tag.toLowerCase().includes(searchTerm));
-            if (!subjectMatch && !senderMatch && !tagMatch) {
+            if (!subjectMatch && !senderMatch) {
+                return false;
+            }
+        }
+        
+        // Tags filter
+        if (filters.tags) {
+            const tagSearchTerm = filters.tags.toLowerCase();
+            if (!email.tags?.some(tag => tag.toLowerCase().includes(tagSearchTerm))) {
                 return false;
             }
         }
 
         // Status filter
         if (filters.statuses.length > 0 && !filters.statuses.includes(email.status)) {
+            return false;
+        }
+        
+        // Priority filter
+        if (filters.priorities.length > 0 && !filters.priorities.includes(email.priority)) {
+            return false;
+        }
+
+        // Type filter
+        if (filters.types.length > 0 && !filters.types.includes(email.type)) {
             return false;
         }
 

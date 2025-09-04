@@ -37,6 +37,9 @@ function HomePageContent() {
     agents: [],
     groups: [],
     statuses: [],
+    priorities: [],
+    types: [],
+    tags: '',
     created: 'any',
   });
 

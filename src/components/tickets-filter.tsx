@@ -15,6 +15,9 @@ export interface FilterState {
   agents: string[];
   groups: string[];
   statuses: string[];
+  priorities: string[];
+  types: string[];
+  tags: string;
   created: string;
 }
 
@@ -25,29 +28,26 @@ interface TicketsFilterProps {
 const agentOptions = ['John Doe', 'Jane Smith', 'Unassigned'];
 const groupOptions = ['Support', 'Sales', 'Engineering'];
 const statusOptions = ['Open', 'Pending', 'Resolved', 'Closed'];
+const priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
+const typeOptions = ['Questions', 'Incident', 'Problem', 'Feature Request'];
 
 export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const [search, setSearch] = useState('');
   const [agents, setAgents] = useState<string[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
+  const [priorities, setPriorities] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [tags, setTags] = useState('');
   const [created, setCreated] = useState('any');
 
-  const handleAgentChange = (agent: string) => {
-    setAgents(prev => prev.includes(agent) ? prev.filter(a => a !== agent) : [...prev, agent]);
+  const handleCheckboxChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
+    setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
   };
 
-  const handleGroupChange = (group: string) => {
-    setGroups(prev => prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]);
-  };
-
-  const handleStatusChange = (status: string) => {
-    setStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
-  };
-  
   const handleApply = useCallback(() => {
-    onApplyFilters({ search, agents, groups, statuses, created });
-  }, [search, agents, groups, statuses, created, onApplyFilters]);
+    onApplyFilters({ search, agents, groups, statuses, priorities, types, tags, created });
+  }, [search, agents, groups, statuses, priorities, types, tags, created, onApplyFilters]);
 
 
   const clearFilters = () => {
@@ -55,6 +55,9 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
     setAgents([]);
     setGroups([]);
     setStatuses([]);
+    setPriorities([]);
+    setTypes([]);
+    setTags('');
     setCreated('any');
   };
   
@@ -63,7 +66,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   }, [handleApply]);
 
 
-  const appliedFiltersCount = [search, ...agents, ...groups, ...statuses, created !== 'any' ? created : null].filter(Boolean).length;
+  const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null].filter(Boolean).length;
 
   return (
     <aside className="hidden lg:block w-80 border-l bg-card">
@@ -98,9 +101,43 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                       <Checkbox 
                         id={`status-${status}`} 
                         checked={statuses.includes(status)} 
-                        onCheckedChange={() => handleStatusChange(status)}
+                        onCheckedChange={() => handleCheckboxChange(setStatuses, status)}
                       />
                       <Label htmlFor={`status-${status}`} className="font-normal">{status}</Label>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="priority">
+              <AccordionTrigger className="px-4 text-base font-semibold">Priority</AccordionTrigger>
+              <AccordionContent className="px-4">
+                <div className="space-y-2">
+                  {priorityOptions.map(priority => (
+                    <div key={priority} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`priority-${priority}`} 
+                        checked={priorities.includes(priority)} 
+                        onCheckedChange={() => handleCheckboxChange(setPriorities, priority)}
+                      />
+                      <Label htmlFor={`priority-${priority}`} className="font-normal">{priority}</Label>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+             <AccordionItem value="type">
+              <AccordionTrigger className="px-4 text-base font-semibold">Type</AccordionTrigger>
+              <AccordionContent className="px-4">
+                <div className="space-y-2">
+                  {typeOptions.map(type => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`type-${type}`} 
+                        checked={types.includes(type)} 
+                        onCheckedChange={() => handleCheckboxChange(setTypes, type)}
+                      />
+                      <Label htmlFor={`type-${type}`} className="font-normal">{type}</Label>
                     </div>
                   ))}
                 </div>
@@ -115,7 +152,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                       <Checkbox 
                         id={`agent-${agent}`} 
                         checked={agents.includes(agent)}
-                        onCheckedChange={() => handleAgentChange(agent)}
+                        onCheckedChange={() => handleCheckboxChange(setAgents, agent)}
                       />
                       <Label htmlFor={`agent-${agent}`} className="font-normal">{agent}</Label>
                     </div>
@@ -132,12 +169,22 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                       <Checkbox 
                         id={`group-${group}`} 
                         checked={groups.includes(group)}
-                        onCheckedChange={() => handleGroupChange(group)}
+                        onCheckedChange={() => handleCheckboxChange(setGroups, group)}
                        />
                       <Label htmlFor={`group-${group}`} className="font-normal">{group}</Label>
                     </div>
                   ))}
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+             <AccordionItem value="tags">
+              <AccordionTrigger className="px-4 text-base font-semibold">Tags</AccordionTrigger>
+              <AccordionContent className="px-4">
+                <Input 
+                    placeholder="Filter by tag..." 
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                />
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="created">
