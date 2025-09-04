@@ -102,7 +102,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
             throw new Error('Failed to acquire access token.');
         }
 
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=10&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
             },
@@ -116,24 +116,29 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
         for (const email of data.value) {
-            if (!email.conversationId) continue; // Skip emails not in a conversation
+            if (!email.conversationId) continue;
+
+            const ticketsCollectionRef = collection(db, 'tickets');
+            const q = query(ticketsCollectionRef, where('conversationId', '==', email.conversationId));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                // A ticket with this conversationId already exists, skip.
+                continue;
+            }
 
             const conversationThread = await fetchAndStoreFullConversation(settings, email.conversationId);
             if (conversationThread.length === 0) continue;
 
             const firstMessage = conversationThread[0];
-            const ticketId = firstMessage.id; // Use first message's ID as the stable ticket ID
+            const ticketId = firstMessage.id;
 
             const ticketDocRef = doc(db, 'tickets', ticketId);
             const ticketDoc = await getDoc(ticketDocRef);
 
-            if (ticketDoc.exists()) {
-                // Ticket already exists, maybe update timestamp or other properties
-                await updateDoc(ticketDocRef, { receivedDateTime: email.receivedDateTime });
-            } else {
-                // New ticket, create it with details from the first message
-                const ticketNumber = await getNextTicketNumber();
-                const newTicketData = {
+            if (!ticketDoc.exists()) {
+                 const ticketNumber = await getNextTicketNumber();
+                 const newTicketData = {
                     title: firstMessage.subject || 'No Subject',
                     sender: firstMessage.sender || 'Unknown Sender',
                     senderEmail: firstMessage.senderEmail || 'Unknown Email',
@@ -549,6 +554,8 @@ export async function unarchiveTickets(ticketIds: string[]) {
         return { success: false, error: "Failed to unarchive tickets." };
     }
 }
+    
+
     
 
     
