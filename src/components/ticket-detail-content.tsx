@@ -487,7 +487,9 @@ export function TicketDetailContent({ id }: { id: string }) {
                                     <ArrowLeft className="h-4 w-4" />
                                 </Link>
                             </Button>
-                            <h1 className="text-xl font-bold truncate">{email?.subject || "Ticket Details"}</h1>
+                            <h1 className="text-xl font-bold truncate">
+                                {email?.ticketNumber && <span className="text-muted-foreground">#{email.ticketNumber}</span>} {email?.subject || "Ticket Details"}
+                            </h1>
                         </div>
                     </Header>
                     <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
@@ -764,5 +766,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
 
     

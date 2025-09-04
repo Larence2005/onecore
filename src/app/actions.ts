@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction } from 'firebase/firestore';
 
 
 export interface Email {
@@ -27,6 +27,7 @@ export interface Email {
     tags?: string[];
     closedAt?: string;
     lastReplier?: 'agent' | 'client';
+    ticketNumber?: number;
 }
 
 export interface Attachment {
@@ -73,6 +74,26 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
     return await cca.acquireTokenByClientCredential(tokenRequest);
 }
 
+async function getNextTicketNumber(): Promise<number> {
+    const counterRef = doc(db, 'counters', 'tickets');
+    try {
+        const newTicketNumber = await runTransaction(db, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            if (!counterDoc.exists()) {
+                transaction.set(counterRef, { currentNumber: 1 });
+                return 1;
+            }
+            const newNumber = counterDoc.data().currentNumber + 1;
+            transaction.update(counterRef, { currentNumber: newNumber });
+            return newNumber;
+        });
+        return newTicketNumber;
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+        throw new Error("Could not generate ticket number.");
+    }
+}
+
 
 export async function getLatestEmails(settings: Settings): Promise<void> {
     try {
@@ -111,6 +132,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
                 await updateDoc(ticketDocRef, { receivedDateTime: email.receivedDateTime });
             } else {
                 // New ticket, create it with details from the first message
+                const ticketNumber = await getNextTicketNumber();
                 const newTicketData = {
                     title: firstMessage.subject || 'No Subject',
                     sender: firstMessage.sender || 'Unknown Sender',
@@ -125,6 +147,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
                     tags: [],
                     deadline: null,
                     closedAt: null,
+                    ticketNumber: ticketNumber,
                 };
                 await setDoc(ticketDocRef, newTicketData);
             }
@@ -191,6 +214,7 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, ag
             deadline: data.deadline,
             closedAt: data.closedAt,
             lastReplier: lastReplier,
+            ticketNumber: data.ticketNumber
         };
     }));
     
@@ -324,6 +348,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         deadline: ticketData?.deadline,
         closedAt: ticketData?.closedAt,
         conversationId: conversationId,
+        ticketNumber: ticketData?.ticketNumber,
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
             priority: ticketData?.priority || 'Low',
@@ -481,14 +506,9 @@ export async function archiveTickets(ticketIds: string[]) {
     try {
         for (const id of ticketIds) {
             const ticketDocRef = doc(db, 'tickets', id);
-            const docSnap = await getDoc(ticketDocRef);
-            if (docSnap.exists()) {
-                const currentStatus = docSnap.data().status;
-                batch.update(ticketDocRef, {
-                    status: 'Archived',
-                    statusBeforeArchive: currentStatus
-                });
-            }
+            batch.update(ticketDocRef, {
+                status: 'Archived',
+            });
         }
         await batch.commit();
         return { success: true };
@@ -503,14 +523,9 @@ export async function unarchiveTickets(ticketIds: string[]) {
     try {
         for (const id of ticketIds) {
             const ticketDocRef = doc(db, 'tickets', id);
-            const docSnap = await getDoc(ticketDocRef);
-            if (docSnap.exists()) {
-                const oldStatus = docSnap.data().statusBeforeArchive || 'Open';
-                batch.update(ticketDocRef, {
-                    status: oldStatus,
-                    statusBeforeArchive: null 
-                });
-            }
+            batch.update(ticketDocRef, {
+                status: 'Open', 
+            });
         }
         await batch.commit();
         return { success: true };
@@ -519,6 +534,8 @@ export async function unarchiveTickets(ticketIds: string[]) {
         return { success: false, error: "Failed to unarchive tickets." };
     }
 }
+    
+
     
 
     

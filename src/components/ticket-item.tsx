@@ -109,6 +109,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                     <Checkbox id={`ticket-${email.id}`} checked={isSelected} onCheckedChange={(checked) => onSelect(email.id, !!checked)} />
+                    {email.ticketNumber && <span className="text-sm font-medium text-muted-foreground">#{email.ticketNumber}</span>}
                 </div>
                 
                 <Link href={`/tickets/${email.id}`} className="flex-grow min-w-0 w-full cursor-pointer">
@@ -214,3 +215,5 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         </li>
     );
 }
+
+    
