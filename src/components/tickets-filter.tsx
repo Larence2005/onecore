@@ -206,9 +206,6 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
             </AccordionItem>
           </Accordion>
         </div>
-        <div className="p-4 border-t flex-shrink-0">
-            <Button className="w-full" onClick={handleApply}>Apply Filters</Button>
-        </div>
       </div>
     </aside>
   );
