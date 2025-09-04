@@ -505,38 +505,17 @@ export async function unarchiveTickets(ticketIds: string[]) {
                 const oldStatus = docSnap.data().statusBeforeArchive || 'Open';
                 batch.update(ticketDocRef, {
                     status: oldStatus,
-                    statusBeforeArchive: deleteDoc, // This is incorrect, should be `FieldValue.delete()` but we can't import it here. Let's just set it to null or remove the field in the update.
+                    statusBeforeArchive: null 
                 });
             }
         }
         await batch.commit();
-        const finalBatch = writeBatch(db);
-        for (const id of ticketIds) {
-            const ticketDocRef = doc(db, 'tickets', id);
-             finalBatch.update(ticketDocRef, {
-                statusBeforeArchive: null,
-            });
-        }
-        //This is not ideal, but without FieldValue.delete() it's the best we can do to clean up.
-        //A better approach would be to refactor to allow FieldValue import.
-        //For now, let's just set it to null
-        for (const id of ticketIds) {
-            const ticketDocRef = doc(db, 'tickets', id);
-             const docSnap = await getDoc(ticketDocRef);
-             if (docSnap.exists()) {
-                 const oldStatus = docSnap.data().statusBeforeArchive || 'Open';
-                 await updateDoc(ticketDocRef, {
-                     status: oldStatus,
-                     statusBeforeArchive: null // Setting to null to "remove" it
-                 });
-             }
-        }
-
         return { success: true };
     } catch (error) {
         console.error("Failed to unarchive tickets:", error);
         return { success: false, error: "Failed to unarchive tickets." };
     }
 }
+    
 
     
