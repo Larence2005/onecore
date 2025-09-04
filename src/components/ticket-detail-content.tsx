@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -150,17 +150,17 @@ export function TicketDetailContent({ id }: { id: string }) {
     ];
     
     const statuses = [
-        { value: 'Open', label: 'Open' },
-        { value: 'Pending', label: 'Pending' },
-        { value: 'Resolved', label: 'Resolved' },
-        { value: 'Closed', label: 'Closed' },
+        { value: 'Open', label: 'Open', icon: CircleDot },
+        { value: 'Pending', label: 'Pending', icon: Clock },
+        { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
+        { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
     ];
 
     const types = [
-        { value: 'Questions', label: 'Questions' },
-        { value: 'Incident', label: 'Incident' },
-        { value: 'Problem', label: 'Problem' },
-        { value: 'Feature Request', label: 'Feature Request' },
+        { value: 'Questions', label: 'Questions', icon: HelpCircle },
+        { value: 'Incident', label: 'Incident', icon: ShieldAlert },
+        { value: 'Problem', label: 'Problem', icon: Bug },
+        { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb },
     ];
     
     const assignees = [
@@ -402,6 +402,10 @@ export function TicketDetailContent({ id }: { id: string }) {
             router.push(`/?view=${view}`); 
         }
     };
+    
+    const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
+    const typeDetails = types.find(t => t.value === currentType) || types[1];
+
 
     return (
         <SidebarProvider>
@@ -583,7 +587,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                             )}
                         </div>
                         
-                        <aside className="w-full lg:w-[340px] lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto flex-shrink-0">
+                        <aside className="w-full lg:w-[400px] lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto flex-shrink-0">
                             {isLoading && (
                                 <Card>
                                     <CardHeader>
@@ -636,11 +640,21 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
                                                 <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue />
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                {statusDetails && <statusDetails.icon className="h-4 w-4" />}
+                                                                {statusDetails?.label}
+                                                            </span>
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {statuses.map(s => (
-                                                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                                            <SelectItem key={s.value} value={s.value}>
+                                                                <span className="flex items-center gap-2">
+                                                                    <s.icon className="h-4 w-4" />
+                                                                    {s.label}
+                                                                </span>
+                                                            </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -649,11 +663,21 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
                                                 <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue />
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                <User className="h-4 w-4" />
+                                                                {currentAssignee}
+                                                            </span>
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                     {assignees.map(a => (
-                                                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                                                            <SelectItem key={a} value={a}>
+                                                                <span className="flex items-center gap-2">
+                                                                    <User className="h-4 w-4" />
+                                                                    {a}
+                                                                </span>
+                                                            </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -662,11 +686,21 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
                                                 <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue />
+                                                        <SelectValue>
+                                                           <span className="flex items-center gap-2">
+                                                                {typeDetails && <typeDetails.icon className="h-4 w-4" />}
+                                                                {typeDetails?.label}
+                                                            </span>
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {types.map(t => (
-                                                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                                            <SelectItem key={t.value} value={t.value}>
+                                                                <span className="flex items-center gap-2">
+                                                                    <t.icon className="h-4 w-4" />
+                                                                    {t.label}
+                                                                </span>
+                                                            </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -722,4 +756,5 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
 
