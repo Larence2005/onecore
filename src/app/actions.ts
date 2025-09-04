@@ -75,19 +75,29 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
 }
 
 async function getNextTicketNumber(): Promise<number> {
-    const counterRef = doc(db, 'counters', 'tickets');
+    const ticketsCollectionRef = collection(db, 'tickets');
+    const counterRef = doc(db, 'counters', 'tickets'); // Still use a counter for atomic operations.
+
     try {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
+            const ticketsSnapshot = await getDocs(ticketsCollectionRef);
+            const currentTicketCount = ticketsSnapshot.size;
+            
             const counterDoc = await transaction.get(counterRef);
-            if (!counterDoc.exists()) {
-                // Initialize the counter. The first ticket number will be 1.
-                transaction.set(counterRef, { currentNumber: 1 });
-                return 1;
+            
+            let nextNumber;
+            if (!counterDoc.exists() || counterDoc.data().currentNumber < currentTicketCount) {
+                // If counter doesn't exist, is behind, or user wants to sync with total.
+                nextNumber = currentTicketCount + 1;
+            } else {
+                // If counter is ahead or in sync, use it to avoid number reuse.
+                nextNumber = counterDoc.data().currentNumber + 1;
             }
-            // The document exists, so we increment the current number.
-            const newNumber = counterDoc.data().currentNumber + 1;
-            transaction.update(counterRef, { currentNumber: newNumber });
-            return newNumber;
+
+            // Update the counter to the new highest number.
+            transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
+
+            return nextNumber;
         });
         return newTicketNumber;
     } catch (e) {
@@ -571,3 +581,6 @@ export async function unarchiveTickets(ticketIds: string[]) {
 
 
 
+
+
+    
