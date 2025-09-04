@@ -96,7 +96,7 @@ export function TicketItem({ email, isSelected, onSelect }: TicketItemProps) {
         <li className={cn("transition-colors", isSelected ? 'bg-blue-50' : 'hover:bg-muted/50')}>
            <Card className={cn(
                "m-2 rounded-lg shadow-sm hover:shadow-md transition-shadow",
-               email.lastReplier === 'client' && 'border-r-4 border-r-blue-500'
+               email.lastReplier === 'client' && 'border-l-4 border-l-blue-500'
             )}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
