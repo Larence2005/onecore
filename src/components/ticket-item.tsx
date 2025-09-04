@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { updateTicket } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { HelpCircle, ShieldAlert, Bug, Lightbulb } from 'lucide-react';
 
 type TicketItemProps = {
     email: Email;
@@ -32,10 +33,10 @@ const statuses = [
 ];
 
 const types = [
-    { value: 'Questions', label: 'Questions' },
-    { value: 'Incident', label: 'Incident' },
-    { value: 'Problem', label: 'Problem' },
-    { value: 'Feature Request', label: 'Feature Request' },
+    { value: 'Questions', label: 'Questions', icon: HelpCircle },
+    { value: 'Incident', label: 'Incident', icon: ShieldAlert },
+    { value: 'Problem', label: 'Problem', icon: Bug },
+    { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb },
 ];
 
 const assignees = [
@@ -53,6 +54,7 @@ export function TicketItem({ email }: TicketItemProps) {
     const { toast } = useToast();
 
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
+    const typeDetails = types.find(t => t.value === currentType) || types[1];
 
     const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isLate = email.deadline && email.closedAt && isPast(parseISO(email.deadline), parseISO(email.closedAt));
@@ -153,11 +155,21 @@ export function TicketItem({ email }: TicketItemProps) {
                     </Select>
                     <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                            <SelectValue />
+                             <SelectValue>
+                                <span className="flex items-center gap-2">
+                                    <typeDetails.icon className="h-4 w-4" />
+                                    {typeDetails.label}
+                                </span>
+                            </SelectValue>
                         </SelectTrigger>
                          <SelectContent>
                             {types.map(t => (
-                                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                <SelectItem key={t.value} value={t.value}>
+                                    <span className="flex items-center gap-2">
+                                        <t.icon className="h-4 w-4" />
+                                        {t.label}
+                                    </span>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
