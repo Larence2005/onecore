@@ -83,7 +83,18 @@ export function DashboardView() {
             value: ticketsByPriority[priority]
         }));
         
-        return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData };
+        const ticketsByType = tickets.reduce((acc, ticket) => {
+            const type = ticket.type || 'Incident'; // Default to Incident if type is not set
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const typeData = Object.keys(ticketsByType).map(type => ({
+            name: type,
+            value: ticketsByType[type]
+        }));
+        
+        return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData };
     }, [tickets]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
@@ -101,6 +112,13 @@ export function DashboardView() {
         'Archived': '#6b7280',
     };
 
+    const TYPE_COLORS: {[key: string]: string} = {
+        'Questions': '#3b82f6',
+        'Incident': '#f97316',
+        'Problem': '#ef4444',
+        'Feature Request': '#8b5cf6',
+    };
+
 
     if (isLoading) {
         return (
@@ -113,6 +131,9 @@ export function DashboardView() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
                     <Skeleton className="h-[300px] w-full" />
+                    <Skeleton className="h-[300px] w-full" />
+                </div>
+                 <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
                     <Skeleton className="h-[300px] w-full" />
                 </div>
             </div>
@@ -190,6 +211,36 @@ export function DashboardView() {
                                 >
                                     {stats.priorityData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={PRIORITY_COLORS[entry.name] || '#8884d8'} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="grid gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Tickets by Type</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={stats.typeData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                >
+                                    {stats.typeData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={TYPE_COLORS[entry.name] || '#8884d8'} />
                                     ))}
                                 </Pie>
                                 <Tooltip />
