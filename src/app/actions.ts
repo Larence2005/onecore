@@ -487,3 +487,18 @@ export async function archiveTickets(ticketIds: string[]) {
         return { success: false, error: "Failed to archive tickets." };
     }
 }
+
+export async function unarchiveTickets(ticketIds: string[]) {
+    const batch = writeBatch(db);
+    ticketIds.forEach(id => {
+        const ticketDocRef = doc(db, 'tickets', id);
+        batch.update(ticketDocRef, { status: 'Open' });
+    });
+    try {
+        await batch.commit();
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to unarchive tickets:", error);
+        return { success: false, error: "Failed to unarchive tickets." };
+    }
+}

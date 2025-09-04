@@ -3,19 +3,21 @@
 
 import { useEffect, useState } from "react";
 import type { Email } from "@/app/actions";
-import { getTicketsFromDB } from "@/app/actions";
+import { getTicketsFromDB, unarchiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Terminal, Archive } from "lucide-react";
+import { Terminal, Archive, RotateCcw } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { TicketItem } from "./ticket-item";
 import { useAuth } from "@/providers/auth-provider";
+import { Button } from "./ui/button";
 
 export function ArchiveView() {
     const { user } = useAuth();
     const [archivedTickets, setArchivedTickets] = useState<Email[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
     const { toast } = useToast();
 
     const fetchArchivedTickets = async () => {
@@ -42,8 +44,47 @@ export function ArchiveView() {
         fetchArchivedTickets();
     }, [user]);
 
+    const handleSelectTicket = (ticketId: string, checked: boolean) => {
+        if (checked) {
+            setSelectedTickets(prev => [...prev, ticketId]);
+        } else {
+            setSelectedTickets(prev => prev.filter(id => id !== ticketId));
+        }
+    };
+    
+    const handleUnarchive = async () => {
+        if(selectedTickets.length === 0) return;
+        const result = await unarchiveTickets(selectedTickets);
+        if (result.success) {
+            toast({
+                title: 'Tickets Unarchived',
+                description: `${selectedTickets.length} ticket(s) have been restored to the inbox.`,
+            });
+            setSelectedTickets([]);
+            fetchArchivedTickets();
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Unarchiving Failed',
+                description: result.error,
+            });
+        }
+    };
+
+
     return (
         <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
+            {selectedTickets.length > 0 && (
+                <div className="flex-shrink-0 flex items-center justify-between p-2 mb-4 bg-muted border rounded-lg">
+                     <div className="flex items-center gap-2">
+                         <span className="text-sm font-medium">{selectedTickets.length} selected</span>
+                     </div>
+                     <Button variant="outline" size="sm" onClick={handleUnarchive}>
+                         <RotateCcw className="mr-2 h-4 w-4" />
+                         Unarchive
+                     </Button>
+                </div>
+            )}
             <div className="flex-grow overflow-y-auto">
                 {isLoading ? (
                      <div className="space-y-4">
@@ -70,8 +111,8 @@ export function ArchiveView() {
                                 <TicketItem 
                                     key={email.id} 
                                     email={email} 
-                                    isSelected={false} // Archived items can't be selected for actions
-                                    onSelect={() => {}} // No-op
+                                    isSelected={selectedTickets.includes(email.id)}
+                                    onSelect={handleSelectTicket}
                                 />
                             ))}
                         </ul>
