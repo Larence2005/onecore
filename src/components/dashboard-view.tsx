@@ -227,25 +227,16 @@ export function DashboardView() {
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={stats.typeData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    nameKey="name"
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                >
+                           <BarChart layout="vertical" data={stats.typeData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" width={100} tickLine={false} axisLine={false} />
+                                <Tooltip cursor={{ fill: 'transparent' }} />
+                                <Bar dataKey="value" layout="vertical" radius={[0, 4, 4, 0]}>
                                     {stats.typeData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={TYPE_COLORS[entry.name] || '#8884d8'} />
                                     ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend />
-                            </PieChart>
+                                </Bar>
+                            </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
