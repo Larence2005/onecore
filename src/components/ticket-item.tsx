@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { updateTicket } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2 } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User } from 'lucide-react';
 
 type TicketItemProps = {
     email: Email;
@@ -136,11 +136,21 @@ export function TicketItem({ email }: TicketItemProps) {
                     </Select>
                     <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                            <SelectValue />
+                           <SelectValue>
+                                <span className="flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    {currentAssignee}
+                                </span>
+                            </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                            {assignees.map(a => (
-                                 <SelectItem key={a} value={a}>{a}</SelectItem>
+                                 <SelectItem key={a} value={a}>
+                                    <span className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        {a}
+                                    </span>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
