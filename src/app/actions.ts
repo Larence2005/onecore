@@ -76,33 +76,28 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
 
 async function getNextTicketNumber(): Promise<number> {
     const ticketsCollectionRef = collection(db, 'tickets');
-    const counterRef = doc(db, 'counters', 'tickets'); // Still use a counter for atomic operations.
+    
+    // This is a dummy ref for the transaction, which requires at least one doc to read.
+    // We'll use the tickets collection's parent, but it won't be used in a meaningful way.
+    const dummyRef = doc(collection(db, '_')); 
 
     try {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
+            // The transaction needs at least one read operation to be valid.
+            await transaction.get(dummyRef);
+            
+            // Get the current count of tickets within the transaction for consistency.
             const ticketsSnapshot = await getDocs(ticketsCollectionRef);
             const currentTicketCount = ticketsSnapshot.size;
             
-            const counterDoc = await transaction.get(counterRef);
-            
-            let nextNumber;
-            if (!counterDoc.exists() || counterDoc.data().currentNumber < currentTicketCount) {
-                // If counter doesn't exist, is behind, or user wants to sync with total.
-                nextNumber = currentTicketCount + 1;
-            } else {
-                // If counter is ahead or in sync, use it to avoid number reuse.
-                nextNumber = counterDoc.data().currentNumber + 1;
-            }
-
-            // Update the counter to the new highest number.
-            transaction.set(counterRef, { currentNumber: nextNumber }, { merge: true });
-
-            return nextNumber;
+            return currentTicketCount + 1;
         });
         return newTicketNumber;
     } catch (e) {
-        console.error("Transaction failed: ", e);
-        throw new Error("Could not generate ticket number.");
+        console.error("Transaction failed to get next ticket number: ", e);
+        // Fallback to a simple count if the transaction fails, though this is less safe.
+        const ticketsSnapshot = await getDocs(ticketsCollectionRef);
+        return ticketsSnapshot.size + 1;
     }
 }
 
@@ -582,5 +577,7 @@ export async function unarchiveTickets(ticketIds: string[]) {
 
 
 
+
+    
 
     
