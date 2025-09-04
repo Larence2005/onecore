@@ -608,6 +608,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             <div className="space-y-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
                                                 <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
+                                                <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
                                             </div>
                                              <div className="space-y-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-xs"><Calendar size={14} /> Submitted</div>
@@ -708,7 +709,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 onChange={(e) => setTagInput(e.target.value)}
                                                 onKeyDown={handleTagKeyDown}
                                                 placeholder="Add a tag..."
-                                                className="h-8 text-sm px-1 border-0 border-b rounded-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                className="h-8 text-sm"
                                             />
                                         </div>
                                     </CardContent>
