@@ -31,6 +31,13 @@ const statuses = [
     { value: 'Closed', label: 'Closed' },
 ];
 
+const types = [
+    { value: 'Questions', label: 'Questions' },
+    { value: 'Incident', label: 'Incident' },
+    { value: 'Problem', label: 'Problem' },
+    { value: 'Feature Request', label: 'Feature Request' },
+];
+
 const assignees = [
     'Unassigned',
     'John Doe',
@@ -41,6 +48,7 @@ export function TicketItem({ email }: TicketItemProps) {
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [currentStatus, setCurrentStatus] = useState(email.status);
+    const [currentType, setCurrentType] = useState(email.type);
     
     const { toast } = useToast();
 
@@ -49,11 +57,12 @@ export function TicketItem({ email }: TicketItemProps) {
     const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isLate = email.deadline && email.closedAt && isPast(parseISO(email.deadline), parseISO(email.closedAt));
 
-    const handleUpdate = async (field: 'priority' | 'assignee' | 'status', value: string) => {
+    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type', value: string) => {
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
         if (field === 'assignee') setCurrentAssignee(value);
         if (field === 'status') setCurrentStatus(value);
+        if (field === 'type') setCurrentType(value);
 
         const result = await updateTicket(email.id, { [field]: value });
         if (result.success) {
@@ -66,6 +75,7 @@ export function TicketItem({ email }: TicketItemProps) {
             if (field === 'priority') setCurrentPriority(email.priority);
             if (field === 'assignee') setCurrentAssignee(email.assignee);
             if (field === 'status') setCurrentStatus(email.status);
+            if (field === 'type') setCurrentType(email.type);
 
             toast({
                 variant: 'destructive',
@@ -100,7 +110,7 @@ export function TicketItem({ email }: TicketItemProps) {
                     </p>
                 </Link>
 
-                <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-36">
+                <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
                     <div>
                         <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
                             <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
@@ -147,9 +157,23 @@ export function TicketItem({ email }: TicketItemProps) {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div>
+                        <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
+                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                             <SelectContent>
+                                {types.map(t => (
+                                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
             </Card>
         </li>
     );
 }
+
+    

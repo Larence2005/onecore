@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -136,6 +136,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentPriority, setCurrentPriority] = useState('');
     const [currentAssignee, setCurrentAssignee] = useState('');
     const [currentStatus, setCurrentStatus] = useState('');
+    const [currentType, setCurrentType] = useState('');
     const [currentDeadline, setCurrentDeadline] = useState<Date | undefined>(undefined);
     const [currentTags, setCurrentTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
@@ -153,6 +154,13 @@ export function TicketDetailContent({ id }: { id: string }) {
         { value: 'Pending', label: 'Pending' },
         { value: 'Resolved', label: 'Resolved' },
         { value: 'Closed', label: 'Closed' },
+    ];
+
+    const types = [
+        { value: 'Questions', label: 'Questions' },
+        { value: 'Incident', label: 'Incident' },
+        { value: 'Problem', label: 'Problem' },
+        { value: 'Feature Request', label: 'Feature Request' },
     ];
     
     const assignees = [
@@ -183,6 +191,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             setCurrentPriority(detailedEmail.priority);
             setCurrentAssignee(detailedEmail.assignee);
             setCurrentStatus(detailedEmail.status);
+            setCurrentType(detailedEmail.type || 'Incident');
             setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
             setCurrentTags(detailedEmail.tags || []);
         } catch (err) {
@@ -202,7 +211,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         fetchEmail();
     }, [fetchEmail]);
     
-    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'deadline' | 'tags', value: any) => {
+    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email) return;
 
         const ticketIdToUpdate = email.conversation?.[0]?.id || email.id;
@@ -645,6 +654,19 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         <SelectContent>
                                                         {assignees.map(a => (
                                                                 <SelectItem key={a} value={a}>{a}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
+                                                    <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {types.map(t => (
+                                                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>

@@ -21,6 +21,7 @@ export interface Email {
     priority: string;
     assignee: string;
     status: string;
+    type: string;
     conversationId?: string;
     deadline?: string;
     tags?: string[];
@@ -119,6 +120,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
                     priority: 'Low',
                     assignee: 'Unassigned',
                     status: 'Open',
+                    type: 'Incident',
                     tags: [],
                     deadline: null,
                     closedAt: null,
@@ -148,6 +150,7 @@ export async function getTicketsFromDB(): Promise<Email[]> {
             priority: data.priority || 'Low',
             assignee: data.assignee || 'Unassigned',
             status: data.status || 'Open',
+            type: data.type || 'Incident',
             conversationId: data.conversationId,
             tags: data.tags || [],
             deadline: data.deadline,
@@ -189,6 +192,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         priority: 'Low',
         assignee: 'Unassigned',
         status: 'Open',
+        type: 'Incident',
         hasAttachments: msg.hasAttachments,
         attachments: msg.attachments,
     }));
@@ -234,6 +238,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
             priority: 'Low',
             assignee: 'Unassigned',
             status: 'Open',
+            type: 'Incident',
             hasAttachments: msg.hasAttachments,
             attachments: msg.attachments,
             tags: [],
@@ -278,6 +283,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         priority: ticketData?.priority || 'Low',
         assignee: ticketData?.assignee || 'Unassigned',
         status: ticketData?.status || 'Open',
+        type: ticketData?.type || 'Incident',
         tags: ticketData?.tags || [],
         deadline: ticketData?.deadline,
         closedAt: ticketData?.closedAt,
@@ -287,6 +293,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
+            type: ticketData?.type || 'Incident',
         })),
     };
 }
@@ -407,7 +414,7 @@ export async function replyToEmailAction(
 
 
 
-export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
+export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
     const ticketDocRef = doc(db, 'tickets', id);
     try {
         const updateData: any = { ...data };
@@ -432,3 +439,5 @@ export async function updateTicket(id: string, data: { priority?: string, assign
         return { success: false, error: "Failed to update ticket." };
     }
 }
+
+    
