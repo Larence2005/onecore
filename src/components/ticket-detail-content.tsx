@@ -604,12 +604,12 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <h2 className="text-lg font-bold">Properties</h2>
                                     </CardHeader>
                                     <CardContent className="space-y-4 text-sm">
-                                        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                            <div className="space-y-1 col-span-2 sm:col-span-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Requester</div>
+                                        <div className="grid grid-cols-1 gap-y-4">
+                                            <div className="space-y-1">
+                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
                                                 <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
                                             </div>
-                                            <div className="space-y-1 col-span-2 sm:col-span-1">
+                                             <div className="space-y-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-xs"><Calendar size={14} /> Submitted</div>
                                                 <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
                                             </div>
