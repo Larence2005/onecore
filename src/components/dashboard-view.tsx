@@ -97,7 +97,7 @@ export function DashboardView() {
         'Open': '#3b82f6',
         'Pending': '#f97316',
         'Resolved': '#22c55e',
-        'Closed': '#16a34a',
+        'Closed': '#ef4444',
         'Archived': '#6b7280',
     };
 
