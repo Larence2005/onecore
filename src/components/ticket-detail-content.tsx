@@ -708,8 +708,8 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 value={tagInput}
                                                 onChange={(e) => setTagInput(e.target.value)}
                                                 onKeyDown={handleTagKeyDown}
-                                                placeholder="Add tag and press Enter"
-                                                className="h-8 text-sm"
+                                                placeholder="Add a tag..."
+                                                className="h-8 text-sm px-1 border-0 border-b rounded-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                                             />
                                         </div>
                                     </CardContent>
