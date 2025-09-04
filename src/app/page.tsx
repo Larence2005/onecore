@@ -117,7 +117,7 @@ function HomePageContent() {
     <SidebarProvider>
       <div className={cn(
         "grid min-h-screen w-full bg-background text-foreground",
-        activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_320px]" : "lg:grid-cols-[240px_1fr]"
+        activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_280px]" : "lg:grid-cols-[240px_1fr]"
       )}>
         <Sidebar className="w-[240px] bg-card hidden lg:flex flex-col py-6">
           <SidebarContent className="flex-grow flex flex-col">

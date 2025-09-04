@@ -69,7 +69,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null].filter(Boolean).length;
 
   return (
-    <aside className="hidden lg:block w-80 border-l bg-card">
+    <aside className="hidden lg:block w-72 border-l bg-card">
       <div className="sticky top-0 h-screen flex flex-col">
         <div className="flex-shrink-0 p-4 border-b">
           <div className="flex justify-between items-center mb-4">
