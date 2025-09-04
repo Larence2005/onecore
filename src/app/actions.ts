@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
 
 
 export interface Email {
@@ -134,9 +134,17 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 }
 
 
-export async function getTicketsFromDB(): Promise<Email[]> {
+export async function getTicketsFromDB(options?: { includeArchived?: boolean }): Promise<Email[]> {
     const ticketsCollectionRef = collection(db, 'tickets');
-    const querySnapshot = await getDocs(ticketsCollectionRef);
+    let q;
+
+    if (options?.includeArchived) {
+        q = query(ticketsCollectionRef, where('status', '==', 'Archived'));
+    } else {
+        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    }
+    
+    const querySnapshot = await getDocs(q);
     
     const emails: Email[] = querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -437,6 +445,21 @@ export async function updateTicket(id: string, data: { priority?: string, assign
     } catch (error) {
         console.error("Failed to update ticket:", error);
         return { success: false, error: "Failed to update ticket." };
+    }
+}
+
+export async function archiveTickets(ticketIds: string[]) {
+    const batch = writeBatch(db);
+    ticketIds.forEach(id => {
+        const ticketDocRef = doc(db, 'tickets', id);
+        batch.update(ticketDocRef, { status: 'Archived' });
+    });
+    try {
+        await batch.commit();
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to archive tickets:", error);
+        return { success: false, error: "Failed to archive tickets." };
     }
 }
 

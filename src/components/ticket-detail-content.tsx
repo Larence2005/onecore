@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2 } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -154,6 +154,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         { value: 'Pending', label: 'Pending', icon: Clock },
         { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
         { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
+        { value: 'Archived', label: 'Archived', icon: Archive },
     ];
 
     const types = [
@@ -398,6 +399,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
             router.push('/');
+        } else if (view === 'archive') {
+            router.push('/archive');
         } else {
             router.push(`/?view=${view}`); 
         }
@@ -437,6 +440,12 @@ export function TicketDetailContent({ id }: { id: string }) {
                             <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
                             <List />
                             <span>Tickets</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                                <Archive />
+                                <span>Archive</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem>
@@ -757,4 +766,4 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
-
+    

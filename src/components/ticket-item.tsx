@@ -12,10 +12,12 @@ import Link from 'next/link';
 import { updateTicket } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Archive } from 'lucide-react';
 
 type TicketItemProps = {
     email: Email;
+    isSelected: boolean;
+    onSelect: (ticketId: string, checked: boolean) => void;
 };
 
 const priorities = [
@@ -30,6 +32,7 @@ const statuses = [
     { value: 'Pending', label: 'Pending', icon: Clock },
     { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
     { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
+    { value: 'Archived', label: 'Archived', icon: Archive },
 ];
 
 const types = [
@@ -45,7 +48,7 @@ const assignees = [
     'Jane Smith'
 ]
 
-export function TicketItem({ email }: TicketItemProps) {
+export function TicketItem({ email, isSelected, onSelect }: TicketItemProps) {
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [currentStatus, setCurrentStatus] = useState(email.status);
@@ -90,11 +93,11 @@ export function TicketItem({ email }: TicketItemProps) {
 
 
     return (
-        <li className="transition-colors hover:bg-muted/50">
+        <li className={cn("transition-colors", isSelected ? 'bg-blue-50' : 'hover:bg-muted/50')}>
            <Card className="m-2 rounded-lg shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
-                    <Checkbox id={`ticket-${email.id}`} />
+                    <Checkbox id={`ticket-${email.id}`} checked={isSelected} onCheckedChange={(checked) => onSelect(email.id, !!checked)} />
                 </div>
                 
                 <Link href={`/tickets/${email.id}`} className="flex-grow min-w-0 w-full cursor-pointer">
@@ -200,3 +203,5 @@ export function TicketItem({ email }: TicketItemProps) {
         </li>
     );
 }
+
+    

@@ -6,9 +6,10 @@ import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
 import type { Email } from '@/app/actions';
 import { FilterState } from './tickets-filter';
+import { ArchiveView } from './archive-view';
 
 type MainViewProps = {
-    activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose';
+    activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
     emails?: Email[];
     isLoading?: boolean;
     error?: string | null;
@@ -34,12 +35,14 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
             case 'compose':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SendEmailForm /></div>;
+            case 'archive':
+                return <ArchiveView />;
             default:
                 return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Select a view</p></div>;
         }
     };
 
-    if (activeView === 'tickets') {
+    if (activeView === 'tickets' || activeView === 'archive') {
         return (
             <div className="flex-1 flex flex-col overflow-y-auto">
                 {renderView()}
@@ -55,3 +58,5 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
         </div>
     );
 }
+
+    

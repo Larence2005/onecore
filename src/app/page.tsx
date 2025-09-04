@@ -6,7 +6,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
@@ -18,7 +18,7 @@ import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
 
 
-type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose';
+type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
 
 function HomePageContent() {
   const { user, loading, logout } = useAuth();
@@ -81,7 +81,7 @@ function HomePageContent() {
 
   useEffect(() => {
     const view = searchParams.get('view') as View;
-    if (view && ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose'].includes(view)) {
+    if (view && ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose', 'archive'].includes(view)) {
       setActiveView(view);
     }
   }, [searchParams]);
@@ -97,7 +97,11 @@ function HomePageContent() {
   
   const handleViewChange = (view: View) => {
     setActiveView(view);
-    router.push(`/?view=${view}`, { scroll: false });
+    if (view === 'archive') {
+      router.push('/archive');
+    } else {
+      router.push(`/?view=${view}`, { scroll: false });
+    }
   }
 
   if (loading || !user) {
@@ -149,6 +153,12 @@ function HomePageContent() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
+                      <Archive />
+                      <span>Archive</span>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
                   <Users />
                    <span>Clients</span>
@@ -193,6 +203,7 @@ function HomePageContent() {
             {activeView === 'clients' && <h1 className="text-xl font-bold">Clients</h1>}
             {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
             {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
+            {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
           </Header>
           <MainView 
             activeView={activeView} 
@@ -234,3 +245,5 @@ export default function Home() {
     </React.Suspense>
   )
 }
+
+    
