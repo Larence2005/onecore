@@ -44,11 +44,12 @@ function HomePageContent() {
   });
 
   const fetchEmails = React.useCallback(async () => {
+    if (!user) return;
     setIsLoading(true);
     setError(null);
 
     try {
-        const dbEmails = await getTicketsFromDB();
+        const dbEmails = await getTicketsFromDB({ agentEmail: user.email || '' });
         setEmails(dbEmails);
     } catch (dbError) {
         const dbErrorMessage = dbError instanceof Error ? dbError.message : "An unknown database error occurred.";
@@ -61,7 +62,7 @@ function HomePageContent() {
     if (isConfigured) {
         try {
             await getLatestEmails(settings);
-            const updatedDbEmails = await getTicketsFromDB();
+            const updatedDbEmails = await getTicketsFromDB({ agentEmail: user.email || '' });
             setEmails(updatedDbEmails);
         } catch (syncError) {
             const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
@@ -72,7 +73,7 @@ function HomePageContent() {
             });
         }
     }
-  }, [settings, isConfigured, toast]);
+  }, [settings, isConfigured, toast, user]);
 
   useEffect(() => {
     fetchEmails();
@@ -171,7 +172,7 @@ function HomePageContent() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
+                <SidebarMenuButton onClick={() => handleViewchange('settings')} isActive={activeView === 'settings'}>
                   <Settings />
                    <span>Settings</span>
                 </SidebarMenuButton>

@@ -26,6 +26,7 @@ export interface Email {
     deadline?: string;
     tags?: string[];
     closedAt?: string;
+    lastReplier?: 'agent' | 'client';
 }
 
 export interface Attachment {
@@ -134,7 +135,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 }
 
 
-export async function getTicketsFromDB(options?: { includeArchived?: boolean }): Promise<Email[]> {
+export async function getTicketsFromDB(options?: { includeArchived?: boolean, agentEmail?: string }): Promise<Email[]> {
     const ticketsCollectionRef = collection(db, 'tickets');
     let q;
 
@@ -146,10 +147,33 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean }):
     
     const querySnapshot = await getDocs(q);
     
-    const emails: Email[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
+    const emails: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
+        const data = ticketDoc.data();
+        let lastReplier: 'agent' | 'client' | undefined = undefined;
+
+        if (data.conversationId && options?.agentEmail) {
+            try {
+                const conversationDocRef = doc(db, 'conversations', data.conversationId);
+                const conversationDoc = await getDoc(conversationDocRef);
+                if (conversationDoc.exists()) {
+                    const conversationData = conversationDoc.data();
+                    const messages = conversationData.messages as DetailedEmail[];
+                    if (messages && messages.length > 0) {
+                        const lastMessage = messages[messages.length - 1];
+                        if(lastMessage.senderEmail?.toLowerCase() === options.agentEmail.toLowerCase()) {
+                            lastReplier = 'agent';
+                        } else {
+                            lastReplier = 'client';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Could not determine last replier for ticket", ticketDoc.id, e);
+            }
+        }
+
         return {
-            id: doc.id,
+            id: ticketDoc.id,
             subject: data.title || 'No Subject',
             sender: data.sender || 'Unknown Sender',
             senderEmail: data.senderEmail || 'Unknown Email',
@@ -163,8 +187,9 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean }):
             tags: data.tags || [],
             deadline: data.deadline,
             closedAt: data.closedAt,
+            lastReplier: lastReplier,
         };
-    });
+    }));
     
     emails.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
     
@@ -462,5 +487,3 @@ export async function archiveTickets(ticketIds: string[]) {
         return { success: false, error: "Failed to archive tickets." };
     }
 }
-
-    

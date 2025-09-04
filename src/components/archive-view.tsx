@@ -9,18 +9,21 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal, Archive } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { TicketItem } from "./ticket-item";
+import { useAuth } from "@/providers/auth-provider";
 
 export function ArchiveView() {
+    const { user } = useAuth();
     const [archivedTickets, setArchivedTickets] = useState<Email[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
 
     const fetchArchivedTickets = async () => {
+        if (!user) return;
         setIsLoading(true);
         setError(null);
         try {
-            const tickets = await getTicketsFromDB({ includeArchived: true });
+            const tickets = await getTicketsFromDB({ includeArchived: true, agentEmail: user.email || '' });
             setArchivedTickets(tickets);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -37,7 +40,7 @@ export function ArchiveView() {
 
     useEffect(() => {
         fetchArchivedTickets();
-    }, []);
+    }, [user]);
 
     return (
         <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
@@ -86,5 +89,3 @@ export function ArchiveView() {
         </div>
     );
 }
-
-    
