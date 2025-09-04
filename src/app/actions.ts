@@ -329,7 +329,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
 
     // Check Firestore cache first
     const conversationDocRef = doc(db, 'conversations', conversationId);
-    const conversationDoc = await getDoc(conversationDocRef);
+    const conversationDoc = await getDoc(conversationDoc);
     let conversationMessages: DetailedEmail[];
 
     if (conversationDoc.exists()) {
@@ -566,5 +566,6 @@ export async function unarchiveTickets(ticketIds: string[]) {
     
 
     
+
 
 
