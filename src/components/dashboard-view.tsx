@@ -97,7 +97,7 @@ export function DashboardView() {
         }));
 
         const upcomingDeadlines = tickets
-            .filter(t => t.deadline && isFuture(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed')
+            .filter(t => t.ticketNumber && t.deadline && isFuture(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed')
             .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
             .slice(0, 5);
         
