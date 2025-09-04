@@ -62,6 +62,7 @@ export function TicketItem({ email, isSelected, onSelect }: TicketItemProps) {
 
     const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isLate = email.deadline && email.closedAt && isPast(parseISO(email.deadline), parseISO(email.closedAt));
+    const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type', value: string) => {
         // Optimistic UI update
@@ -93,10 +94,17 @@ export function TicketItem({ email, isSelected, onSelect }: TicketItemProps) {
 
 
     return (
-        <li className={cn("transition-colors", isSelected ? 'bg-blue-50' : 'hover:bg-muted/50')}>
+        <li className={cn(
+            "transition-colors", 
+            isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : '',
+            isCompleted ? '' : 'hover:bg-muted/50'
+        )}>
            <Card className={cn(
-               "m-2 rounded-lg shadow-sm hover:shadow-md transition-shadow",
-               email.lastReplier === 'client' && 'border-l-4 border-l-blue-500'
+               "m-2 rounded-lg shadow-sm transition-all",
+               isCompleted 
+                ? 'bg-muted/60 hover:shadow-md'
+                : 'hover:shadow-md',
+               email.lastReplier === 'client' && !isCompleted && 'border-l-4 border-l-blue-500'
             )}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                 <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
