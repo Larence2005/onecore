@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { Providers } from './providers';
+import React from 'react';
 
 export const metadata: Metadata = {
   title: 'Onecore',
@@ -23,7 +24,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <Providers>
-          {children}
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>}>
+              {children}
+            </React.Suspense>
           <Toaster />
         </Providers>
       </body>
