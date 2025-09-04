@@ -9,53 +9,19 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal } from "lucide-react";
 import { TicketsView } from "./tickets-view";
+import { FilterState } from "./tickets-filter";
 
-export function ReadEmails() {
-  const { settings, isConfigured } = useSettings();
-  const { toast } = useToast();
-  const [emails, setEmails] = useState<Email[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface ReadEmailsProps {
+  emails: Email[];
+  isLoading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  filters: FilterState;
+}
 
-  const fetchEmails = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
 
-    // Immediately fetch from the database to show existing data
-    try {
-        const dbEmails = await getTicketsFromDB();
-        setEmails(dbEmails);
-    } catch (dbError) {
-        const dbErrorMessage = dbError instanceof Error ? dbError.message : "An unknown database error occurred.";
-        setError(dbErrorMessage);
-        setEmails([]);
-    } finally {
-        setIsLoading(false);
-    }
-
-    // Then, trigger the API sync in the background if configured
-    if (isConfigured) {
-        try {
-            await getLatestEmails(settings);
-            // After sync, refresh data from DB to show any new emails
-            const updatedDbEmails = await getTicketsFromDB();
-            setEmails(updatedDbEmails);
-        } catch (syncError) {
-            const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
-            // We can choose to show a non-blocking toast notification here
-            toast({
-                variant: "destructive",
-                title: "Failed to sync with email server.",
-                description: syncErrorMessage,
-            });
-        }
-    }
-  }, [settings, isConfigured, toast]);
-
-  useEffect(() => {
-    fetchEmails();
-  }, [fetchEmails]);
-
+export function ReadEmails({ emails, isLoading, error, onRefresh, filters }: ReadEmailsProps) {
+  const { isConfigured } = useSettings();
 
   if (!isConfigured && !isLoading) {
     return (
@@ -77,7 +43,8 @@ export function ReadEmails() {
           emails={emails}
           isLoading={isLoading}
           error={error}
-          onRefresh={fetchEmails}
+          onRefresh={onRefresh}
+          filters={filters}
       />
     </div>
   );

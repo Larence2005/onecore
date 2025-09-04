@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
@@ -11,7 +11,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
-import { TicketsFilter } from '@/components/tickets-filter';
+import { TicketsFilter, FilterState } from '@/components/tickets-filter';
+import type { Email } from '@/app/actions';
+import { getTicketsFromDB, getLatestEmails } from '@/app/actions';
+import { useSettings } from '@/providers/settings-provider';
+import { useToast } from '@/hooks/use-toast';
+
 
 type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose';
 
@@ -20,6 +25,56 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<View>('tickets');
+  
+  const { settings, isConfigured } = useSettings();
+  const { toast } = useToast();
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [filters, setFilters] = useState<FilterState>({
+    search: '',
+    agents: [],
+    groups: [],
+    statuses: [],
+    created: 'any',
+  });
+
+  const fetchEmails = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        const dbEmails = await getTicketsFromDB();
+        setEmails(dbEmails);
+    } catch (dbError) {
+        const dbErrorMessage = dbError instanceof Error ? dbError.message : "An unknown database error occurred.";
+        setError(dbErrorMessage);
+        setEmails([]);
+    } finally {
+        setIsLoading(false);
+    }
+
+    if (isConfigured) {
+        try {
+            await getLatestEmails(settings);
+            const updatedDbEmails = await getTicketsFromDB();
+            setEmails(updatedDbEmails);
+        } catch (syncError) {
+            const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
+            toast({
+                variant: "destructive",
+                title: "Failed to sync with email server.",
+                description: syncErrorMessage,
+            });
+        }
+    }
+  }, [settings, isConfigured, toast]);
+
+  useEffect(() => {
+    fetchEmails();
+  }, [fetchEmails]);
+
 
   useEffect(() => {
     const view = searchParams.get('view') as View;
@@ -49,6 +104,11 @@ function HomePageContent() {
       </div>
     );
   }
+  
+  const onApplyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters);
+  };
+
 
   return (
     <SidebarProvider>
@@ -131,10 +191,17 @@ function HomePageContent() {
             {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
             {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
           </Header>
-          <MainView activeView={activeView} />
+          <MainView 
+            activeView={activeView} 
+            emails={emails}
+            isLoading={isLoading}
+            error={error}
+            onRefresh={fetchEmails}
+            filters={filters}
+          />
         </main>
         
-        {activeView === 'tickets' && <TicketsFilter />}
+        {activeView === 'tickets' && <TicketsFilter onApplyFilters={onApplyFilters} />}
       </div>
     </SidebarProvider>
   );

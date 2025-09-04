@@ -4,18 +4,28 @@
 import { ReadEmails } from '@/components/read-emails';
 import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
+import type { Email } from '@/app/actions';
+import { FilterState } from './tickets-filter';
 
 type MainViewProps = {
     activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose';
+    emails?: Email[];
+    isLoading?: boolean;
+    error?: string | null;
+    onRefresh?: () => void;
+    filters?: FilterState;
 }
 
-export function MainView({ activeView }: MainViewProps) {
+export function MainView({ activeView, emails, isLoading, error, onRefresh, filters }: MainViewProps) {
     const renderView = () => {
         switch (activeView) {
             case 'analytics':
                 return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Analytics coming soon.</p></div>;
             case 'tickets':
-                return <ReadEmails />;
+                if (!emails || isLoading === undefined || error === undefined || !onRefresh || !filters) {
+                    return null;
+                }
+                return <ReadEmails emails={emails} isLoading={isLoading} error={error} onRefresh={onRefresh} filters={filters} />;
             case 'clients':
                 return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Clients coming soon.</p></div>;
             case 'organization':

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -10,11 +10,23 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
 
-const agentOptions = ['Agent 1', 'Agent 2', 'Agent 3'];
+export interface FilterState {
+  search: string;
+  agents: string[];
+  groups: string[];
+  statuses: string[];
+  created: string;
+}
+
+interface TicketsFilterProps {
+  onApplyFilters: (filters: FilterState) => void;
+}
+
+const agentOptions = ['John Doe', 'Jane Smith', 'Unassigned'];
 const groupOptions = ['Support', 'Sales', 'Engineering'];
 const statusOptions = ['Open', 'Pending', 'Resolved', 'Closed'];
 
-export function TicketsFilter() {
+export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const [search, setSearch] = useState('');
   const [agents, setAgents] = useState<string[]>([]);
   const [groups, setGroups] = useState<string[]>([]);
@@ -32,6 +44,11 @@ export function TicketsFilter() {
   const handleStatusChange = (status: string) => {
     setStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
   };
+  
+  const handleApply = () => {
+    onApplyFilters({ search, agents, groups, statuses, created });
+  };
+
 
   const clearFilters = () => {
     setSearch('');
@@ -40,6 +57,12 @@ export function TicketsFilter() {
     setStatuses([]);
     setCreated('any');
   };
+  
+  useEffect(() => {
+    // This effect ensures that clearing filters locally also propagates the changes.
+    onApplyFilters({ search, agents, groups, statuses, created });
+  }, [search, agents, groups, statuses, created, onApplyFilters]);
+
 
   const appliedFiltersCount = [search, ...agents, ...groups, ...statuses, created !== 'any' ? created : null].filter(Boolean).length;
 
@@ -138,7 +161,7 @@ export function TicketsFilter() {
           </Accordion>
         </div>
         <div className="p-4 border-t flex-shrink-0">
-            <Button className="w-full">Apply Filters</Button>
+            <Button className="w-full" onClick={handleApply}>Apply Filters</Button>
         </div>
       </div>
     </aside>
