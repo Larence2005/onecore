@@ -475,11 +475,18 @@ export async function updateTicket(id: string, data: { priority?: string, assign
 
 export async function archiveTickets(ticketIds: string[]) {
     const batch = writeBatch(db);
-    ticketIds.forEach(id => {
-        const ticketDocRef = doc(db, 'tickets', id);
-        batch.update(ticketDocRef, { status: 'Archived' });
-    });
     try {
+        for (const id of ticketIds) {
+            const ticketDocRef = doc(db, 'tickets', id);
+            const docSnap = await getDoc(ticketDocRef);
+            if (docSnap.exists()) {
+                const currentStatus = docSnap.data().status;
+                batch.update(ticketDocRef, { 
+                    status: 'Archived',
+                    statusBeforeArchive: currentStatus 
+                });
+            }
+        }
         await batch.commit();
         return { success: true };
     } catch (error) {
@@ -490,11 +497,18 @@ export async function archiveTickets(ticketIds: string[]) {
 
 export async function unarchiveTickets(ticketIds: string[]) {
     const batch = writeBatch(db);
-    ticketIds.forEach(id => {
-        const ticketDocRef = doc(db, 'tickets', id);
-        batch.update(ticketDocRef, { status: 'Open' });
-    });
     try {
+        for (const id of ticketIds) {
+            const ticketDocRef = doc(db, 'tickets', id);
+            const docSnap = await getDoc(ticketDocRef);
+            if (docSnap.exists()) {
+                const previousStatus = docSnap.data().statusBeforeArchive || 'Open';
+                batch.update(ticketDocRef, { 
+                    status: previousStatus,
+                    statusBeforeArchive: null // Or delete the field
+                });
+            }
+        }
         await batch.commit();
         return { success: true };
     } catch (error) {
