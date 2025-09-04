@@ -59,7 +59,7 @@ export function DashboardView() {
         const totalTickets = tickets.length;
         const openTickets = tickets.filter(t => t.status === 'Open' || t.status === 'Pending').length;
         const resolvedToday = tickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
-        const overdueTickets = tickets.filter(t => t.deadline && isToday(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
+        const overdueTickets = tickets.filter(t => t.deadline && isPast(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
 
         const ticketsByStatus = tickets.reduce((acc, ticket) => {
             const status = ticket.status;
@@ -69,7 +69,7 @@ export function DashboardView() {
         
         const statusData = Object.keys(ticketsByStatus).map(status => ({
             name: status,
-            count: ticketsByStatus[status]
+            value: ticketsByStatus[status]
         }));
         
         const ticketsByPriority = tickets.reduce((acc, ticket) => {
@@ -92,6 +92,14 @@ export function DashboardView() {
         'High': '#f97316',
         'Urgent': '#ef4444',
     };
+    
+    const STATUS_COLORS: {[key: string]: string} = {
+        'Open': '#3b82f6',
+        'Pending': '#f97316',
+        'Resolved': '#22c55e',
+        'Closed': '#16a34a',
+        'Archived': '#6b7280',
+    };
 
 
     if (isLoading) {
@@ -103,9 +111,9 @@ export function DashboardView() {
                     <Skeleton className="h-[108px] w-full" />
                     <Skeleton className="h-[108px] w-full" />
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                    <Skeleton className="h-[300px] w-full col-span-4" />
-                    <Skeleton className="h-[300px] w-full col-span-3" />
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                    <Skeleton className="h-[300px] w-full" />
+                    <Skeleton className="h-[300px] w-full" />
                 </div>
             </div>
         );
@@ -132,24 +140,37 @@ export function DashboardView() {
                 <StatCard title="Overdue" value={stats.overdueTickets} icon={AlertTriangle} />
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="lg:col-span-4">
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
                     <CardHeader>
                         <CardTitle>Tickets by Status</CardTitle>
                     </CardHeader>
-                    <CardContent className="pl-2">
+                    <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={stats.statusData}>
-                                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                             <PieChart>
+                                <Pie
+                                    data={stats.statusData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    nameKey="name"
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                >
+                                    {stats.statusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#8884d8'} />
+                                    ))}
+                                </Pie>
                                 <Tooltip />
-                                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
+                                <Legend />
+                            </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                <Card className="lg:col-span-3">
+                <Card>
                     <CardHeader>
                         <CardTitle>Tickets by Priority</CardTitle>
                     </CardHeader>
