@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
@@ -105,9 +105,9 @@ function HomePageContent() {
     );
   }
   
-  const onApplyFilters = (newFilters: FilterState) => {
+  const onApplyFilters = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
-  };
+  }, []);
 
 
   return (

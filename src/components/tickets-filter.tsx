@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -45,9 +45,9 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
     setStatuses(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
   };
   
-  const handleApply = () => {
+  const handleApply = useCallback(() => {
     onApplyFilters({ search, agents, groups, statuses, created });
-  };
+  }, [search, agents, groups, statuses, created, onApplyFilters]);
 
 
   const clearFilters = () => {
@@ -59,9 +59,8 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   };
   
   useEffect(() => {
-    // This effect ensures that clearing filters locally also propagates the changes.
-    onApplyFilters({ search, agents, groups, statuses, created });
-  }, [search, agents, groups, statuses, created, onApplyFilters]);
+    handleApply();
+  }, [handleApply]);
 
 
   const appliedFiltersCount = [search, ...agents, ...groups, ...statuses, created !== 'any' ? created : null].filter(Boolean).length;
