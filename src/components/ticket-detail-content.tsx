@@ -617,82 +617,75 @@ export function TicketDetailContent({ id }: { id: string }) {
 
                                         <Separator />
                                         
-                                        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                            <div className="space-y-2 col-span-2 sm:col-span-1">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                    <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {priorities.map(p => (
-                                                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                    <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {statuses.map(s => (
-                                                                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                    <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                        {assignees.map(a => (
-                                                                <SelectItem key={a} value={a}>{a}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                    <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {types.map(t => (
-                                                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
-                                                                {currentDeadline ? format(currentDeadline, 'PPP') : 'Set deadline'}
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <CalendarIcon
-                                                                mode="single"
-                                                                selected={currentDeadline}
-                                                                onSelect={handleDeadlineChange}
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                </div>
+                                        <div className="grid grid-cols-1 gap-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
+                                                <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {priorities.map(p => (
+                                                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
-
-                                            <div className="space-y-2 col-span-2 sm:col-span-1">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Activity size={14} /> Activity</span>
-                                                <div className="text-sm text-muted-foreground italic">No activity yet.</div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
+                                                <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {statuses.map(s => (
+                                                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                    {assignees.map(a => (
+                                                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
+                                                <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {types.map(t => (
+                                                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
+                                                            {currentDeadline ? format(currentDeadline, 'PPP') : 'Set deadline'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <CalendarIcon
+                                                            mode="single"
+                                                            selected={currentDeadline}
+                                                            onSelect={handleDeadlineChange}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
                                             </div>
                                         </div>
                                         
@@ -729,4 +722,3 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
-    
