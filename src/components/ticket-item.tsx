@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { updateTicket } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Archive } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User } from 'lucide-react';
 
 type TicketItemProps = {
     email: Email;
@@ -32,7 +32,6 @@ const statuses = [
     { value: 'Pending', label: 'Pending', icon: Clock },
     { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
     { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
-    { value: 'Archived', label: 'Archived', icon: Archive },
 ];
 
 const types = [

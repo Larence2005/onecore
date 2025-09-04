@@ -154,7 +154,6 @@ export function TicketDetailContent({ id }: { id: string }) {
         { value: 'Pending', label: 'Pending', icon: Clock },
         { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
         { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
-        { value: 'Archived', label: 'Archived', icon: Archive },
     ];
 
     const types = [

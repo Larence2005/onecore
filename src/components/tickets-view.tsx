@@ -139,6 +139,17 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
 
     return (
         <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
+            {selectedTickets.length > 0 && (
+                <div className="flex-shrink-0 flex items-center justify-between p-2 mb-4 bg-muted border rounded-lg">
+                     <div className="flex items-center gap-2">
+                         <span className="text-sm font-medium">{selectedTickets.length} selected</span>
+                     </div>
+                     <Button variant="outline" size="sm" onClick={handleArchive}>
+                         <Archive className="mr-2 h-4 w-4" />
+                         Archive
+                     </Button>
+                </div>
+            )}
              <div className="flex-grow overflow-y-auto">
                 {isLoading ? (
                     <div className="space-y-4">
