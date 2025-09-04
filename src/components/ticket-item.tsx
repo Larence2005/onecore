@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { updateTicket } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2 } from 'lucide-react';
 
 type TicketItemProps = {
     email: Email;
@@ -26,10 +26,10 @@ const priorities = [
 ];
 
 const statuses = [
-    { value: 'Open', label: 'Open' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Resolved', label: 'Resolved' },
-    { value: 'Closed', label: 'Closed' },
+    { value: 'Open', label: 'Open', icon: CircleDot },
+    { value: 'Pending', label: 'Pending', icon: Clock },
+    { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
+    { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
 ];
 
 const types = [
@@ -55,6 +55,7 @@ export function TicketItem({ email }: TicketItemProps) {
 
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
+    const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
 
     const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isLate = email.deadline && email.closedAt && isPast(parseISO(email.deadline), parseISO(email.closedAt));
@@ -145,11 +146,21 @@ export function TicketItem({ email }: TicketItemProps) {
                     </Select>
                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                            <SelectValue />
+                            <SelectValue>
+                                <span className="flex items-center gap-2">
+                                    <statusDetails.icon className="h-4 w-4" />
+                                    {statusDetails.label}
+                                </span>
+                            </SelectValue>
                         </SelectTrigger>
                          <SelectContent>
                             {statuses.map(s => (
-                                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                 <SelectItem key={s.value} value={s.value}>
+                                    <span className="flex items-center gap-2">
+                                        <s.icon className="h-4 w-4" />
+                                        {s.label}
+                                    </span>
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
