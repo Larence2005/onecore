@@ -8,9 +8,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, Rocket, Lightbulb, Users, Building2 } from 'lucide-react';
+import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
-import { isToday, parseISO, isPast } from 'date-fns';
+import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays } from 'date-fns';
+import { Badge } from './ui/badge';
+import Link from 'next/link';
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
     <Card>
@@ -93,8 +95,13 @@ export function DashboardView() {
             name: type,
             value: ticketsByType[type]
         }));
+
+        const upcomingDeadlines = tickets
+            .filter(t => t.deadline && isFuture(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed')
+            .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
+            .slice(0, 5);
         
-        return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData };
+        return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
     }, [tickets]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
@@ -117,6 +124,15 @@ export function DashboardView() {
         'Incident': '#f97316',
         'Problem': '#ef4444',
         'Feature Request': '#8b5cf6',
+    };
+
+    const getDaysLeftBadge = (deadline: string) => {
+        const days = differenceInCalendarDays(parseISO(deadline), new Date());
+        if (days < 0) return null; // Should be filtered out already
+        if (days === 0) return <Badge variant="destructive">Today</Badge>;
+        if (days <= 3) return <Badge variant="destructive">{days}d left</Badge>;
+        if (days <= 7) return <Badge variant="secondary" className="bg-yellow-500 text-white">{days}d left</Badge>;
+        return <Badge variant="outline">{days}d left</Badge>;
     };
 
 
@@ -224,45 +240,6 @@ export function DashboardView() {
             <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Rocket className="h-5 w-5" />
-                            Upcoming Updates
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4 text-sm text-muted-foreground">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                    <Lightbulb className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-foreground">AI-Powered Suggestions</p>
-                                    <p>Get smart suggestions for ticket categorization and replies.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                    <Users className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-foreground">Client Management</p>
-                                    <p>A dedicated view to manage and track client communication history.</p>
-                                </div>
-                            </div>
-                             <div className="flex items-start gap-4">
-                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                    <Building2 className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-foreground">Organization Tools</p>
-                                    <p>Manage teams, agents, and groups within your organization.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
                         <CardTitle>Tickets by Type</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -278,6 +255,37 @@ export function DashboardView() {
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <CalendarClock className="h-5 w-5" />
+                            Upcoming Deadlines
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {stats.upcomingDeadlines.length > 0 ? (
+                            <div className="space-y-4">
+                                {stats.upcomingDeadlines.map(ticket => (
+                                    <div key={ticket.id} className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <Link href={`/tickets/${ticket.id}`} className="font-medium text-sm truncate block hover:underline" title={ticket.subject}>
+                                                {ticket.subject}
+                                            </Link>
+                                            <p className="text-xs text-muted-foreground">
+                                                #{ticket.ticketNumber} &bull; {ticket.assignee}
+                                            </p>
+                                        </div>
+                                        {ticket.deadline && getDaysLeftBadge(ticket.deadline)}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center text-sm text-muted-foreground py-8">
+                                <p>No upcoming deadlines.</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
