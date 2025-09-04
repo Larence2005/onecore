@@ -91,7 +91,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
           </div>
         </div>
         <div className="flex-grow overflow-y-auto">
-          <Accordion type="multiple" defaultValue={['status', 'agents']} className="w-full">
+          <Accordion type="multiple" defaultValue={['status', 'priority', 'type', 'agents', 'groups', 'tags', 'created']} className="w-full">
             <AccordionItem value="status">
               <AccordionTrigger className="px-4 text-base font-semibold">Status</AccordionTrigger>
               <AccordionContent className="px-4">
