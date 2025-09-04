@@ -478,14 +478,9 @@ export async function archiveTickets(ticketIds: string[]) {
     try {
         for (const id of ticketIds) {
             const ticketDocRef = doc(db, 'tickets', id);
-            const docSnap = await getDoc(ticketDocRef);
-            if (docSnap.exists()) {
-                const currentStatus = docSnap.data().status;
-                batch.update(ticketDocRef, { 
-                    status: 'Archived',
-                    statusBeforeArchive: currentStatus 
-                });
-            }
+            batch.update(ticketDocRef, { 
+                status: 'Archived',
+            });
         }
         await batch.commit();
         return { success: true };
@@ -500,14 +495,9 @@ export async function unarchiveTickets(ticketIds: string[]) {
     try {
         for (const id of ticketIds) {
             const ticketDocRef = doc(db, 'tickets', id);
-            const docSnap = await getDoc(ticketDocRef);
-            if (docSnap.exists()) {
-                const previousStatus = docSnap.data().statusBeforeArchive || 'Open';
-                batch.update(ticketDocRef, { 
-                    status: previousStatus,
-                    statusBeforeArchive: null // Or delete the field
-                });
-            }
+            batch.update(ticketDocRef, { 
+                status: 'Open'
+            });
         }
         await batch.commit();
         return { success: true };
