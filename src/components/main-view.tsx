@@ -7,6 +7,7 @@ import { SettingsForm } from '@/components/settings-form';
 import type { Email } from '@/app/actions';
 import { FilterState } from './tickets-filter';
 import { ArchiveView } from './archive-view';
+import { DashboardView } from './dashboard-view';
 
 type MainViewProps = {
     activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
@@ -21,7 +22,7 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
     const renderView = () => {
         switch (activeView) {
             case 'analytics':
-                return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Analytics coming soon.</p></div>;
+                return <DashboardView />;
             case 'tickets':
                 if (!emails || isLoading === undefined || error === undefined || !onRefresh || !filters) {
                     return null;
@@ -42,7 +43,7 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
         }
     };
 
-    if (activeView === 'tickets' || activeView === 'archive') {
+    if (activeView === 'tickets' || activeView === 'archive' || activeView === 'analytics') {
         return (
             <div className="flex-1 flex flex-col overflow-y-auto">
                 {renderView()}

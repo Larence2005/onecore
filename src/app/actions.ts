@@ -158,11 +158,14 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 }
 
 
-export async function getTicketsFromDB(options?: { includeArchived?: boolean, agentEmail?: string }): Promise<Email[]> {
+export async function getTicketsFromDB(options?: { includeArchived?: boolean, agentEmail?: string, fetchAll?: boolean }): Promise<Email[]> {
     const ticketsCollectionRef = collection(db, 'tickets');
     let q;
 
-    if (options?.includeArchived) {
+    if (options?.fetchAll) {
+        // No filter, get all tickets
+        q = query(ticketsCollectionRef);
+    } else if (options?.includeArchived) {
         q = query(ticketsCollectionRef, where('status', '==', 'Archived'));
     } else {
         q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
@@ -220,8 +223,9 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, ag
     
     emails.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
     
-    return emails.slice(0, 10);
+    return emails;
 }
+
 
 export async function fetchAndStoreFullConversation(settings: Settings, conversationId: string): Promise<DetailedEmail[]> {
     const authResponse = await getAccessToken(settings);
@@ -506,9 +510,14 @@ export async function archiveTickets(ticketIds: string[]) {
     try {
         for (const id of ticketIds) {
             const ticketDocRef = doc(db, 'tickets', id);
-            batch.update(ticketDocRef, {
-                status: 'Archived',
-            });
+            const ticketDoc = await getDoc(ticketDocRef);
+            if(ticketDoc.exists()){
+                const currentStatus = ticketDoc.data().status;
+                batch.update(ticketDocRef, {
+                    status: 'Archived',
+                    statusBeforeArchive: currentStatus
+                });
+            }
         }
         await batch.commit();
         return { success: true };
@@ -518,14 +527,20 @@ export async function archiveTickets(ticketIds: string[]) {
     }
 }
 
+
 export async function unarchiveTickets(ticketIds: string[]) {
     const batch = writeBatch(db);
     try {
         for (const id of ticketIds) {
             const ticketDocRef = doc(db, 'tickets', id);
-            batch.update(ticketDocRef, {
-                status: 'Open', 
-            });
+            const ticketDoc = await getDoc(ticketDocRef);
+            if (ticketDoc.exists()) {
+                const data = ticketDoc.data();
+                batch.update(ticketDocRef, {
+                    status: data.statusBeforeArchive || 'Open',
+                    statusBeforeArchive: null
+                });
+            }
         }
         await batch.commit();
         return { success: true };
