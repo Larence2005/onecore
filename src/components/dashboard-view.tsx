@@ -271,10 +271,10 @@ export function DashboardView() {
                                     <div key={ticket.id} className="flex items-center justify-between">
                                         <div className="flex-1 min-w-0">
                                             <Link href={`/tickets/${ticket.id}`} className="font-medium text-sm truncate block hover:underline" title={ticket.subject}>
-                                                {ticket.subject}
+                                                {ticket.subject} <span className="text-muted-foreground">#{ticket.ticketNumber}</span>
                                             </Link>
                                             <p className="text-xs text-muted-foreground">
-                                                #{ticket.ticketNumber} &bull; {ticket.assignee}
+                                                {ticket.sender}
                                             </p>
                                         </div>
                                         {ticket.deadline && getDaysLeftBadge(ticket.deadline)}
