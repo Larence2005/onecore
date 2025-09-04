@@ -172,6 +172,9 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, ag
             }
         }
 
+        // For archived tickets, show their status before archiving.
+        const status = (options?.includeArchived && data.statusBeforeArchive) ? data.statusBeforeArchive : data.status;
+
         return {
             id: ticketDoc.id,
             subject: data.title || 'No Subject',
@@ -181,7 +184,7 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, ag
             receivedDateTime: data.receivedDateTime || new Date().toISOString(),
             priority: data.priority || 'Low',
             assignee: data.assignee || 'Unassigned',
-            status: data.status || 'Open',
+            status: status || 'Open',
             type: data.type || 'Incident',
             conversationId: data.conversationId,
             tags: data.tags || [],

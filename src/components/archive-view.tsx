@@ -113,6 +113,7 @@ export function ArchiveView() {
                                     email={email} 
                                     isSelected={selectedTickets.includes(email.id)}
                                     onSelect={handleSelectTicket}
+                                    isArchivedView={true}
                                 />
                             ))}
                         </ul>
