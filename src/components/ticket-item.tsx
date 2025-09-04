@@ -110,10 +110,10 @@ export function TicketItem({ email }: TicketItemProps) {
                     </p>
                 </Link>
 
-                <div className="flex flex-row sm:flex-col items-stretch gap-1 ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
+                <div className="flex flex-row sm:flex-col items-stretch ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
                     <div>
                         <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue>
                                     <span className="flex items-center gap-2">
                                         <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
@@ -135,7 +135,7 @@ export function TicketItem({ email }: TicketItemProps) {
                     </div>
                      <div>
                         <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -147,7 +147,7 @@ export function TicketItem({ email }: TicketItemProps) {
                     </div>
                      <div>
                         <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                              <SelectContent>
@@ -159,7 +159,7 @@ export function TicketItem({ email }: TicketItemProps) {
                     </div>
                     <div>
                         <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
-                            <SelectTrigger className="h-8 text-xs border-0 bg-transparent shadow-none focus:ring-0">
+                            <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0">
                                 <SelectValue />
                             </SelectTrigger>
                              <SelectContent>
@@ -175,5 +175,3 @@ export function TicketItem({ email }: TicketItemProps) {
         </li>
     );
 }
-
-    
