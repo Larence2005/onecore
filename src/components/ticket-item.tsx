@@ -105,8 +105,8 @@ export function TicketItem({ email }: TicketItemProps) {
                     <p className="font-medium text-foreground whitespace-nowrap overflow-hidden text-ellipsis">{email.subject}</p>
 
                     <p className="text-sm text-muted-foreground truncate">
-                        {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'PPP')}
-                        {email.deadline && ` • Deadline: ${format(parseISO(email.deadline), 'PPP')}`}
+                        {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}
+                        {email.deadline && ` • Deadline: ${format(parseISO(email.deadline), 'MMMM d, yyyy')}`}
                     </p>
                 </Link>
 

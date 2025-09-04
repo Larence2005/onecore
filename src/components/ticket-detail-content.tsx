@@ -611,7 +611,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="space-y-1 col-span-2 sm:col-span-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-xs"><Calendar size={14} /> Submitted</div>
-                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'PPP')}</div>
+                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
                                             </div>
                                         </div>
 
@@ -675,7 +675,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
-                                                            {currentDeadline ? format(currentDeadline, 'PPP') : 'Set deadline'}
+                                                            {currentDeadline ? format(currentDeadline, 'MMMM d, yyyy') : 'Set deadline'}
                                                         </Button>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-auto p-0" align="start">
