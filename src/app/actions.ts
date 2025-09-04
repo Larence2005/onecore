@@ -80,9 +80,11 @@ async function getNextTicketNumber(): Promise<number> {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
             if (!counterDoc.exists()) {
+                // Initialize the counter. The first ticket number will be 1.
                 transaction.set(counterRef, { currentNumber: 1 });
                 return 1;
             }
+            // The document exists, so we increment the current number.
             const newNumber = counterDoc.data().currentNumber + 1;
             transaction.update(counterRef, { currentNumber: newNumber });
             return newNumber;
@@ -115,7 +117,10 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
-        for (const email of data.value) {
+        // Reverse the emails to process oldest first, ensuring chronological ticket numbers
+        const emailsToProcess = data.value.reverse();
+
+        for (const email of emailsToProcess) {
             if (!email.conversationId) continue;
 
             const ticketsCollectionRef = collection(db, 'tickets');
@@ -561,3 +566,4 @@ export async function unarchiveTickets(ticketIds: string[]) {
     
 
     
+
