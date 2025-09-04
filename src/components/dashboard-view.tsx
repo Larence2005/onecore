@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, Rocket, Lightbulb, Users, Building2 } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { isToday, parseISO, isPast } from 'date-fns';
 
@@ -133,7 +133,8 @@ export function DashboardView() {
                     <Skeleton className="h-[300px] w-full" />
                     <Skeleton className="h-[300px] w-full" />
                 </div>
-                 <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                    <Skeleton className="h-[300px] w-full" />
                     <Skeleton className="h-[300px] w-full" />
                 </div>
             </div>
@@ -220,7 +221,46 @@ export function DashboardView() {
                     </CardContent>
                 </Card>
             </div>
-            <div className="grid gap-6">
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Rocket className="h-5 w-5" />
+                            Upcoming Updates
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <Lightbulb className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-foreground">AI-Powered Suggestions</p>
+                                    <p>Get smart suggestions for ticket categorization and replies.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <Users className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-foreground">Client Management</p>
+                                    <p>A dedicated view to manage and track client communication history.</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-4">
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-foreground">Organization Tools</p>
+                                    <p>Manage teams, agents, and groups within your organization.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Tickets by Type</CardTitle>
