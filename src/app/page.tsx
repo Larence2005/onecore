@@ -289,7 +289,7 @@ function HomePageContent() {
           />
         </main>
         
-        {activeView === 'tickets' && userProfile?.uid === userProfile?.organizationOwnerUid && <TicketsFilter onApplyFilters={onApplyFilters} />}
+        {activeView === 'tickets' && <TicketsFilter onApplyFilters={onApplyFilters} />}
       </div>
     </SidebarProvider>
   );
