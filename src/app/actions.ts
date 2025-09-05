@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 
@@ -583,6 +583,9 @@ export async function unarchiveTickets(ticketIds: string[]) {
 // --- Organization Actions ---
 
 export async function createOrganization(name: string, uid: string, email: string) {
+    const auth = getAuth(adminApp);
+    await auth.getUser(uid);
+
     // Create organization document
     const organizationRef = doc(collection(db, "organizations"));
     await setDoc(organizationRef, {
@@ -590,7 +593,7 @@ export async function createOrganization(name: string, uid: string, email: strin
         owner: uid,
         members: [{ name: 'Admin', email: email }] // Add owner as first member
     });
-
+    
     return { success: true, organizationId: organizationRef.id };
 }
 
@@ -628,3 +631,68 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
 
     return [];
 }
+
+
+export async function updateMemberInOrganization(organizationId: string, originalEmail: string, newName: string, newEmail: string) {
+    if (!organizationId || !originalEmail || !newName || !newEmail) {
+        throw new Error("All parameters are required for updating a member.");
+    }
+
+    const organizationRef = doc(db, "organizations", organizationId);
+    
+    await runTransaction(db, async (transaction) => {
+        const orgDoc = await transaction.get(organizationRef);
+        if (!orgDoc.exists()) {
+            throw new Error("Organization not found.");
+        }
+
+        const members = (orgDoc.data().members || []) as OrganizationMember[];
+        
+        const memberToUpdate = members.find(m => m.email === originalEmail);
+        if (!memberToUpdate) {
+            throw new Error("Member not found.");
+        }
+        
+        // If email is being changed, check if the new email already exists
+        if (originalEmail !== newEmail && members.some(m => m.email === newEmail)) {
+            throw new Error("Another member with this email already exists.");
+        }
+        
+        const updatedMembers = members.map(m => 
+            m.email === originalEmail ? { name: newName, email: newEmail } : m
+        );
+        
+        transaction.update(organizationRef, { members: updatedMembers });
+    });
+
+    return { success: true };
+}
+
+
+export async function deleteMemberFromOrganization(organizationId: string, email: string) {
+    if (!organizationId || !email) {
+        throw new Error("Organization ID and member email are required.");
+    }
+
+    const organizationRef = doc(db, "organizations", organizationId);
+    
+    await runTransaction(db, async (transaction) => {
+        const orgDoc = await transaction.get(organizationRef);
+        if (!orgDoc.exists()) {
+            throw new Error("Organization not found.");
+        }
+
+        const members = (orgDoc.data().members || []) as OrganizationMember[];
+        const memberToDelete = members.find(m => m.email === email);
+        if (!memberToDelete) {
+             throw new Error("Member not found to delete.");
+        }
+
+        await updateDoc(organizationRef, {
+            members: arrayRemove(memberToDelete)
+        });
+    });
+
+    return { success: true };
+}
+
