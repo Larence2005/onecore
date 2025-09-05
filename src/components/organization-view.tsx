@@ -35,13 +35,17 @@ export function OrganizationView() {
     }, [userProfile]);
 
     const handleCreateOrganization = async () => {
-        if (!user || !organizationName.trim()) {
+        if (!user || !user.email) {
+            toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create an organization.' });
+            return;
+        }
+        if (!organizationName.trim()) {
             toast({ variant: 'destructive', title: 'Organization name is required.' });
             return;
         }
         setIsCreating(true);
         try {
-            await createOrganization(organizationName, user.uid, user.email!);
+            await createOrganization(organizationName, user.uid, user.email);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
             // Re-fetch user profile to get the new organization ID
             await fetchUserProfile(user);

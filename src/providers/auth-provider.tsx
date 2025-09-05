@@ -39,7 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const organizationsRef = collection(db, "organizations");
-    const q = query(organizationsRef, where("members", "array-contains", user.email));
+    // Use 'in' query to check if the user's email is in the members array of any organization
+    // Note: 'array-contains' only works for a single value. For multiple potential organizations,
+    // this would need a different structure or multiple queries. For now, we assume one.
+    const q = query(organizationsRef, where("members", "array-contains", { name: user.displayName || 'Admin', email: user.email }));
     
     const querySnapshot = await getDocs(q);
 
@@ -53,7 +56,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         organizationName: orgDoc.data().name
       });
     } else {
-      setUserProfile({ uid: user.uid, email: user.email });
+        // More robust check if the first query fails (e.g. name mismatch)
+        const allOrgsSnapshot = await getDocs(collection(db, "organizations"));
+        let foundOrg = false;
+        for (const orgDoc of allOrgsSnapshot.docs) {
+            const members = orgDoc.data().members as {name: string, email: string}[];
+            if (members.some(member => member.email === user.email)) {
+                 setUserProfile({
+                    uid: user.uid,
+                    email: user.email,
+                    organizationId: orgDoc.id,
+                    organizationName: orgDoc.data().name
+                });
+                foundOrg = true;
+                break;
+            }
+        }
+        if (!foundOrg) {
+             setUserProfile({ uid: user.uid, email: user.email });
+        }
     }
   }, []);
 
