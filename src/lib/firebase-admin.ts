@@ -1,9 +1,9 @@
 import admin from 'firebase-admin';
 
 if (!admin.apps.length) {
-    admin.initializeApp({
-        // You can leave this empty if you have GOOGLE_APPLICATION_CREDENTIALS set
-    });
+    // By not passing any configuration, the Admin SDK will automatically
+    // use the Application Default Credentials (ADC) from the environment.
+    admin.initializeApp();
 }
 
 export const app = admin.app();
