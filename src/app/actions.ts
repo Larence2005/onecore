@@ -7,7 +7,7 @@ import {
     Configuration,
     AuthenticationResult
 } from '@azure/msal-node';
-import { db, auth as firebaseAuth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion } from 'firebase/firestore';
 import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
@@ -595,11 +595,9 @@ export async function createOrganization(name: string, uid: string, email: strin
 
     // Update user's profile with organizationId
     const userRef = doc(db, "users", uid);
-    await setDoc(userRef, {
-        uid: uid,
-        email: email,
+    await updateDoc(userRef, {
         organizationId: organizationRef.id,
-    }, { merge: true });
+    });
 
     return { success: true, organizationId: organizationRef.id };
 }
