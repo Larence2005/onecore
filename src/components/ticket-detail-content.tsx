@@ -185,31 +185,11 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
     const fetchEmail = useCallback(async () => {
-        // API configuration is not required to view an email from the DB
         if (!id) return;
 
         setIsLoading(true);
         try {
-            // First, get the conversationId from the ticket document in Firestore.
-            // This is necessary because the clicked `id` might not be the first message ID,
-            // which is used as the document ID for tickets.
-            const ticketDocRef = doc(db, 'tickets', id);
-            const ticketDoc = await getDoc(ticketDocRef);
-            let conversationIdFromClient: string | undefined;
-
-            if (ticketDoc.exists()) {
-                conversationIdFromClient = ticketDoc.data().conversationId;
-            } else {
-                 // Fallback for cases where the ID might be a different message in a thread
-                 // We need to find the ticket document via conversationId if we can't find it by id
-                 // This part is tricky without a direct way to search. Let's assume for now
-                 // that if the ticket doc isn't found by ID, we can't get the conversationId yet.
-                 // The server action will have to handle this.
-            }
-
-            // We need to pass settings, even if partial, for the function signature.
-            // The action will use what it needs (just the DB part if no API access is available/needed)
-            const detailedEmail = await getEmail(settings, id, conversationIdFromClient);
+            const detailedEmail = await getEmail(settings, id);
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
             setCurrentAssignee(detailedEmail.assignee);

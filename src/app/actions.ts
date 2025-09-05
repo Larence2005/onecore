@@ -299,26 +299,20 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 }
 
 
-export async function getEmail(settings: Settings, id: string, conversationIdFromClient?: string): Promise<DetailedEmail> {
-    let conversationId = conversationIdFromClient;
+export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
+    // The ID passed to this function is the ID of the ticket document, which is also the ID of the first email in the conversation.
+    const ticketDocRef = doc(db, 'tickets', id);
+    const ticketDocSnap = await getDoc(ticketDocRef);
 
-    // If we don't have conversationId, try to get it from the ticket doc
-    if (!conversationId) {
-        const ticketDocRef = doc(db, 'tickets', id);
-        const ticketDocSnap = await getDoc(ticketDocRef);
-        if (ticketDocSnap.exists()) {
-            conversationId = ticketDocSnap.data().conversationId;
-        }
+    if (!ticketDocSnap.exists()) {
+        throw new Error("Ticket not found in the database.");
     }
-    
+
+    const conversationId = ticketDocSnap.data().conversationId;
     if (!conversationId) {
-        // This case would be for an email that's not part of a ticketed conversation.
-        // For now, we'll assume all detailed views are for ticketed conversations.
-        // If we must support this, we would need to fetch the single message from Graph API.
         throw new Error("Could not determine the conversation for this ticket.");
     }
     
-    // We have a conversation ID, try to get it from cache first.
     const conversationDocRef = doc(db, 'conversations', conversationId);
     const conversationDoc = await getDoc(conversationDocRef);
     let conversationMessages: DetailedEmail[];
@@ -326,27 +320,25 @@ export async function getEmail(settings: Settings, id: string, conversationIdFro
     if (conversationDoc.exists() && conversationDoc.data().messages) {
         conversationMessages = conversationDoc.data().messages as DetailedEmail[];
     } else {
-        // If not in cache, we MUST fetch from API.
-        // Check for settings before proceeding.
-        if (!settings.clientId || !settings.clientSecret || !settings.tenantId) {
-            throw new Error("Cannot fetch email details from the server. Please configure your Microsoft Graph API credentials in Settings.");
+        // If not in cache, try to fetch from API, but only if settings are configured.
+        if (settings.clientId && settings.clientSecret && settings.tenantId) {
+            conversationMessages = await fetchAndStoreFullConversation(settings, conversationId);
+        } else {
+            // No API settings and not in cache, we cannot proceed.
+            throw new Error("Cannot fetch email details. The conversation is not cached, and your Microsoft Graph API credentials are not configured in Settings.");
         }
-        conversationMessages = await fetchAndStoreFullConversation(settings, conversationId);
     }
     
     if (!conversationMessages || conversationMessages.length === 0) {
         throw new Error('Conversation could not be found in the database or fetched from the API.');
     }
 
-    // Since the ID passed to this function could be any message in the thread,
-    // we need to find the *first* message to get the ticket ID.
     const firstMessageId = conversationMessages[0].id;
-    const ticketDocRef = doc(db, 'tickets', firstMessageId);
-    const ticketDoc = await getDoc(ticketDocRef);
+    const ticketDoc = await getDoc(doc(db, 'tickets', firstMessageId));
     const ticketData = ticketDoc.data();
 
-    // The "main" email is the one the user clicked on.
-    const mainEmail = conversationMessages.find(m => m.id === id) || conversationMessages[0];
+    // The "main" email is the one the user clicked on, which is the first message for our ticketed system.
+    const mainEmail = conversationMessages.find(m => m.id === firstMessageId) || conversationMessages[0];
 
     return {
         ...mainEmail,
@@ -362,7 +354,6 @@ export async function getEmail(settings: Settings, id: string, conversationIdFro
         ticketNumber: ticketData?.ticketNumber,
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
-            // Enrich each message in the conversation with ticket-level data for consistency
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
