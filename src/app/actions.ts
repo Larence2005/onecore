@@ -577,14 +577,6 @@ export async function unarchiveTickets(ticketIds: string[]) {
 // --- Organization Actions ---
 
 export async function createOrganization(name: string, uid: string, email: string) {
-    const auth = getAuth(adminApp);
-    // Check if user exists, just to be safe.
-    try {
-        await auth.getUser(uid);
-    } catch (error) {
-        throw new Error("User does not exist. You must be logged in to create an organization.");
-    }
-
     // Create organization document
     const organizationRef = doc(collection(db, "organizations"));
     await setDoc(organizationRef, {
