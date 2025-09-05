@@ -306,28 +306,13 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
     let conversationId: string | undefined;
     let conversationMessages: DetailedEmail[] = [];
     
-    // First, try to get the conversationId from the ticket document in Firestore.
-    // This is the most reliable way and doesn't require API keys for assignees.
-    const ticketDocSnap = await getDoc(doc(db, 'tickets', id));
+    const ticketDocRefById = doc(db, 'tickets', id);
+    const ticketDocSnap = await getDoc(ticketDocRefById);
+
     if (ticketDocSnap.exists()) {
         conversationId = ticketDocSnap.data().conversationId;
-    }
-
-    // If not found in tickets, it might be a message ID, try to get it via Graph API (if configured)
-    if (!conversationId) {
-        const authResponse = await getAccessToken(settings);
-        if (authResponse?.accessToken) {
-            const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=conversationId`, {
-                headers: { Authorization: `Bearer ${authResponse.accessToken}` }
-            });
-            if (messageResponse.ok) {
-                const messageData = await messageResponse.json();
-                conversationId = messageData.conversationId;
-            } else if (messageResponse.status !== 404) {
-                 const error = await messageResponse.json();
-                 console.error(`Graph API error fetching message: ${error.error?.message || messageResponse.statusText}`);
-            }
-        }
+    } else {
+        throw new Error("Ticket not found in the database.");
     }
     
     if (!conversationId) {
@@ -345,15 +330,42 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
         if (settings.clientId && settings.clientSecret && settings.tenantId) {
             conversationMessages = await fetchAndStoreFullConversation(settings, conversationId);
         } else {
-             throw new Error("Cannot fetch email details. The conversation is not cached, and your Microsoft Graph API credentials are not configured in Settings.");
+             // We don't throw an error here, as the conversation might just not be cached yet.
+             // We can construct the detail view from the ticket data alone if needed.
+             console.log("Conversation not cached and API not configured. Some details may be missing.");
         }
     }
     
+    // If conversation is still empty, maybe it's a new ticket not yet synced.
+    // We can rely on the ticket document itself.
     if (!conversationMessages || conversationMessages.length === 0) {
-        throw new Error('Conversation could not be found in the database or fetched from the API.');
+       if (ticketDocSnap.exists()) {
+           const ticketData = ticketDocSnap.data();
+           const placeholderEmail: DetailedEmail = {
+               id: ticketDocSnap.id,
+               subject: ticketData.title || 'No Subject',
+               sender: ticketData.sender || 'Unknown Sender',
+               senderEmail: ticketData.senderEmail || 'Unknown Email',
+               bodyPreview: ticketData.bodyPreview || '',
+               receivedDateTime: ticketData.receivedDateTime,
+               priority: ticketData.priority || 'Low',
+               assignee: ticketData.assignee || 'Unassigned',
+               status: ticketData.status || 'Open',
+               type: ticketData.type || 'Incident',
+               conversationId: ticketData.conversationId,
+               tags: ticketData.tags || [],
+               deadline: ticketData.deadline,
+               closedAt: ticketData.closedAt,
+               ticketNumber: ticketData.ticketNumber,
+               body: { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' }
+           };
+           conversationMessages = [placeholderEmail];
+       } else {
+            throw new Error('This ticket could not be found in the database.');
+       }
     }
 
-    // Now, find the main ticket document for this conversation
+    // Now, find the main ticket document for this conversation to get the properties
     const ticketsCollectionRef = collection(db, 'tickets');
     const q = query(ticketsCollectionRef, where('conversationId', '==', conversationId));
     const querySnapshot = await getDocs(q);
@@ -683,5 +695,3 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     return { success: true };
 }
-
-    
