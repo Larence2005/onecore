@@ -74,6 +74,10 @@ const getMsalConfig = (settings: Settings): Configuration => ({
 });
 
 async function getAccessToken(settings: Settings): Promise<AuthenticationResult | null> {
+    if(!settings.clientId || !settings.tenantId || !settings.clientSecret) {
+        // Not configured, cannot get token
+        return null;
+    }
     const msalConfig = getMsalConfig(settings);
     const cca = new ConfidentialClientApplication(msalConfig);
     const tokenRequest = {
@@ -115,7 +119,9 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
     try {
         const authResponse = await getAccessToken(settings);
         if (!authResponse?.accessToken) {
-            throw new Error('Failed to acquire access token.');
+            // Silently fail if not configured
+            console.log("Skipping email sync: API credentials not configured.");
+            return;
         }
 
         const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
@@ -192,7 +198,7 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, fe
     }
     
     if (options?.includeArchived) {
-        queries.push(where('status', '==', 'Archived'));
+        // No status filter for archived, we get them all and filter client side
     } else if(!options?.fetchAll) {
         queries.push(where('status', '!=', 'Archived'));
     }
@@ -201,12 +207,9 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, fe
     
     const querySnapshot = await getDocs(q);
     
-    const emails: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
+    let emails: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
         const data = ticketDoc.data();
         
-        // For archived tickets, show their status before archiving.
-        const status = (options?.includeArchived && data.statusBeforeArchive) ? data.statusBeforeArchive : data.status;
-
         return {
             id: ticketDoc.id,
             subject: data.title || 'No Subject',
@@ -216,15 +219,20 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, fe
             receivedDateTime: data.receivedDateTime || new Date().toISOString(),
             priority: data.priority || 'Low',
             assignee: data.assignee || 'Unassigned',
-            status: status || 'Open',
+            status: data.status || 'Open',
             type: data.type || 'Incident',
             conversationId: data.conversationId,
             tags: data.tags || [],
             deadline: data.deadline,
             closedAt: data.closedAt,
-            ticketNumber: data.ticketNumber
+            ticketNumber: data.ticketNumber,
+            statusBeforeArchive: data.statusBeforeArchive
         };
     }));
+
+    if (options?.includeArchived) {
+        emails = emails.filter(e => e.status === 'Archived');
+    }
     
     emails.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
     
@@ -235,7 +243,8 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, fe
 export async function fetchAndStoreFullConversation(settings: Settings, conversationId: string): Promise<DetailedEmail[]> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
-        throw new Error('Failed to acquire access token.');
+        // Can't fetch from API, return empty array. The caller should handle this.
+        return [];
     }
 
     const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments&$expand=attachments`, {
@@ -291,82 +300,46 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 
 
 export async function getEmail(settings: Settings, id: string, conversationIdFromClient?: string): Promise<DetailedEmail> {
-    const authResponse = await getAccessToken(settings);
-    if (!authResponse?.accessToken) {
-        throw new Error('Failed to acquire access token.');
-    }
+    let conversationId = conversationIdFromClient;
 
-    let msg: any;
-    let wasFetchedFromApi = false;
-
-    // First, try fetching the specific email by ID
-    const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments&$expand=attachments`, {
-        headers: { Authorization: `Bearer ${authResponse.accessToken}` }
-    });
-
-    if (messageResponse.ok) {
-        msg = await messageResponse.json();
-        wasFetchedFromApi = true;
-    } else if (conversationIdFromClient) {
-        // If fetching by ID fails, and we have a conversation ID, it means this isn't the first message.
-        // The conversation should already be cached. If not, fetch it now.
-        const conversationDocRef = doc(db, 'conversations', conversationIdFromClient);
-        const conversationDoc = await getDoc(conversationDocRef);
-        if (!conversationDoc.exists()) {
-             await fetchAndStoreFullConversation(settings, conversationIdFromClient);
-        }
-        // We will read from the cache below, so no need to set `msg` here.
-    } else {
-        const error = await messageResponse.json();
-        throw new Error(`Failed to fetch email details: ${error.error?.message || messageResponse.statusText}`);
-    }
-
-    const conversationId = msg?.conversationId || conversationIdFromClient;
-
+    // If we don't have conversationId, try to get it from the ticket doc
     if (!conversationId) {
-        // Handle single email not part of a conversation
-         const emailDetail: DetailedEmail = {
-            id: msg.id,
-            subject: msg.subject,
-            sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
-            senderEmail: msg.from?.emailAddress?.address,
-            body: msg.body,
-            receivedDateTime: msg.receivedDateTime,
-            bodyPreview: msg.bodyPreview,
-            priority: 'Low',
-            assignee: 'Unassigned',
-            status: 'Open',
-            type: 'Incident',
-            hasAttachments: msg.hasAttachments,
-            attachments: msg.attachments,
-            tags: [],
-            deadline: undefined,
-         };
-         const ticketDocRef = doc(db, 'tickets', msg.id);
-         const ticketDoc = await getDoc(ticketDocRef);
-         if (ticketDoc.exists()) {
-            const ticketData = ticketDoc.data();
-            return {...emailDetail, ...ticketData};
-         }
-         return emailDetail;
+        const ticketDocRef = doc(db, 'tickets', id);
+        const ticketDocSnap = await getDoc(ticketDocRef);
+        if (ticketDocSnap.exists()) {
+            conversationId = ticketDocSnap.data().conversationId;
+        }
     }
-
-    // Check Firestore cache first
+    
+    if (!conversationId) {
+        // This case would be for an email that's not part of a ticketed conversation.
+        // For now, we'll assume all detailed views are for ticketed conversations.
+        // If we must support this, we would need to fetch the single message from Graph API.
+        throw new Error("Could not determine the conversation for this ticket.");
+    }
+    
+    // We have a conversation ID, try to get it from cache first.
     const conversationDocRef = doc(db, 'conversations', conversationId);
     const conversationDoc = await getDoc(conversationDocRef);
     let conversationMessages: DetailedEmail[];
 
-    if (conversationDoc.exists()) {
+    if (conversationDoc.exists() && conversationDoc.data().messages) {
         conversationMessages = conversationDoc.data().messages as DetailedEmail[];
     } else {
-        // If not in cache, fetch from API and store it
+        // If not in cache, we MUST fetch from API.
+        // Check for settings before proceeding.
+        if (!settings.clientId || !settings.clientSecret || !settings.tenantId) {
+            throw new Error("Cannot fetch email details from the server. Please configure your Microsoft Graph API credentials in Settings.");
+        }
         conversationMessages = await fetchAndStoreFullConversation(settings, conversationId);
     }
     
     if (!conversationMessages || conversationMessages.length === 0) {
-        throw new Error('Conversation could not be found or fetched, even after a fallback attempt.');
+        throw new Error('Conversation could not be found in the database or fetched from the API.');
     }
 
+    // Since the ID passed to this function could be any message in the thread,
+    // we need to find the *first* message to get the ticket ID.
     const firstMessageId = conversationMessages[0].id;
     const ticketDocRef = doc(db, 'tickets', firstMessageId);
     const ticketDoc = await getDoc(ticketDocRef);
@@ -389,6 +362,7 @@ export async function getEmail(settings: Settings, id: string, conversationIdFro
         ticketNumber: ticketData?.ticketNumber,
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
+            // Enrich each message in the conversation with ticket-level data for consistency
             priority: ticketData?.priority || 'Low',
             assignee: ticketData?.assignee || 'Unassigned',
             status: ticketData?.status || 'Open',
@@ -401,7 +375,7 @@ export async function getEmail(settings: Settings, id: string, conversationIdFro
 export async function sendEmailAction(settings: Settings, emailData: {recipient: string, subject: string, body: string}): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
-        throw new Error('Failed to acquire access token.');
+        throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
     const message = {
@@ -448,7 +422,7 @@ export async function replyToEmailAction(
 ): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
-        throw new Error('Failed to acquire access token.');
+        throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
     let replyPayload: any;
@@ -598,7 +572,7 @@ export async function createOrganization(name: string, uid: string, email: strin
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
+export async function addMemberToOrganization(organizationId: string, name: string, email: string, password?: string) {
     if (!organizationId || !email || !name) {
         throw new Error("Organization ID, member name, and email are required.");
     }
