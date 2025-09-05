@@ -1,6 +1,4 @@
 
-"use client";
-
 import { AssigneeProfile } from "@/components/assignee-profile";
 
 // This is the main page component.
