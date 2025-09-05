@@ -344,14 +344,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
 
     const handleReplyClick = () => {
-        const latestMessage = email?.conversation ? email.conversation[email.conversation.length - 1] : email;
-        const sender = latestMessage?.senderEmail || '';
-        const receivedDate = latestMessage ? format(parseISO(latestMessage.receivedDateTime), 'eee, MMM d, yyyy h:mm a') : '';
-        
-        const quoteHeader = `On ${receivedDate}, ${sender} wrote:`;
-        const quotedContent = `<br><br><blockquote>${quoteHeader}<br>${latestMessage?.body.content}</blockquote>`;
-
-        setReplyContent(`<p><br></p>${quotedContent}`);
+        setReplyContent('');
         setIsReplying(true);
     };
 
