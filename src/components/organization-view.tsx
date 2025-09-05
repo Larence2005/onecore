@@ -12,7 +12,7 @@ import { createOrganization, addMemberToOrganization, getOrganizationMembers } f
 import { RefreshCw, UserPlus, Users } from 'lucide-react';
 
 export function OrganizationView() {
-    const { user, userProfile, loading } = useAuth();
+    const { user, userProfile, loading, fetchUserProfile } = useAuth();
     const { toast } = useToast();
     const [organizationName, setOrganizationName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -21,13 +21,13 @@ export function OrganizationView() {
     const [members, setMembers] = useState<string[]>([]);
 
     useEffect(() => {
-        if (userProfile?.organizationId) {
-            const fetchMembers = async () => {
-                const orgMembers = await getOrganizationMembers(userProfile.organizationId!);
+        const fetchMembers = async () => {
+            if (userProfile?.organizationId) {
+                const orgMembers = await getOrganizationMembers(userProfile.organizationId);
                 setMembers(orgMembers);
-            };
-            fetchMembers();
-        }
+            }
+        };
+        fetchMembers();
     }, [userProfile]);
 
     const handleCreateOrganization = async () => {
@@ -39,8 +39,8 @@ export function OrganizationView() {
         try {
             await createOrganization(organizationName, user.uid, user.email!);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
-            // The auth provider will pick up the change and update the profile
-            window.location.reload(); // Quick way to refresh state, could be improved.
+            // Re-fetch user profile to get the new organization ID
+            await fetchUserProfile(user);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             toast({ variant: 'destructive', title: 'Creation Failed', description: errorMessage });
@@ -54,9 +54,13 @@ export function OrganizationView() {
             toast({ variant: 'destructive', title: 'Member email is required.' });
             return;
         }
+        if (!userProfile?.organizationId) {
+            toast({ variant: 'destructive', title: 'Cannot add member without an organization.' });
+            return;
+        }
         setIsAddingMember(true);
         try {
-            await addMemberToOrganization(userProfile!.organizationId!, newMemberEmail);
+            await addMemberToOrganization(userProfile.organizationId, newMemberEmail);
             toast({ title: 'Member Added', description: `${newMemberEmail} has been added to the organization.` });
             setMembers([...members, newMemberEmail]);
             setNewMemberEmail('');

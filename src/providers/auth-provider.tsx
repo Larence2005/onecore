@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData } from '@/lib/types';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export interface UserProfile {
   uid: string;
@@ -22,6 +22,7 @@ interface AuthContextType {
   signup: (data: SignUpFormData) => Promise<any>;
   login: (data: LoginFormData) => Promise<any>;
   logout: () => Promise<void>;
+  fetchUserProfile: (user: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,23 +33,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = useCallback(async (user: User) => {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
-    if(userDoc.exists()) {
-        const profile = userDoc.data() as UserProfile;
-        if (profile.organizationId) {
-            const orgDocRef = doc(db, "organizations", profile.organizationId);
-            const orgDoc = await getDoc(orgDocRef);
-            if(orgDoc.exists()){
-                setUserProfile({ ...profile, organizationName: orgDoc.data().name });
-            } else {
-                 setUserProfile(profile);
-            }
-        } else {
-            setUserProfile(profile);
-        }
+    if (!user.email) {
+      setUserProfile({ uid: user.uid, email: '' });
+      return;
+    }
+    
+    const organizationsRef = collection(db, "organizations");
+    const q = query(organizationsRef, where("members", "array-contains", user.email));
+    
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      // Assuming a user can only be part of one organization for now
+      const orgDoc = querySnapshot.docs[0];
+      setUserProfile({
+        uid: user.uid,
+        email: user.email,
+        organizationId: orgDoc.id,
+        organizationName: orgDoc.data().name
+      });
     } else {
-      setUserProfile({ uid: user.uid, email: user.email! });
+      setUserProfile({ uid: user.uid, email: user.email });
     }
   }, []);
 
@@ -68,14 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserProfile]);
 
   const signup = async (data: SignUpFormData) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const user = userCredential.user;
-    // Create user document in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      uid: user.uid,
-      email: user.email,
-    });
-    return userCredential;
+    return createUserWithEmailAndPassword(auth, data.email, data.password);
   }
 
   const login = (data: LoginFormData) => {
@@ -92,7 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signup,
     login,
-    logout
+    logout,
+    fetchUserProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -593,12 +593,6 @@ export async function createOrganization(name: string, uid: string, email: strin
         members: [email] // Add owner's email to members list
     });
 
-    // Update user's profile with organizationId
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-        organizationId: organizationRef.id,
-    });
-
     return { success: true, organizationId: organizationRef.id };
 }
 
