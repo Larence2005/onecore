@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember } fro
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, Settings as SettingsIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -185,11 +185,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
     const fetchEmail = useCallback(async () => {
-        if (!isConfigured) {
-            setError("Please configure your Microsoft Graph API credentials in Settings.");
-            setIsLoading(false);
-            return;
-        }
+        // API configuration is not required to view an email from the DB
         if (!id) return;
 
         setIsLoading(true);
@@ -211,6 +207,8 @@ export function TicketDetailContent({ id }: { id: string }) {
                  // The server action will have to handle this.
             }
 
+            // We need to pass settings, even if partial, for the function signature.
+            // The action will use what it needs (just the DB part if no API access is available/needed)
             const detailedEmail = await getEmail(settings, id, conversationIdFromClient);
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
@@ -225,12 +223,13 @@ export function TicketDetailContent({ id }: { id: string }) {
             toast({
                 variant: "destructive",
                 title: "Failed to load email.",
-                description: errorMessage,
+                description: "This might happen if the email was deleted or if there's a network issue.",
             });
         } finally {
             setIsLoading(false);
         }
-    }, [id, settings, isConfigured, toast]);
+    }, [id, settings, toast]);
+
 
     useEffect(() => {
         fetchEmail();
@@ -307,6 +306,10 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
 
     const handleSendReply = async () => {
+        if (!isConfigured) {
+            toast({ variant: "destructive", title: "API Settings Required", description: "Please configure your Microsoft Graph API credentials in Settings to send replies." });
+            return;
+        }
         if (!replyContent.trim() && attachments.length === 0) {
             toast({ variant: "destructive", title: "Cannot send an empty reply." });
             return;
@@ -560,55 +563,67 @@ export function TicketDetailContent({ id }: { id: string }) {
                                     {isReplying && (
                                         <Card>
                                             <CardContent className="p-4 space-y-4">
-                                                <RichTextEditor
-                                                    value={replyContent}
-                                                    onChange={setReplyContent}
-                                                    onAttachmentClick={() => fileInputRef.current?.click()}
-                                                />
-                                                <input
-                                                    type="file"
-                                                    ref={fileInputRef}
-                                                    multiple
-                                                    onChange={handleFileChange}
-                                                    className="hidden"
-                                                />
-                                                 {attachments.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <h4 className="text-sm font-medium">Attachments</h4>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {attachments.map((file, index) => (
-                                                                <Badge key={index} variant="secondary" className="flex items-center gap-2">
-                                                                    <span>{file.name}</span>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-4 w-4 rounded-full"
-                                                                        onClick={() => removeAttachment(file)}
-                                                                    >
-                                                                        <X className="h-3 w-3" />
-                                                                        <span className="sr-only">Remove attachment</span>
-                                                                    </Button>
-                                                                </Badge>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
-                                                    <Button onClick={handleSendReply} disabled={isSending}>
-                                                        {isSending ? (
-                                                            <>
-                                                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                                                Sending...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Send className="mr-2 h-4 w-4" />
-                                                                Send Reply
-                                                            </>
+                                                {!isConfigured ? (
+                                                     <Alert>
+                                                        <SettingsIcon className="h-4 w-4" />
+                                                        <AlertTitle>API Configuration Needed</AlertTitle>
+                                                        <AlertDescription>
+                                                            Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to send replies.
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                ) : (
+                                                    <>
+                                                        <RichTextEditor
+                                                            value={replyContent}
+                                                            onChange={setReplyContent}
+                                                            onAttachmentClick={() => fileInputRef.current?.click()}
+                                                        />
+                                                        <input
+                                                            type="file"
+                                                            ref={fileInputRef}
+                                                            multiple
+                                                            onChange={handleFileChange}
+                                                            className="hidden"
+                                                        />
+                                                        {attachments.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <h4 className="text-sm font-medium">Attachments</h4>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {attachments.map((file, index) => (
+                                                                        <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                                                                            <span>{file.name}</span>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-4 w-4 rounded-full"
+                                                                                onClick={() => removeAttachment(file)}
+                                                                            >
+                                                                                <X className="h-3 w-3" />
+                                                                                <span className="sr-only">Remove attachment</span>
+                                                                            </Button>
+                                                                        </Badge>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
                                                         )}
-                                                    </Button>
-                                                </div>
+                                                         <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
+                                                            <Button onClick={handleSendReply} disabled={isSending}>
+                                                                {isSending ? (
+                                                                    <>
+                                                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                        Sending...
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Send className="mr-2 h-4 w-4" />
+                                                                        Send Reply
+                                                                    </>
+                                                                )}
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </CardContent>
                                         </Card>
                                     )}

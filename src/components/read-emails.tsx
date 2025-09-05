@@ -23,20 +23,6 @@ interface ReadEmailsProps {
 export function ReadEmails({ emails, isLoading, error, onRefresh, filters }: ReadEmailsProps) {
   const { isConfigured } = useSettings();
 
-  if (!isConfigured && !isLoading) {
-    return (
-        <div className="flex items-center justify-center h-full">
-            <Alert className="max-w-2xl mx-auto w-full">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Configuration Required</AlertTitle>
-                <AlertDescription>
-                    Please go to the Settings tab to configure your Microsoft Graph API credentials before you can read emails.
-                </AlertDescription>
-            </Alert>
-        </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full">
       <TicketsView
