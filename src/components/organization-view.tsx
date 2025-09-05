@@ -156,5 +156,3 @@ export function OrganizationView() {
         </div>
     );
 }
-
-    

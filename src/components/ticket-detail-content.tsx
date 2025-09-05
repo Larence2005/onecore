@@ -792,5 +792,3 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
