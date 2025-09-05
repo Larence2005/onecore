@@ -58,6 +58,12 @@ export interface DetailedEmail extends Email {
     hasAttachments?: boolean;
 }
 
+export interface OrganizationMember {
+    name: string;
+    email: string;
+}
+
+
 const getMsalConfig = (settings: Settings): Configuration => ({
     auth: {
         clientId: settings.clientId,
@@ -582,36 +588,34 @@ export async function createOrganization(name: string, uid: string, email: strin
     await setDoc(organizationRef, {
         name: name,
         owner: uid,
-        members: [email] // Add owner's email to members list
+        members: [{ name: 'Admin', email: email }] // Add owner as first member
     });
 
     return { success: true, organizationId: organizationRef.id };
 }
 
 
-export async function addMemberToOrganization(organizationId: string, email: string) {
-    if (!organizationId || !email) throw new Error("Organization ID and member email are required.");
+export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
+    if (!organizationId || !email || !name) throw new Error("Organization ID, member name, and email are required.");
 
     const organizationRef = doc(db, "organizations", organizationId);
     
-    // Check if member already exists
     const orgDoc = await getDoc(organizationRef);
     if(orgDoc.exists()){
-        const members = orgDoc.data().members || [];
-        if(members.includes(email)) {
+        const members = (orgDoc.data().members || []) as OrganizationMember[];
+        if(members.some(member => member.email === email)) {
             throw new Error("This user is already a member of the organization.");
         }
     }
 
-    // Add email to the members array
     await updateDoc(organizationRef, {
-        members: arrayUnion(email)
+        members: arrayUnion({ name, email })
     });
 
     return { success: true };
 }
 
-export async function getOrganizationMembers(organizationId: string): Promise<string[]> {
+export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
     if (!organizationId) return [];
     
     const organizationRef = doc(db, "organizations", organizationId);
@@ -619,7 +623,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<st
 
     if (orgDoc.exists()) {
         const data = orgDoc.data();
-        return data.members || [];
+        return (data.members || []) as OrganizationMember[];
     }
 
     return [];

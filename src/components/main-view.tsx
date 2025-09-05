@@ -10,6 +10,7 @@ import { ArchiveView } from './archive-view';
 import { DashboardView } from './dashboard-view';
 import { OrganizationView } from './organization-view';
 import { useAuth } from '@/providers/auth-provider';
+import { ClientsView } from './clients-view';
 
 type MainViewProps = {
     activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
@@ -33,7 +34,7 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
                 }
                 return <ReadEmails emails={emails} isLoading={isLoading} error={error} onRefresh={onRefresh} filters={filters} />;
             case 'clients':
-                return <div className="flex flex-1 items-center justify-center text-muted-foreground"><p>Clients coming soon.</p></div>;
+                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><ClientsView /></div>;
             case 'organization':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><OrganizationView /></div>;
             case 'settings':

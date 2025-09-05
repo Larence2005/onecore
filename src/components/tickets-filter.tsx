@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { getOrganizationMembers } from '@/app/actions';
+import type { OrganizationMember } from '@/app/actions';
 
 export interface FilterState {
   search: string;
@@ -36,7 +37,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const { userProfile } = useAuth();
   const [search, setSearch] = useState('');
   const [agents, setAgents] = useState<string[]>([]);
-  const [agentOptions, setAgentOptions] = useState<string[]>(['Unassigned']);
+  const [agentOptions, setAgentOptions] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
   const [groups, setGroups] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
@@ -48,7 +49,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
     const fetchAgents = async () => {
         if(userProfile?.organizationId) {
             const members = await getOrganizationMembers(userProfile.organizationId);
-            setAgentOptions(['Unassigned', ...members]);
+            setAgentOptions([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
         }
     };
     fetchAgents();
@@ -161,13 +162,13 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
               <AccordionContent className="px-4">
                 <div className="space-y-2">
                   {agentOptions.map(agent => (
-                    <div key={agent} className="flex items-center space-x-2">
+                    <div key={agent.email} className="flex items-center space-x-2">
                       <Checkbox 
-                        id={`agent-${agent}`} 
-                        checked={agents.includes(agent)}
-                        onCheckedChange={() => handleCheckboxChange(setAgents, agent)}
+                        id={`agent-${agent.email}`} 
+                        checked={agents.includes(agent.email)}
+                        onCheckedChange={() => handleCheckboxChange(setAgents, agent.email)}
                       />
-                      <Label htmlFor={`agent-${agent}`} className="font-normal">{agent}</Label>
+                      <Label htmlFor={`agent-${agent.email}`} className="font-normal">{agent.name}</Label>
                     </div>
                   ))}
                 </div>

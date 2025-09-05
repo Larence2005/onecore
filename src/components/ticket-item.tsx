@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Email } from "@/app/actions";
+import type { Email, OrganizationMember } from "@/app/actions";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
@@ -50,7 +50,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [currentStatus, setCurrentStatus] = useState(email.status);
     const [currentType, setCurrentType] = useState(email.type);
-    const [assignees, setAssignees] = useState<string[]>(['Unassigned']);
+    const [assignees, setAssignees] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
     
     const { toast } = useToast();
 
@@ -58,7 +58,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         const fetchAssignees = async () => {
             if (userProfile?.organizationId) {
                 const members = await getOrganizationMembers(userProfile.organizationId);
-                setAssignees(['Unassigned', ...members]);
+                setAssignees([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
             }
         };
         fetchAssignees();
@@ -162,16 +162,16 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                            <SelectValue>
                                 <span className="flex items-center gap-2">
                                     <User className="h-4 w-4" />
-                                    {currentAssignee}
+                                    {assignees.find(a => a.email === currentAssignee)?.name || currentAssignee}
                                 </span>
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                            {assignees.map(a => (
-                                 <SelectItem key={a} value={a}>
+                                 <SelectItem key={a.email} value={a.email}>
                                     <span className="flex items-center gap-2">
                                         <User className="h-4 w-4" />
-                                        {a}
+                                        {a.name}
                                     </span>
                                 </SelectItem>
                             ))}

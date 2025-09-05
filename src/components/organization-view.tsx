@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, addMemberToOrganization, getOrganizationMembers } from '@/app/actions';
+import type { OrganizationMember } from '@/app/actions';
 import { RefreshCw, UserPlus, Users } from 'lucide-react';
 
 export function OrganizationView() {
@@ -17,8 +18,9 @@ export function OrganizationView() {
     const [organizationName, setOrganizationName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [isAddingMember, setIsAddingMember] = useState(false);
+    const [newMemberName, setNewMemberName] = useState('');
     const [newMemberEmail, setNewMemberEmail] = useState('');
-    const [members, setMembers] = useState<string[]>([]);
+    const [members, setMembers] = useState<OrganizationMember[]>([]);
 
     useEffect(() => {
         const fetchMembers = async () => {
@@ -50,8 +52,8 @@ export function OrganizationView() {
     };
 
     const handleAddMember = async () => {
-        if (!newMemberEmail.trim()) {
-            toast({ variant: 'destructive', title: 'Member email is required.' });
+        if (!newMemberName.trim() || !newMemberEmail.trim()) {
+            toast({ variant: 'destructive', title: 'Member name and email are required.' });
             return;
         }
         if (!userProfile?.organizationId) {
@@ -60,9 +62,10 @@ export function OrganizationView() {
         }
         setIsAddingMember(true);
         try {
-            await addMemberToOrganization(userProfile.organizationId, newMemberEmail);
-            toast({ title: 'Member Added', description: `${newMemberEmail} has been added to the organization.` });
-            setMembers([...members, newMemberEmail]);
+            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail);
+            toast({ title: 'Member Added', description: `${newMemberName} has been added to the organization.` });
+            setMembers([...members, { name: newMemberName, email: newMemberEmail }]);
+            setNewMemberName('');
             setNewMemberEmail('');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -120,7 +123,10 @@ export function OrganizationView() {
                     <div className="space-y-2">
                         {members.map((member, index) => (
                             <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
-                               <span>{member}</span>
+                               <div>
+                                    <span className="font-medium">{member.name}</span>
+                                    <span className="text-muted-foreground ml-2">({member.email})</span>
+                               </div>
                             </div>
                         ))}
                         {members.length === 0 && <p className="text-sm text-muted-foreground">No members yet. Add one below.</p>}
@@ -135,6 +141,15 @@ export function OrganizationView() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="member-name">Member Name</Label>
+                        <Input 
+                            id="member-name"
+                            placeholder="John Doe" 
+                            value={newMemberName}
+                            onChange={(e) => setNewMemberName(e.target.value)}
+                        />
+                    </div>
                     <div className="space-y-2">
                         <Label htmlFor="member-email">Member Email</Label>
                         <Input 

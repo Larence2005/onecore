@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -143,7 +143,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentTags, setCurrentTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
 
-    const [assignees, setAssignees] = useState<string[]>(['Unassigned']);
+    const [assignees, setAssignees] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
 
 
     const priorities = [
@@ -177,7 +177,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         const fetchAssignees = async () => {
             if (userProfile?.organizationId) {
                 const members = await getOrganizationMembers(userProfile.organizationId);
-                setAssignees(['Unassigned', ...members]);
+                setAssignees([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
             }
         };
         fetchAssignees();
@@ -702,16 +702,16 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
                                                                 <User className="h-4 w-4" />
-                                                                {currentAssignee}
+                                                                {assignees.find(a => a.email === currentAssignee)?.name || currentAssignee}
                                                             </span>
                                                         </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                     {assignees.map(a => (
-                                                            <SelectItem key={a} value={a}>
+                                                            <SelectItem key={a.email} value={a.email}>
                                                                 <span className="flex items-center gap-2">
                                                                     <User className="h-4 w-4" />
-                                                                    {a}
+                                                                    {a.name}
                                                                 </span>
                                                             </SelectItem>
                                                         ))}
