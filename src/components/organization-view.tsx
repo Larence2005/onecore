@@ -69,7 +69,9 @@ export function OrganizationView() {
     };
     
     useEffect(() => {
-        fetchMembers();
+        if (userProfile?.organizationId) {
+            fetchMembers();
+        }
     }, [userProfile]);
 
     const handleCreateOrganization = async () => {
@@ -269,7 +271,7 @@ export function OrganizationView() {
                     <div className="space-y-2">
                         {members.map((member) => (
                              <div key={member.email} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                                <Link href={`/clients/${encodeURIComponent(member.email)}`} className="flex-grow flex items-center gap-4">
+                                <Link href={`/assignees/${encodeURIComponent(member.email)}`} className="flex-grow flex items-center gap-4">
                                     <div>
                                         <p className="font-medium">{member.name}</p>
                                         <p className="text-sm text-muted-foreground">{member.email}</p>
@@ -361,3 +363,5 @@ export function OrganizationView() {
         </div>
     );
 }
+
+    

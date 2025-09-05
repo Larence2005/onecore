@@ -19,7 +19,7 @@ import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive } from 'lucide-react';
 
-export function ClientProfile({ email }: { email: string }) {
+export function AssigneeProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout } = useAuth();
   const [assignedTickets, setAssignedTickets] = useState<Email[]>([]);
   const [member, setMember] = useState<OrganizationMember | null>(null);
@@ -41,7 +41,7 @@ export function ClientProfile({ email }: { email: string }) {
         // Wait for auth to be loaded
         if(loading) return;
 
-        setError("You must be part of an organization to view client profiles.");
+        setError("You must be part of an organization to view assignee profiles.");
         setIsLoading(false);
         return;
       }
@@ -56,7 +56,7 @@ export function ClientProfile({ email }: { email: string }) {
 
         const currentMember = allMembers.find(m => m.email === email);
         if (!currentMember) {
-          throw new Error("Client not found in your organization.");
+          throw new Error("Assignee not found in your organization.");
         }
         setMember(currentMember);
 
@@ -68,7 +68,7 @@ export function ClientProfile({ email }: { email: string }) {
         setError(errorMessage);
         toast({
           variant: "destructive",
-          title: "Failed to load client profile.",
+          title: "Failed to load assignee profile.",
           description: errorMessage,
         });
       } finally {
@@ -76,7 +76,9 @@ export function ClientProfile({ email }: { email: string }) {
       }
     };
 
-    fetchData();
+    if(!loading) {
+        fetchData();
+    }
   }, [user, userProfile, email, toast, loading]);
 
     const handleLogout = async () => {
@@ -93,10 +95,7 @@ export function ClientProfile({ email }: { email: string }) {
             router.push('/');
         } else if (view === 'archive') {
             router.push('/archive');
-        } else if (view === 'clients') {
-            router.push('/?view=clients');
-        }
-        else {
+        } else {
             router.push(`/?view=${view}`); 
         }
     };
@@ -145,13 +144,13 @@ export function ClientProfile({ email }: { email: string }) {
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <SidebarMenuButton onClick={() => handleMenuClick('clients')} isActive>
+                                <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
                                 <Users />
                                 <span>Clients</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
+                                <SidebarMenuButton onClick={() => handleMenuClick('organization')} isActive>
                                 <Building2 />
                                 <span>Organization</span>
                                 </SidebarMenuButton>
@@ -184,7 +183,7 @@ export function ClientProfile({ email }: { email: string }) {
                                     <ArrowLeft className="h-4 w-4" />
                                 </Link>
                             </Button>
-                            <h1 className="text-xl font-bold">Client Profile</h1>
+                            <h1 className="text-xl font-bold">Assignee Profile</h1>
                         </div>
                     </Header>
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -245,7 +244,7 @@ export function ClientProfile({ email }: { email: string }) {
                                             </ul>
                                         ) : (
                                             <div className="text-center py-10">
-                                                <p className="text-muted-foreground">No tickets assigned to this client.</p>
+                                                <p className="text-muted-foreground">No tickets assigned to this member.</p>
                                             </div>
                                         )}
                                     </CardContent>
@@ -258,3 +257,5 @@ export function ClientProfile({ email }: { email: string }) {
         </SidebarProvider>
   );
 }
+
+    
