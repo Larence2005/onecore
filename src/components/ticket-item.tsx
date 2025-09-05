@@ -162,7 +162,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                            <SelectValue>
                                 <span className="flex items-center gap-2">
                                     <User className="h-4 w-4" />
-                                    {assignees.find(a => a.email === currentAssignee)?.name || currentAssignee}
+                                    {assignees.find(a => a.email === currentAssignee)?.name || 'Unassigned'}
                                 </span>
                             </SelectValue>
                         </SelectTrigger>
