@@ -6,7 +6,7 @@ import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, sign
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { addMemberToOrganization } from '@/app/actions';
+
 
 export interface UserProfile {
   uid: string;
@@ -79,21 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [fetchUserProfile]);
 
-  const signup = async (data: SignUpFormData) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    
-    // After user is created, add them to the first organization found.
-    // This is a simplification assuming a single-org setup for now.
-    const organizationsRef = collection(db, "organizations");
-    const orgsSnapshot = await getDocs(organizationsRef);
-
-    if (!orgsSnapshot.empty) {
-        const firstOrgDoc = orgsSnapshot.docs[0];
-        const userName = data.email.split('@')[0]; // Simple name generation
-        await addMemberToOrganization(firstOrgDoc.id, userName, data.email);
-    }
-
-    return userCredential;
+  const signup = (data: SignUpFormData) => {
+    return createUserWithEmailAndPassword(auth, data.email, data.password);
   }
 
   const login = (data: LoginFormData) => {
@@ -124,5 +111,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    

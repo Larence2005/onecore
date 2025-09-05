@@ -598,9 +598,25 @@ export async function createOrganization(name: string, uid: string, email: strin
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
+export async function addMemberToOrganization(organizationId: string, name: string, email: string, password?: string) {
     if (!organizationId || !email || !name) {
         throw new Error("Organization ID, member name, and email are required.");
+    }
+
+    if (password) {
+        try {
+            await adminAuth.createUser({ email, password, displayName: name });
+        } catch (error: any) {
+             // Provide more specific error messages
+            if (error.code === 'auth/email-already-exists') {
+                throw new Error('This email address is already in use by another account.');
+            } else if (error.code === 'auth/invalid-password') {
+                 throw new Error('The password must be a string with at least six characters.');
+            }
+            console.error("Error creating user:", error);
+            // Generic error for other cases, including the persistent credential issue
+            throw new Error("Could not create a user account. There might be a server configuration issue.");
+        }
     }
     
     const organizationRef = doc(db, "organizations", organizationId);
@@ -690,12 +706,3 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     return { success: true };
 }
-
-
-    
-
-    
-
-
-
-    
