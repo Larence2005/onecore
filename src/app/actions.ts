@@ -303,31 +303,30 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 
 
 export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
-    let conversationId;
+    let conversationId: string | undefined;
     let conversationMessages: DetailedEmail[] = [];
     
-    // First, try to find the conversationId from the message ID itself.
-    // This is necessary because the `id` passed to this function could be any message in the thread.
-    const authResponse = await getAccessToken(settings);
-
-    if (authResponse?.accessToken) {
-        const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=conversationId`, {
-            headers: { Authorization: `Bearer ${authResponse.accessToken}` }
-        });
-        if (messageResponse.ok) {
-            const messageData = await messageResponse.json();
-            conversationId = messageData.conversationId;
-        } else if (messageResponse.status !== 404) {
-             const error = await messageResponse.json();
-             console.error(`Graph API error fetching message: ${error.error?.message || messageResponse.statusText}`);
-        }
+    // First, try to get the conversationId from the ticket document in Firestore.
+    // This is the most reliable way and doesn't require API keys for assignees.
+    const ticketDocSnap = await getDoc(doc(db, 'tickets', id));
+    if (ticketDocSnap.exists()) {
+        conversationId = ticketDocSnap.data().conversationId;
     }
 
+    // If not found in tickets, it might be a message ID, try to get it via Graph API (if configured)
     if (!conversationId) {
-        // Fallback: Check if the provided ID is a ticket ID which has a conversationId
-        const ticketDocSnap = await getDoc(doc(db, 'tickets', id));
-        if (ticketDocSnap.exists()) {
-            conversationId = ticketDocSnap.data().conversationId;
+        const authResponse = await getAccessToken(settings);
+        if (authResponse?.accessToken) {
+            const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=conversationId`, {
+                headers: { Authorization: `Bearer ${authResponse.accessToken}` }
+            });
+            if (messageResponse.ok) {
+                const messageData = await messageResponse.json();
+                conversationId = messageData.conversationId;
+            } else if (messageResponse.status !== 404) {
+                 const error = await messageResponse.json();
+                 console.error(`Graph API error fetching message: ${error.error?.message || messageResponse.statusText}`);
+            }
         }
     }
     
