@@ -12,6 +12,16 @@ import { createOrganization, addMemberToOrganization, getOrganizationMembers } f
 import type { OrganizationMember } from '@/app/actions';
 import { RefreshCw, UserPlus, Users, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
 
 
 export function OrganizationView() {
@@ -23,6 +33,8 @@ export function OrganizationView() {
     const [newMemberName, setNewMemberName] = useState('');
     const [newMemberEmail, setNewMemberEmail] = useState('');
     const [members, setMembers] = useState<OrganizationMember[]>([]);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
 
     useEffect(() => {
         const fetchMembers = async () => {
@@ -47,7 +59,6 @@ export function OrganizationView() {
         try {
             await createOrganization(organizationName, user.uid, user.email);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
-            // Re-fetch user profile to get the new organization ID
             await fetchUserProfile(user);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -73,6 +84,7 @@ export function OrganizationView() {
             setMembers([...members, { name: newMemberName, email: newMemberEmail }]);
             setNewMemberName('');
             setNewMemberEmail('');
+            setIsDialogOpen(false); // Close dialog on success
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             toast({ variant: 'destructive', title: 'Failed to Add Member', description: errorMessage });
@@ -118,11 +130,67 @@ export function OrganizationView() {
     return (
         <div className="space-y-8 max-w-4xl w-full">
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Users /> {userProfile.organizationName || 'Your Organization'}</CardTitle>
-                    <CardDescription>
-                        Manage your organization's members. Members can be assigned to tickets.
-                    </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="flex items-center gap-2"><Users /> {userProfile.organizationName || 'Your Organization'}</CardTitle>
+                        <CardDescription>
+                            Manage your organization's members. Members can be assigned to tickets.
+                        </CardDescription>
+                    </div>
+                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                           <Button>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Add New Member
+                           </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add New Member</DialogTitle>
+                                <DialogDescription>
+                                    Add a new person to your organization. They will be available to be assigned to tickets.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right">
+                                        Name
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={newMemberName}
+                                        onChange={(e) => setNewMemberName(e.target.value)}
+                                        className="col-span-3"
+                                        placeholder="John Doe"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="email" className="text-right">
+                                        Email
+                                    </Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={newMemberEmail}
+                                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                                        className="col-span-3"
+                                        placeholder="member@example.com"
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button type="button" variant="secondary">
+                                    Cancel
+                                    </Button>
+                                </DialogClose>
+                                <Button onClick={handleAddMember} disabled={isAddingMember}>
+                                    {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                    Add Member
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </CardHeader>
                 <CardContent>
                     <h3 className="font-semibold mb-4">Members ({members.length})</h3>
@@ -138,44 +206,9 @@ export function OrganizationView() {
                                 </div>
                             </Link>
                         ))}
-                        {members.length === 0 && <p className="text-sm text-muted-foreground">No members yet. Add one below.</p>}
+                        {members.length === 0 && <p className="text-sm text-muted-foreground">No members yet. Add one to get started.</p>}
                     </div>
                 </CardContent>
-            </Card>
-            <Card>
-                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><UserPlus /> Add New Member</CardTitle>
-                    <CardDescription>
-                        Add a new person to your organization.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="member-name">Member Name</Label>
-                        <Input 
-                            id="member-name"
-                            placeholder="John Doe" 
-                            value={newMemberName}
-                            onChange={(e) => setNewMemberName(e.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="member-email">Member Email</Label>
-                        <Input 
-                            id="member-email" 
-                            type="email"
-                            placeholder="member@example.com" 
-                            value={newMemberEmail}
-                            onChange={(e) => setNewMemberEmail(e.target.value)}
-                        />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                     <Button onClick={handleAddMember} disabled={isAddingMember}>
-                        {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                        Add Member
-                    </Button>
-                </CardFooter>
             </Card>
         </div>
     );
