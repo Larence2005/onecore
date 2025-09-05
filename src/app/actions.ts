@@ -122,7 +122,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
-        const emailsToProcess = data.value.reverse();
+        const emailsToProcess = data.value;
 
         for (const email of emailsToProcess) {
             if (!email.conversationId) continue;
@@ -576,6 +576,8 @@ export async function unarchiveTickets(ticketIds: string[]) {
 
 
 
+
+    
 
     
 
