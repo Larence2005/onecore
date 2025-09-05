@@ -172,7 +172,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 }
 
 
-export async function getTicketsFromDB(options?: { includeArchived?: boolean, agentEmail?: string, fetchAll?: boolean }): Promise<Email[]> {
+export async function getTicketsFromDB(options?: { includeArchived?: boolean, fetchAll?: boolean }): Promise<Email[]> {
     const ticketsCollectionRef = collection(db, 'tickets');
     let q;
 
@@ -189,29 +189,7 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, ag
     
     const emails: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
         const data = ticketDoc.data();
-        let lastReplier: 'agent' | 'client' | undefined = undefined;
-
-        if (data.conversationId && options?.agentEmail) {
-            try {
-                const conversationDocRef = doc(db, 'conversations', data.conversationId);
-                const conversationDoc = await getDoc(conversationDocRef);
-                if (conversationDoc.exists()) {
-                    const conversationData = conversationDoc.data();
-                    const messages = conversationData.messages as DetailedEmail[];
-                    if (messages && messages.length > 0) {
-                        const lastMessage = messages[messages.length - 1];
-                        if(lastMessage.senderEmail?.toLowerCase() === options.agentEmail.toLowerCase()) {
-                            lastReplier = 'agent';
-                        } else {
-                            lastReplier = 'client';
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error("Could not determine last replier for ticket", ticketDoc.id, e);
-            }
-        }
-
+        
         // For archived tickets, show their status before archiving.
         const status = (options?.includeArchived && data.statusBeforeArchive) ? data.statusBeforeArchive : data.status;
 
@@ -230,7 +208,6 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, ag
             tags: data.tags || [],
             deadline: data.deadline,
             closedAt: data.closedAt,
-            lastReplier: lastReplier,
             ticketNumber: data.ticketNumber
         };
     }));
@@ -586,3 +563,4 @@ export async function unarchiveTickets(ticketIds: string[]) {
     
 
     
+

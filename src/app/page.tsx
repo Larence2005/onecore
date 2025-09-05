@@ -12,10 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
-import type { Email } from '@/app/actions';
-import { getTicketsFromDB, getLatestEmails } from '@/app/actions';
+import type { Email, DetailedEmail } from '@/app/actions';
+import { getLatestEmails, getTicketsFromDB, fetchAndStoreFullConversation } from '@/app/actions';
 import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
@@ -43,41 +45,93 @@ function HomePageContent() {
     created: 'any',
   });
 
-  const fetchEmails = React.useCallback(async () => {
-    if (!user) return;
-    setIsLoading(true);
-    setError(null);
-
-    try {
-        const dbEmails = await getTicketsFromDB({ agentEmail: user.email || '' });
-        setEmails(dbEmails);
-    } catch (dbError) {
-        const dbErrorMessage = dbError instanceof Error ? dbError.message : "An unknown database error occurred.";
-        setError(dbErrorMessage);
-        setEmails([]);
-    } finally {
-        setIsLoading(false);
-    }
-
+  const syncLatestEmails = useCallback(async () => {
     if (isConfigured) {
         try {
             await getLatestEmails(settings);
-            const updatedDbEmails = await getTicketsFromDB({ agentEmail: user.email || '' });
-            setEmails(updatedDbEmails);
         } catch (syncError) {
             const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
+            console.error("Failed to sync emails:", syncErrorMessage);
+            // Optionally, show a non-intrusive toast
             toast({
                 variant: "destructive",
-                title: "Failed to sync with email server.",
-                description: syncErrorMessage,
+                title: "Email Sync Failed",
+                description: "Could not fetch the latest emails from the server.",
             });
         }
     }
-  }, [settings, isConfigured, toast, user]);
+  }, [settings, isConfigured, toast]);
 
   useEffect(() => {
-    fetchEmails();
-  }, [fetchEmails]);
+    if (!user) return;
+
+    setIsLoading(true);
+    
+    const ticketsCollectionRef = collection(db, 'tickets');
+    const q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        setError(null);
+        const ticketsFromDb: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
+            const data = ticketDoc.data();
+            let lastReplier: 'agent' | 'client' | undefined = undefined;
+
+            if (data.conversationId && user.email) {
+                try {
+                    const conversationDocRef = doc(db, 'conversations', data.conversationId);
+                    const conversationDoc = await getDoc(conversationDocRef);
+                    if (conversationDoc.exists()) {
+                        const conversationData = conversationDoc.data();
+                        const messages = conversationData.messages as DetailedEmail[];
+                        if (messages && messages.length > 0) {
+                            const lastMessage = messages[messages.length - 1];
+                            if(lastMessage.senderEmail?.toLowerCase() === user.email.toLowerCase()) {
+                                lastReplier = 'agent';
+                            } else {
+                                lastReplier = 'client';
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Could not determine last replier for ticket", ticketDoc.id, e);
+                }
+            }
+            
+            return {
+                id: ticketDoc.id,
+                subject: data.title || 'No Subject',
+                sender: data.sender || 'Unknown Sender',
+                senderEmail: data.senderEmail || 'Unknown Email',
+                bodyPreview: data.bodyPreview || '',
+                receivedDateTime: data.receivedDateTime || new Date().toISOString(),
+                priority: data.priority || 'Low',
+                assignee: data.assignee || 'Unassigned',
+                status: data.status || 'Open',
+                type: data.type || 'Incident',
+                conversationId: data.conversationId,
+                tags: data.tags || [],
+                deadline: data.deadline,
+                closedAt: data.closedAt,
+                lastReplier: lastReplier,
+                ticketNumber: data.ticketNumber
+            };
+        }));
+
+        ticketsFromDb.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+        setEmails(ticketsFromDb);
+        setIsLoading(false);
+    }, (err) => {
+        const dbErrorMessage = err instanceof Error ? err.message : "An unknown database error occurred.";
+        setError(dbErrorMessage);
+        setEmails([]);
+        setIsLoading(false);
+    });
+
+    // Initial sync
+    syncLatestEmails();
+
+    return () => unsubscribe();
+  }, [user, syncLatestEmails]);
 
 
   useEffect(() => {
@@ -172,7 +226,7 @@ function HomePageContent() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewchange('settings')} isActive={activeView === 'settings'}>
+                <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
                   <Settings />
                    <span>Settings</span>
                 </SidebarMenuButton>
@@ -211,7 +265,7 @@ function HomePageContent() {
             emails={emails}
             isLoading={isLoading}
             error={error}
-            onRefresh={fetchEmails}
+            onRefresh={syncLatestEmails}
             filters={filters}
           />
         </main>
