@@ -29,9 +29,19 @@ export function ClientProfile({ email }: { email: string }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!loading && !user) {
+        router.push('/login');
+    }
+  }, [user, loading, router]);
+
+
+  useEffect(() => {
     const fetchData = async () => {
-      if (!userProfile?.organizationId) {
-        setError("You are not part of an organization.");
+      if (!user || !userProfile?.organizationId) {
+        // Wait for auth to be loaded
+        if(loading) return;
+
+        setError("You must be part of an organization to view client profiles.");
         setIsLoading(false);
         return;
       }
@@ -67,7 +77,7 @@ export function ClientProfile({ email }: { email: string }) {
     };
 
     fetchData();
-  }, [userProfile, email, toast]);
+  }, [user, userProfile, email, toast, loading]);
 
     const handleLogout = async () => {
         try {

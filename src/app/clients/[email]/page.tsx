@@ -1,28 +1,10 @@
-
 "use client";
 
 import { ClientProfile } from "@/components/client-profile";
-import { useAuth } from "@/providers/auth-provider";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
+// This is the main page component.
+// It receives the `params` from the URL and passes the email to the client component.
 export default function ClientProfilePage({ params }: { params: { email: string } }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
-  if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-          <p>Loading...</p>
-      </div>
-    );
-  }
-
+  // The client-side logic is now fully encapsulated in ClientProfile.
   return <ClientProfile email={decodeURIComponent(params.email)} />;
 }
