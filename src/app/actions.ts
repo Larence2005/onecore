@@ -618,11 +618,24 @@ export async function addMemberToOrganization(organizationId: string, name: stri
 
     // Create the user in Firebase Authentication
     if (password) {
-        await auth.createUser({
-            email: email,
-            password: password,
-            displayName: name,
-        });
+        try {
+            await auth.createUser({
+                email: email,
+                password: password,
+                displayName: name,
+            });
+        } catch (error: any) {
+            console.error("Error creating user in Firebase Auth:", error);
+            // Provide a more specific error message if possible
+            if (error.code === 'auth/email-already-exists') {
+                throw new Error("This email is already registered.");
+            }
+            if (error.code === 'auth/invalid-password') {
+                 throw new Error("Password must be at least 6 characters long.");
+            }
+             // This is a catch-all for other auth errors, including the credential error
+            throw new Error("Could not create user account. Please check server configuration and try again.");
+        }
     } else {
         throw new Error("Password is required to create a new member account.");
     }
@@ -715,5 +728,7 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     return { success: true };
 }
 
+
+    
 
     
