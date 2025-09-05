@@ -45,7 +45,6 @@ export function OrganizationView() {
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [newMemberName, setNewMemberName] = useState('');
     const [newMemberEmail, setNewMemberEmail] = useState('');
-    const [newMemberPassword, setNewMemberPassword] = useState('');
 
     const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
     const [updatedName, setUpdatedName] = useState('');
@@ -75,7 +74,6 @@ export function OrganizationView() {
     const resetAddMemberForm = () => {
         setNewMemberName('');
         setNewMemberEmail('');
-        setNewMemberPassword('');
         setIsAddMemberDialogOpen(false);
     };
 
@@ -84,14 +82,14 @@ export function OrganizationView() {
             toast({ variant: 'destructive', title: 'Error', description: 'Organization not found.' });
             return;
         }
-        if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberPassword.trim()) {
+        if (!newMemberName.trim() || !newMemberEmail.trim()) {
             toast({ variant: 'destructive', title: 'All fields are required.' });
             return;
         }
 
         setIsAddingMember(true);
         try {
-            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail, newMemberPassword);
+            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail);
             toast({ title: 'Member Added', description: `${newMemberName} has been added to the organization.` });
             await fetchMembers();
             resetAddMemberForm();
@@ -219,7 +217,7 @@ export function OrganizationView() {
                             <DialogHeader>
                                 <DialogTitle>Add New Member</DialogTitle>
                                 <DialogDescription>
-                                    Create a new user account and add them to your organization.
+                                    Add a new person to your organization. They will be able to log in using their Google account.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
@@ -230,10 +228,6 @@ export function OrganizationView() {
                                 <div className="space-y-2">
                                     <Label htmlFor="new-member-email">Email</Label>
                                     <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="new-member-password">Password</Label>
-                                    <Input id="new-member-password" type="password" value={newMemberPassword} onChange={(e) => setNewMemberPassword(e.target.value)} placeholder="Set an initial password" />
                                 </div>
                             </div>
                             <DialogFooter>

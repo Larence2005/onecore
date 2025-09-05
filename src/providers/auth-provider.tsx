@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -25,6 +25,7 @@ interface AuthContextType {
   login: (data: LoginFormData) => Promise<any>;
   logout: () => Promise<void>;
   fetchUserProfile: (user: User) => Promise<void>;
+  signInWithGoogle: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,7 +61,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!foundOrg) {
-        setUserProfile({ uid: user.uid, email: user.email });
+        // If user is the owner of an org, they are implicitly a member
+        const q = query(organizationsRef, where("owner", "==", user.uid));
+        const ownerOrgSnapshot = await getDocs(q);
+        if (!ownerOrgSnapshot.empty) {
+            const orgDoc = ownerOrgSnapshot.docs[0];
+            setUserProfile({
+                uid: user.uid,
+                email: user.email,
+                organizationId: orgDoc.id,
+                organizationName: orgDoc.data().name,
+                organizationOwnerUid: orgDoc.data().owner,
+            });
+        } else {
+            setUserProfile({ uid: user.uid, email: user.email });
+        }
     }
   }, []);
 
@@ -87,6 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return signInWithEmailAndPassword(auth, data.email, data.password);
   }
 
+  const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
+  }
+
   const logout = () => {
     return signOut(auth);
   };
@@ -98,7 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signup,
     login,
     logout,
-    fetchUserProfile
+    fetchUserProfile,
+    signInWithGoogle
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
