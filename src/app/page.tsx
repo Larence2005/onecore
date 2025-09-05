@@ -23,7 +23,7 @@ import { db } from '@/lib/firebase';
 type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
 
 function HomePageContent() {
-  const { user, loading, logout } = useAuth();
+  const { user, userProfile, loading, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<View>('tickets');
@@ -63,12 +63,21 @@ function HomePageContent() {
   }, [settings, isConfigured, toast]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !userProfile) return;
 
     setIsLoading(true);
     
     const ticketsCollectionRef = collection(db, 'tickets');
-    const q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    let q;
+
+    // If the user is the owner of the org, they see all tickets.
+    // Otherwise, they only see tickets assigned to them.
+    if(userProfile.uid === userProfile.organizationOwnerUid) {
+        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    } else {
+        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'), where('assignee', '==', user.email));
+    }
+
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
         setError(null);
@@ -127,17 +136,19 @@ function HomePageContent() {
         setIsLoading(false);
     });
 
-    // Initial sync
-    syncLatestEmails();
+    // Initial sync for org owners only
+    if(userProfile.uid === userProfile.organizationOwnerUid){
+        syncLatestEmails();
+    }
     
-    // Set up interval for subsequent syncs
-    const intervalId = setInterval(syncLatestEmails, 30000); // 30 seconds
+    // Set up interval for subsequent syncs for org owners
+    const intervalId = userProfile.uid === userProfile.organizationOwnerUid ? setInterval(syncLatestEmails, 30000) : null;
 
     return () => {
       unsubscribe();
-      clearInterval(intervalId);
+      if(intervalId) clearInterval(intervalId);
     }
-  }, [user, syncLatestEmails]);
+  }, [user, userProfile, syncLatestEmails]);
 
 
   useEffect(() => {
@@ -278,7 +289,7 @@ function HomePageContent() {
           />
         </main>
         
-        {activeView === 'tickets' && <TicketsFilter onApplyFilters={onApplyFilters} />}
+        {activeView === 'tickets' && userProfile?.uid === userProfile?.organizationOwnerUid && <TicketsFilter onApplyFilters={onApplyFilters} />}
       </div>
     </SidebarProvider>
   );
@@ -306,3 +317,5 @@ export default function Home() {
       <HomePageContent />
   )
 }
+
+    

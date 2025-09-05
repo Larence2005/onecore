@@ -182,18 +182,21 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 }
 
 
-export async function getTicketsFromDB(options?: { includeArchived?: boolean, fetchAll?: boolean }): Promise<Email[]> {
+export async function getTicketsFromDB(options?: { includeArchived?: boolean, fetchAll?: boolean, agentEmail?: string }): Promise<Email[]> {
     const ticketsCollectionRef = collection(db, 'tickets');
-    let q;
+    let queries = [];
 
-    if (options?.fetchAll) {
-        // No filter, get all tickets
-        q = query(ticketsCollectionRef);
-    } else if (options?.includeArchived) {
-        q = query(ticketsCollectionRef, where('status', '==', 'Archived'));
-    } else {
-        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    if (options?.agentEmail) {
+        queries.push(where('assignee', '==', options.agentEmail));
     }
+    
+    if (options?.includeArchived) {
+        queries.push(where('status', '==', 'Archived'));
+    } else if(!options?.fetchAll) {
+        queries.push(where('status', '!=', 'Archived'));
+    }
+
+    const q = query(ticketsCollectionRef, ...queries);
     
     const querySnapshot = await getDocs(q);
     
@@ -583,10 +586,6 @@ export async function unarchiveTickets(ticketIds: string[]) {
 // --- Organization Actions ---
 
 export async function createOrganization(name: string, uid: string, email: string) {
-    const auth = getAuth(adminApp);
-    await auth.getUser(uid);
-
-    // Create organization document
     const organizationRef = doc(collection(db, "organizations"));
     await setDoc(organizationRef, {
         name: name,
@@ -598,19 +597,39 @@ export async function createOrganization(name: string, uid: string, email: strin
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
-    if (!organizationId || !email || !name) throw new Error("Organization ID, member name, and email are required.");
-
-    const organizationRef = doc(db, "organizations", organizationId);
-    
-    const orgDoc = await getDoc(organizationRef);
-    if(orgDoc.exists()){
-        const members = (orgDoc.data().members || []) as OrganizationMember[];
-        if(members.some(member => member.email === email)) {
-            throw new Error("This user is already a member of the organization.");
-        }
+export async function addMemberToOrganization(organizationId: string, name: string, email: string, password?: string) {
+    if (!organizationId || !email || !name) {
+        throw new Error("Organization ID, member name, and email are required.");
     }
 
+    const auth = getAuth(adminApp);
+    
+    // Check if user already exists in Firebase Auth
+    try {
+        await auth.getUserByEmail(email);
+        throw new Error("A user with this email address already exists.");
+    } catch (error: any) {
+        if (error.code !== 'auth/user-not-found') {
+            // Re-throw if it's an error other than "user-not-found"
+            throw error;
+        }
+        // If user does not exist, proceed to create them
+    }
+
+    // Create the user in Firebase Authentication
+    if (password) {
+        await auth.createUser({
+            email: email,
+            password: password,
+            displayName: name,
+        });
+    } else {
+        throw new Error("Password is required to create a new member account.");
+    }
+    
+    const organizationRef = doc(db, "organizations", organizationId);
+    
+    // Add the user to the organization's members list in Firestore
     await updateDoc(organizationRef, {
         members: arrayUnion({ name, email })
     });
@@ -696,3 +715,5 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     return { success: true };
 }
 
+
+    

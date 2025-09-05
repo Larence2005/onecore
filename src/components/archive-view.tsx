@@ -13,7 +13,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { Button } from "./ui/button";
 
 export function ArchiveView() {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth();
     const [archivedTickets, setArchivedTickets] = useState<Email[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,11 @@ export function ArchiveView() {
         setIsLoading(true);
         setError(null);
         try {
-            const tickets = await getTicketsFromDB({ includeArchived: true, agentEmail: user.email || '' });
+            const isOwner = userProfile?.uid === userProfile?.organizationOwnerUid;
+            const tickets = await getTicketsFromDB({ 
+                includeArchived: true, 
+                agentEmail: isOwner ? undefined : user.email || '' 
+            });
             setArchivedTickets(tickets);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -41,8 +45,10 @@ export function ArchiveView() {
     };
 
     useEffect(() => {
-        fetchArchivedTickets();
-    }, [user]);
+        if (user && userProfile) {
+            fetchArchivedTickets();
+        }
+    }, [user, userProfile]);
 
     const handleSelectTicket = (ticketId: string, checked: boolean) => {
         if (checked) {
@@ -131,3 +137,5 @@ export function ArchiveView() {
         </div>
     );
 }
+
+    

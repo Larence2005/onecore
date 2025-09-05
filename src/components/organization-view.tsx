@@ -48,6 +48,7 @@ export function OrganizationView() {
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [newMemberName, setNewMemberName] = useState('');
     const [newMemberEmail, setNewMemberEmail] = useState('');
+    const [newMemberPassword, setNewMemberPassword] = useState('');
 
     // State for Edit Member Dialog
     const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
@@ -97,8 +98,8 @@ export function OrganizationView() {
     };
 
     const handleAddMember = async () => {
-        if (!newMemberName.trim() || !newMemberEmail.trim()) {
-            toast({ variant: 'destructive', title: 'Member name and email are required.' });
+        if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberPassword.trim()) {
+            toast({ variant: 'destructive', title: 'All fields are required.' });
             return;
         }
         if (!userProfile?.organizationId) {
@@ -107,11 +108,12 @@ export function OrganizationView() {
         }
         setIsAddingMember(true);
         try {
-            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail);
+            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail, newMemberPassword);
             toast({ title: 'Member Added', description: `${newMemberName} has been added to the organization.` });
             await fetchMembers(); // Re-fetch members
             setNewMemberName('');
             setNewMemberEmail('');
+            setNewMemberPassword('');
             setIsAddMemberDialogOpen(false); // Close dialog on success
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -222,7 +224,7 @@ export function OrganizationView() {
                             <DialogHeader>
                                 <DialogTitle>Add New Member</DialogTitle>
                                 <DialogDescription>
-                                    Add a new person to your organization. They will be available to be assigned to tickets.
+                                    Create an account for a new assignee. They will be able to log in with these credentials.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -249,6 +251,19 @@ export function OrganizationView() {
                                         onChange={(e) => setNewMemberEmail(e.target.value)}
                                         className="col-span-3"
                                         placeholder="member@example.com"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="password" className="text-right">
+                                        Password
+                                    </Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={newMemberPassword}
+                                        onChange={(e) => setNewMemberPassword(e.target.value)}
+                                        className="col-span-3"
+                                        placeholder="********"
                                     />
                                 </div>
                             </div>
