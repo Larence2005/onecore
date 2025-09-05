@@ -9,6 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
+import { getOrganizationMembers } from '@/app/actions';
 
 export interface FilterState {
   search: string;
@@ -25,21 +27,32 @@ interface TicketsFilterProps {
   onApplyFilters: (filters: FilterState) => void;
 }
 
-const agentOptions = ['John Doe', 'Jane Smith', 'Unassigned'];
 const groupOptions = ['Support', 'Sales', 'Engineering'];
 const statusOptions = ['Open', 'Pending', 'Resolved', 'Closed'];
 const priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
 const typeOptions = ['Questions', 'Incident', 'Problem', 'Feature Request'];
 
 export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
+  const { userProfile } = useAuth();
   const [search, setSearch] = useState('');
   const [agents, setAgents] = useState<string[]>([]);
+  const [agentOptions, setAgentOptions] = useState<string[]>(['Unassigned']);
   const [groups, setGroups] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
   const [types, setTypes] = useState<string[]>([]);
   const [tags, setTags] = useState('');
   const [created, setCreated] = useState('any');
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+        if(userProfile?.organizationId) {
+            const members = await getOrganizationMembers(userProfile.organizationId);
+            setAgentOptions(['Unassigned', ...members]);
+        }
+    };
+    fetchAgents();
+  }, [userProfile]);
 
   const handleCheckboxChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
     setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);

@@ -7,8 +7,10 @@ import {
     Configuration,
     AuthenticationResult
 } from '@azure/msal-node';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment } from 'firebase/firestore';
+import { db, auth as firebaseAuth } from '@/lib/firebase';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion } from 'firebase/firestore';
+import { getAuth } from "firebase-admin/auth";
+import { app as adminApp } from '@/lib/firebase-admin';
 
 
 export interface Email {
@@ -571,29 +573,64 @@ export async function unarchiveTickets(ticketIds: string[]) {
         return { success: false, error: "Failed to unarchive tickets." };
     }
 }
+
+// --- Organization Actions ---
+
+export async function createOrganization(name: string) {
+    const user = firebaseAuth.currentUser;
+    if (!user) throw new Error("You must be logged in to create an organization.");
+
+    // Create organization document
+    const organizationRef = doc(collection(db, "organizations"));
+    await setDoc(organizationRef, {
+        name: name,
+        owner: user.uid,
+        members: [user.email] // Add owner's email to members list
+    });
+
+    // Update user's profile with organizationId
+    const userRef = doc(db, "users", user.uid);
+    await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        organizationId: organizationRef.id,
+    }, { merge: true });
+
+    return { success: true, organizationId: organizationRef.id };
+}
+
+export async function addMemberToOrganization(organizationId: string, email: string) {
+    if (!organizationId || !email) throw new Error("Organization ID and member email are required.");
+
+    const organizationRef = doc(db, "organizations", organizationId);
     
+    // Check if member already exists
+    const orgDoc = await getDoc(organizationRef);
+    if(orgDoc.exists()){
+        const members = orgDoc.data().members || [];
+        if(members.includes(email)) {
+            throw new Error("This user is already a member of the organization.");
+        }
+    }
 
+    // Add email to the members array
+    await updateDoc(organizationRef, {
+        members: arrayUnion(email)
+    });
+
+    return { success: true };
+}
+
+export async function getOrganizationMembers(organizationId: string): Promise<string[]> {
+    if (!organizationId) return [];
     
+    const organizationRef = doc(db, "organizations", organizationId);
+    const orgDoc = await getDoc(organizationRef);
 
-    
+    if (orgDoc.exists()) {
+        const data = orgDoc.data();
+        return data.members || [];
+    }
 
-    
-
-
-
-
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-
+    return [];
+}

@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction, updateTicket } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -123,7 +123,7 @@ const downloadAttachment = (attachment: Attachment) => {
 export function TicketDetailContent({ id }: { id: string }) {
     const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
-    const { user, loading, logout } = useAuth();
+    const { user, userProfile, loading, logout } = useAuth();
     const router = useRouter();
     const [email, setEmail] = useState<DetailedEmail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -142,6 +142,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentDeadline, setCurrentDeadline] = useState<Date | undefined>(undefined);
     const [currentTags, setCurrentTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
+
+    const [assignees, setAssignees] = useState<string[]>(['Unassigned']);
 
 
     const priorities = [
@@ -165,17 +167,21 @@ export function TicketDetailContent({ id }: { id: string }) {
         { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb },
     ];
     
-    const assignees = [
-        'Unassigned',
-        'John Doe',
-        'Jane Smith'
-    ];
-
     useEffect(() => {
         if (!loading && !user) {
         router.push('/login');
         }
     }, [user, loading, router]);
+    
+    useEffect(() => {
+        const fetchAssignees = async () => {
+            if (userProfile?.organizationId) {
+                const members = await getOrganizationMembers(userProfile.organizationId);
+                setAssignees(['Unassigned', ...members]);
+            }
+        };
+        fetchAssignees();
+    }, [userProfile]);
 
 
     const fetchEmail = useCallback(async () => {
@@ -324,7 +330,8 @@ export function TicketDetailContent({ id }: { id: string }) {
             setAttachments([]);
             setIsReplying(false);
             await fetchEmail();
-        } catch (err) {
+        } catch (err)
+            {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             toast({
                 variant: "destructive",
@@ -654,7 +661,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <div className="grid grid-cols-1 gap-y-4">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)}>
+                                                <Select value={currentPriority} onValueChange={(value) => {setCurrentPriority(value); handleUpdate('priority', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue />
                                                     </SelectTrigger>
@@ -667,7 +674,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)}>
+                                                <Select value={currentStatus} onValueChange={(value) => {setCurrentStatus(value); handleUpdate('status', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
@@ -690,7 +697,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)}>
+                                                <Select value={currentAssignee} onValueChange={(value) => {setCurrentAssignee(value); handleUpdate('assignee', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
@@ -713,7 +720,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)}>
+                                                <Select value={currentType} onValueChange={(value) => {setCurrentType(value); handleUpdate('type', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                            <span className="flex items-center gap-2">
@@ -785,7 +792,3 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
-
-    

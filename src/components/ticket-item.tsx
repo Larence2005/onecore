@@ -9,10 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cn } from "@/lib/utils";
 import { Card } from "./ui/card";
 import Link from 'next/link';
-import { updateTicket } from "@/app/actions";
+import { updateTicket, getOrganizationMembers } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User } from 'lucide-react';
+import { useAuth } from "@/providers/auth-provider";
+
 
 type TicketItemProps = {
     email: Email;
@@ -42,19 +44,25 @@ const types = [
     { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb },
 ];
 
-const assignees = [
-    'Unassigned',
-    'John Doe',
-    'Jane Smith'
-]
-
 export function TicketItem({ email, isSelected, onSelect, isArchivedView = false }: TicketItemProps) {
+    const { userProfile } = useAuth();
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [currentStatus, setCurrentStatus] = useState(email.status);
     const [currentType, setCurrentType] = useState(email.type);
+    const [assignees, setAssignees] = useState<string[]>(['Unassigned']);
     
     const { toast } = useToast();
+
+    useEffect(() => {
+        const fetchAssignees = async () => {
+            if (userProfile?.organizationId) {
+                const members = await getOrganizationMembers(userProfile.organizationId);
+                setAssignees(['Unassigned', ...members]);
+            }
+        };
+        fetchAssignees();
+    }, [userProfile]);
 
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
@@ -215,5 +223,3 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         </li>
     );
 }
-
-    
