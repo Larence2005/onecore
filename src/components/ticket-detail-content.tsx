@@ -14,7 +14,7 @@ import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/providers/auth-provider';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { Header } from '@/components/header';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -28,6 +28,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
@@ -186,7 +188,24 @@ export function TicketDetailContent({ id }: { id: string }) {
 
         setIsLoading(true);
         try {
-            const detailedEmail = await getEmail(settings, id);
+            // First, get the conversationId from the ticket document in Firestore.
+            // This is necessary because the clicked `id` might not be the first message ID,
+            // which is used as the document ID for tickets.
+            const ticketDocRef = doc(db, 'tickets', id);
+            const ticketDoc = await getDoc(ticketDocRef);
+            let conversationIdFromClient: string | undefined;
+
+            if (ticketDoc.exists()) {
+                conversationIdFromClient = ticketDoc.data().conversationId;
+            } else {
+                 // Fallback for cases where the ID might be a different message in a thread
+                 // We need to find the ticket document via conversationId if we can't find it by id
+                 // This part is tricky without a direct way to search. Let's assume for now
+                 // that if the ticket doc isn't found by ID, we can't get the conversationId yet.
+                 // The server action will have to handle this.
+            }
+
+            const detailedEmail = await getEmail(settings, id, conversationIdFromClient);
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
             setCurrentAssignee(detailedEmail.assignee);

@@ -278,23 +278,38 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 }
 
 
-export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
+export async function getEmail(settings: Settings, id: string, conversationIdFromClient?: string): Promise<DetailedEmail> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token.');
     }
 
+    let msg: any;
+    let wasFetchedFromApi = false;
+
+    // First, try fetching the specific email by ID
     const messageResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${id}?$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments&$expand=attachments`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
-    if (!messageResponse.ok) {
+    if (messageResponse.ok) {
+        msg = await messageResponse.json();
+        wasFetchedFromApi = true;
+    } else if (conversationIdFromClient) {
+        // If fetching by ID fails, and we have a conversation ID, it means this isn't the first message.
+        // The conversation should already be cached. If not, fetch it now.
+        const conversationDocRef = doc(db, 'conversations', conversationIdFromClient);
+        const conversationDoc = await getDoc(conversationDocRef);
+        if (!conversationDoc.exists()) {
+             await fetchAndStoreFullConversation(settings, conversationIdFromClient);
+        }
+        // We will read from the cache below, so no need to set `msg` here.
+    } else {
         const error = await messageResponse.json();
         throw new Error(`Failed to fetch email details: ${error.error?.message || messageResponse.statusText}`);
     }
 
-    const msg = await messageResponse.json();
-    const conversationId = msg.conversationId;
+    const conversationId = msg?.conversationId || conversationIdFromClient;
 
     if (!conversationId) {
         // Handle single email not part of a conversation
@@ -579,5 +594,6 @@ export async function unarchiveTickets(ticketIds: string[]) {
     
 
     
+
 
 
