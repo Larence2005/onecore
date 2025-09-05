@@ -122,8 +122,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
-        // Reverse the emails to process oldest first, ensuring chronological ticket numbers
-        const emailsToProcess = data.value.reverse();
+        const emailsToProcess = data.value;
 
         for (const email of emailsToProcess) {
             if (!email.conversationId) continue;
