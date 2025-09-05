@@ -132,7 +132,9 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
-                // A ticket with this conversationId already exists, skip.
+                // A ticket with this conversationId already exists.
+                // Fetch the entire conversation to get the latest reply.
+                await fetchAndStoreFullConversation(settings, email.conversationId);
                 continue;
             }
 
@@ -257,6 +259,20 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 
     const conversationDocRef = doc(db, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: conversationMessages });
+
+    // When a conversation is updated, we also need to update the main ticket's bodyPreview
+    if (conversationMessages.length > 0) {
+        const firstMessage = conversationMessages[0];
+        const lastMessage = conversationMessages[conversationMessages.length - 1];
+        const ticketDocRef = doc(db, 'tickets', firstMessage.id);
+        const ticketDoc = await getDoc(ticketDocRef);
+        if (ticketDoc.exists()) {
+            await updateDoc(ticketDocRef, {
+                bodyPreview: lastMessage.bodyPreview
+            });
+        }
+    }
+
 
     return conversationMessages;
 }
@@ -563,4 +579,5 @@ export async function unarchiveTickets(ticketIds: string[]) {
     
 
     
+
 
