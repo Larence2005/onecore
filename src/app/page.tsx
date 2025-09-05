@@ -129,8 +129,14 @@ function HomePageContent() {
 
     // Initial sync
     syncLatestEmails();
+    
+    // Set up interval for subsequent syncs
+    const intervalId = setInterval(syncLatestEmails, 30000); // 30 seconds
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearInterval(intervalId);
+    }
   }, [user, syncLatestEmails]);
 
 
