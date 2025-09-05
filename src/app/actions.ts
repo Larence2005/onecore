@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment } from 'firebase/firestore';
 
 
 export interface Email {
@@ -74,31 +74,31 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
     return await cca.acquireTokenByClientCredential(tokenRequest);
 }
 
-async function getNextTicketNumber(): Promise<number> {
-    const ticketsCollectionRef = collection(db, 'tickets');
-    
-    // This is a dummy ref for the transaction, which requires at least one doc to read.
-    // We'll use the tickets collection's parent, but it won't be used in a meaningful way.
-    const dummyRef = doc(collection(db, '_')); 
-
+async function getAndIncrementTicketCounter(): Promise<number> {
+    const counterRef = doc(db, 'counters', 'tickets');
     try {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
-            // The transaction needs at least one read operation to be valid.
-            await transaction.get(dummyRef);
-            
-            // Get the current count of tickets within the transaction for consistency.
-            const ticketsSnapshot = await getDocs(ticketsCollectionRef);
-            const currentTicketCount = ticketsSnapshot.size;
-            
-            return currentTicketCount + 1;
+            const counterDoc = await transaction.get(counterRef);
+            if (!counterDoc.exists()) {
+                // Initialize the counter if it doesn't exist
+                transaction.set(counterRef, { currentNumber: 1 });
+                return 1;
+            }
+            const newNumber = counterDoc.data().currentNumber + 1;
+            transaction.update(counterRef, { currentNumber: newNumber });
+            return newNumber;
         });
         return newTicketNumber;
     } catch (e) {
-        console.error("Transaction failed to get next ticket number: ", e);
-        // Fallback to a simple count if the transaction fails, though this is less safe.
-        const ticketsSnapshot = await getDocs(ticketsCollectionRef);
-        return ticketsSnapshot.size + 1;
+        console.error("Transaction failed: ", e);
+        // Fallback or error handling
+        throw new Error("Could not generate a unique ticket number.");
     }
+}
+
+
+async function getNextTicketNumber(): Promise<number> {
+    return getAndIncrementTicketCounter();
 }
 
 
@@ -576,6 +576,8 @@ export async function unarchiveTickets(ticketIds: string[]) {
 
 
 
+
+    
 
     
 
