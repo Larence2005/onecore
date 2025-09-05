@@ -160,6 +160,8 @@ function HomePageContent() {
     setActiveView(view);
     if (view === 'archive') {
       router.push('/archive');
+    } else if (view === 'clients') {
+      router.push(`/?view=clients`);
     } else {
       router.push(`/?view=${view}`, { scroll: false });
     }

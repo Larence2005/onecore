@@ -10,7 +10,9 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, addMemberToOrganization, getOrganizationMembers } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, UserPlus, Users } from 'lucide-react';
+import { RefreshCw, UserPlus, Users, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+
 
 export function OrganizationView() {
     const { user, userProfile, loading, fetchUserProfile } = useAuth();
@@ -121,13 +123,16 @@ export function OrganizationView() {
                 <CardContent>
                     <h3 className="font-semibold mb-4">Members ({members.length})</h3>
                     <div className="space-y-2">
-                        {members.map((member, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
-                               <div>
-                                    <span className="font-medium">{member.name}</span>
-                                    <span className="text-muted-foreground ml-2">({member.email})</span>
-                               </div>
-                            </div>
+                        {members.map((member) => (
+                             <Link href={`/clients/${encodeURIComponent(member.email)}`} key={member.email} className="block">
+                                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                                    <div>
+                                        <p className="font-medium">{member.name}</p>
+                                        <p className="text-sm text-muted-foreground">{member.email}</p>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                            </Link>
                         ))}
                         {members.length === 0 && <p className="text-sm text-muted-foreground">No members yet. Add one below.</p>}
                     </div>
