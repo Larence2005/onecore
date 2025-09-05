@@ -597,50 +597,21 @@ export async function createOrganization(name: string, uid: string, email: strin
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string, password?: string) {
+export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
     if (!organizationId || !email || !name) {
         throw new Error("Organization ID, member name, and email are required.");
     }
 
-    const auth = getAuth(adminApp);
-    
-    // Check if user already exists in Firebase Auth
-    try {
-        await auth.getUserByEmail(email);
-        throw new Error("A user with this email address already exists.");
-    } catch (error: any) {
-        if (error.code !== 'auth/user-not-found') {
-            // Re-throw if it's an error other than "user-not-found"
-            throw error;
-        }
-        // If user does not exist, proceed to create them
-    }
-
-    // Create the user in Firebase Authentication
-    if (password) {
-        try {
-            await auth.createUser({
-                email: email,
-                password: password,
-                displayName: name,
-            });
-        } catch (error: any) {
-            console.error("Error creating user in Firebase Auth:", error);
-            // Provide a more specific error message if possible
-            if (error.code === 'auth/email-already-exists') {
-                throw new Error("This email is already registered.");
-            }
-            if (error.code === 'auth/invalid-password') {
-                 throw new Error("Password must be at least 6 characters long.");
-            }
-             // This is a catch-all for other auth errors, including the credential error
-            throw new Error("Could not create user account. Please check server configuration and try again.");
-        }
-    } else {
-        throw new Error("Password is required to create a new member account.");
-    }
-    
     const organizationRef = doc(db, "organizations", organizationId);
+
+    // Check if member already exists
+    const orgDoc = await getDoc(organizationRef);
+    if(orgDoc.exists()){
+        const members = (orgDoc.data().members || []) as OrganizationMember[];
+        if (members.some(m => m.email === email)) {
+            throw new Error("A member with this email address already exists in the organization.");
+        }
+    }
     
     // Add the user to the organization's members list in Firestore
     await updateDoc(organizationRef, {
@@ -732,3 +703,4 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     
 
     
+
