@@ -90,7 +90,7 @@ export function OrganizationView() {
         setIsAddingMember(true);
         try {
             await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail);
-            toast({ title: 'Member Added', description: `${newMemberName} has been added to the organization.` });
+            toast({ title: 'Member Added', description: `${newMemberName} has been invited to the organization.` });
             await fetchMembers();
             resetAddMemberForm();
         } catch (error) {
@@ -204,7 +204,7 @@ export function OrganizationView() {
                     <div>
                         <CardTitle className="flex items-center gap-2"><Users /> {userProfile.organizationName || 'Your Organization'}</CardTitle>
                         <CardDescription>
-                            Manage your organization's members. Members can be assigned to tickets.
+                            Invite members to your organization. They can sign up with the invited email to join.
                         </CardDescription>
                     </div>
                      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
@@ -217,7 +217,7 @@ export function OrganizationView() {
                             <DialogHeader>
                                 <DialogTitle>Add New Member</DialogTitle>
                                 <DialogDescription>
-                                    Add a new person to your organization. They will be able to log in using their Google account.
+                                    Invite a new person to your organization. They will be able to sign up with their email.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
