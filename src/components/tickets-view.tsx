@@ -5,7 +5,7 @@ import type { Email } from "@/app/actions";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Terminal, Archive } from "lucide-react";
+import { Terminal, Archive, ChevronLeft, ChevronRight } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { TicketItem } from "./ticket-item";
 import { FilterState } from "./tickets-filter";
@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 import { isAfter, subDays, parseISO } from "date-fns";
 import { archiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 
 type TicketsViewProps = {
@@ -95,9 +96,19 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
 
 
 export function TicketsView({ emails, isLoading, error, onRefresh, filters }: TicketsViewProps) {
-    const filteredEmails = useMemo(() => filterEmails(emails, filters), [emails, filters]);
     const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [ticketsPerPage, setTicketsPerPage] = useState(10);
     const { toast } = useToast();
+    
+    const filteredEmails = useMemo(() => filterEmails(emails, filters), [emails, filters]);
+
+    // Pagination logic
+    const indexOfLastTicket = currentPage * ticketsPerPage;
+    const indexOfFirstTicket = indexOfLastTicket - ticketsPerPage;
+    const currentTickets = filteredEmails.slice(indexOfFirstTicket, indexOfLastTicket);
+    const totalPages = Math.ceil(filteredEmails.length / ticketsPerPage);
+
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -172,7 +183,7 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                 ) : filteredEmails.length > 0 ? (
                      <div className="border-t">
                         <ul className="space-y-0">
-                            {filteredEmails.map((email) => (
+                            {currentTickets.map((email) => (
                                 <TicketItem 
                                     key={email.id} 
                                     email={email} 
@@ -191,6 +202,48 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                     </div>
                 )}
             </div>
+            {totalPages > 1 && (
+                <div className="flex-shrink-0 flex items-center justify-between p-2 mt-4 border-t">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Rows per page</span>
+                        <Select value={String(ticketsPerPage)} onValueChange={(value) => setTicketsPerPage(Number(value))}>
+                            <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue placeholder={ticketsPerPage} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="25">25</SelectItem>
+                                <SelectItem value="50">50</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                        <span className="text-muted-foreground">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
