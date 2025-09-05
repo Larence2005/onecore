@@ -6,6 +6,7 @@ import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, sign
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { addMemberToOrganization } from '@/app/actions';
 
 export interface UserProfile {
   uid: string;
@@ -40,9 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const organizationsRef = collection(db, "organizations");
-    // Firestore's array-contains-any is not suitable here. We must query all orgs and filter client-side.
-    // This is not ideal for performance but is necessary with the current data model.
-    // A better model would have a 'users' collection with an 'organizationId' field.
     const allOrgsSnapshot = await getDocs(organizationsRef);
 
     let foundOrg = false;
@@ -82,7 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserProfile]);
 
   const signup = async (data: SignUpFormData) => {
-    return createUserWithEmailAndPassword(auth, data.email, data.password);
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    
+    // After user is created, add them to the first organization found.
+    // This is a simplification assuming a single-org setup for now.
+    const organizationsRef = collection(db, "organizations");
+    const orgsSnapshot = await getDocs(organizationsRef);
+
+    if (!orgsSnapshot.empty) {
+        const firstOrgDoc = orgsSnapshot.docs[0];
+        const userName = data.email.split('@')[0]; // Simple name generation
+        await addMemberToOrganization(firstOrgDoc.id, userName, data.email);
+    }
+
+    return userCredential;
   }
 
   const login = (data: LoginFormData) => {
@@ -113,3 +124,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

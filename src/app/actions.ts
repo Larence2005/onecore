@@ -598,40 +598,12 @@ export async function createOrganization(name: string, uid: string, email: strin
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string, password?: string) {
-    if (!organizationId || !email || !name || !password) {
-        throw new Error("Organization ID, member name, email, and password are required.");
+export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
+    if (!organizationId || !email || !name) {
+        throw new Error("Organization ID, member name, and email are required.");
     }
     
-    try {
-        // Create user in Firebase Auth
-        await adminAuth.createUser({
-            email: email,
-            password: password,
-            displayName: name,
-        });
-
-    } catch (error: any) {
-         if (error.code === 'auth/email-already-exists') {
-            throw new Error("A user with this email address already exists.");
-        } else if (error.code === 'auth/invalid-password') {
-            throw new Error("Password is too weak. It must be at least 6 characters long.");
-        }
-        console.error("Error creating user:", error);
-        throw new Error("Could not create user account. There might be a server configuration issue.");
-    }
-
     const organizationRef = doc(db, "organizations", organizationId);
-    
-    // Check if member already exists in the organization document
-    const orgDoc = await getDoc(organizationRef);
-    if(orgDoc.exists()){
-        const members = (orgDoc.data().members || []) as OrganizationMember[];
-        if (members.some(m => m.email === email)) {
-             // User exists in Auth, now add them to the org if they aren't already there.
-             // This path is for adding an existing Firebase user to the organization.
-        }
-    }
     
     // Add the user to the organization's members list in Firestore
     await updateDoc(organizationRef, {
@@ -724,3 +696,6 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     
 
+
+
+    
