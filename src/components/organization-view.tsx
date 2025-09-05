@@ -37,7 +37,7 @@ export function OrganizationView() {
         }
         setIsCreating(true);
         try {
-            await createOrganization(organizationName);
+            await createOrganization(organizationName, user.uid, user.email!);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
             // The auth provider will pick up the change and update the profile
             window.location.reload(); // Quick way to refresh state, could be improved.

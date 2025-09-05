@@ -576,28 +576,34 @@ export async function unarchiveTickets(ticketIds: string[]) {
 
 // --- Organization Actions ---
 
-export async function createOrganization(name: string) {
-    const user = firebaseAuth.currentUser;
-    if (!user) throw new Error("You must be logged in to create an organization.");
+export async function createOrganization(name: string, uid: string, email: string) {
+    const auth = getAuth(adminApp);
+    // Check if user exists, just to be safe.
+    try {
+        await auth.getUser(uid);
+    } catch (error) {
+        throw new Error("User does not exist. You must be logged in to create an organization.");
+    }
 
     // Create organization document
     const organizationRef = doc(collection(db, "organizations"));
     await setDoc(organizationRef, {
         name: name,
-        owner: user.uid,
-        members: [user.email] // Add owner's email to members list
+        owner: uid,
+        members: [email] // Add owner's email to members list
     });
 
     // Update user's profile with organizationId
-    const userRef = doc(db, "users", user.uid);
+    const userRef = doc(db, "users", uid);
     await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
+        uid: uid,
+        email: email,
         organizationId: organizationRef.id,
     }, { merge: true });
 
     return { success: true, organizationId: organizationRef.id };
 }
+
 
 export async function addMemberToOrganization(organizationId: string, email: string) {
     if (!organizationId || !email) throw new Error("Organization ID and member email are required.");
