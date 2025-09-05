@@ -40,37 +40,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const organizationsRef = collection(db, "organizations");
-    const q = query(organizationsRef, where("members", "array-contains", { email: user.email, name: user.displayName || 'Admin' }));
-    
-    let foundOrg = false;
-    const querySnapshot = await getDocs(q);
+    // Firestore's array-contains-any is not suitable here. We must query all orgs and filter client-side.
+    // This is not ideal for performance but is necessary with the current data model.
+    // A better model would have a 'users' collection with an 'organizationId' field.
+    const allOrgsSnapshot = await getDocs(organizationsRef);
 
-    if (!querySnapshot.empty) {
-        const orgDoc = querySnapshot.docs[0];
-         setUserProfile({
-            uid: user.uid,
-            email: user.email,
-            organizationId: orgDoc.id,
-            organizationName: orgDoc.data().name,
-            organizationOwnerUid: orgDoc.data().owner
-        });
-        foundOrg = true;
-    } else {
-        // Fallback check if the name doesn't match (e.g. for the first admin)
-        const allOrgsSnapshot = await getDocs(collection(db, "organizations"));
-        for (const orgDoc of allOrgsSnapshot.docs) {
-            const members = orgDoc.data().members as {name: string, email: string}[];
-            if (members.some(member => member.email === user.email)) {
-                 setUserProfile({
-                    uid: user.uid,
-                    email: user.email,
-                    organizationId: orgDoc.id,
-                    organizationName: orgDoc.data().name,
-                    organizationOwnerUid: orgDoc.data().owner,
-                });
-                foundOrg = true;
-                break;
-            }
+    let foundOrg = false;
+    for (const orgDoc of allOrgsSnapshot.docs) {
+        const members = orgDoc.data().members as {name: string, email: string}[];
+        if (members && members.some(member => member.email === user.email)) {
+            setUserProfile({
+                uid: user.uid,
+                email: user.email,
+                organizationId: orgDoc.id,
+                organizationName: orgDoc.data().name,
+                organizationOwnerUid: orgDoc.data().owner,
+            });
+            foundOrg = true;
+            break; 
         }
     }
 
@@ -126,5 +113,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
