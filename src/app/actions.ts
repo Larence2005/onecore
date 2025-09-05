@@ -109,7 +109,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
             throw new Error('Failed to acquire access token.');
         }
 
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=100&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
             },
