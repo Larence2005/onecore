@@ -14,6 +14,7 @@ import { isAfter, subDays, parseISO } from "date-fns";
 import { archiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { useAuth } from "@/providers/auth-provider";
 
 
 type TicketsViewProps = {
@@ -96,6 +97,7 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
 
 
 export function TicketsView({ emails, isLoading, error, onRefresh, filters }: TicketsViewProps) {
+    const { userProfile } = useAuth();
     const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [ticketsPerPage, setTicketsPerPage] = useState(10);
@@ -127,8 +129,8 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
     };
     
     const handleArchive = async () => {
-        if(selectedTickets.length === 0) return;
-        const result = await archiveTickets(selectedTickets);
+        if(selectedTickets.length === 0 || !userProfile?.organizationId) return;
+        const result = await archiveTickets(userProfile.organizationId, selectedTickets);
         if (result.success) {
             toast({
                 title: 'Tickets Archived',

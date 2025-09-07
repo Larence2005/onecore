@@ -73,13 +73,14 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type', value: string) => {
+        if (!userProfile?.organizationId) return;
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
         if (field === 'assignee') setCurrentAssignee(value);
         if (field === 'status') setCurrentStatus(value);
         if (field === 'type') setCurrentType(value);
 
-        const result = await updateTicket(email.id, { [field]: value });
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: value });
         if (result.success) {
             toast({
                 title: 'Ticket Updated',

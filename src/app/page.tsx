@@ -46,9 +46,9 @@ function HomePageContent() {
   });
 
   const syncLatestEmails = useCallback(async () => {
-    if (isConfigured) {
+    if (isConfigured && userProfile?.organizationId) {
         try {
-            await getLatestEmails(settings);
+            await getLatestEmails(settings, userProfile.organizationId);
         } catch (syncError) {
             const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
             console.error("Failed to sync emails:", syncErrorMessage);
@@ -60,14 +60,14 @@ function HomePageContent() {
             });
         }
     }
-  }, [settings, isConfigured, toast]);
+  }, [settings, isConfigured, toast, userProfile?.organizationId]);
 
   useEffect(() => {
-    if (!user || !userProfile) return;
+    if (!user || !userProfile || !userProfile.organizationId) return;
 
     setIsLoading(true);
     
-    const ticketsCollectionRef = collection(db, 'tickets');
+    const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
     let q;
 
     // If the user is the owner of the org, they see all tickets.
@@ -85,9 +85,9 @@ function HomePageContent() {
             const data = ticketDoc.data();
             let lastReplier: 'agent' | 'client' | undefined = undefined;
 
-            if (data.conversationId && user.email) {
+            if (data.conversationId && user.email && userProfile.organizationId) {
                 try {
-                    const conversationDocRef = doc(db, 'conversations', data.conversationId);
+                    const conversationDocRef = doc(db, 'organizations', userProfile.organizationId, 'conversations', data.conversationId);
                     const conversationDoc = await getDoc(conversationDocRef);
                     if (conversationDoc.exists()) {
                         const conversationData = conversationDoc.data();

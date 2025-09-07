@@ -21,12 +21,12 @@ export function ArchiveView() {
     const { toast } = useToast();
 
     const fetchArchivedTickets = async () => {
-        if (!user) return;
+        if (!user || !userProfile?.organizationId) return;
         setIsLoading(true);
         setError(null);
         try {
             const isOwner = userProfile?.uid === userProfile?.organizationOwnerUid;
-            const tickets = await getTicketsFromDB({ 
+            const tickets = await getTicketsFromDB(userProfile.organizationId, { 
                 includeArchived: true, 
                 agentEmail: isOwner ? undefined : user.email || '' 
             });
@@ -59,8 +59,8 @@ export function ArchiveView() {
     };
     
     const handleUnarchive = async () => {
-        if(selectedTickets.length === 0) return;
-        const result = await unarchiveTickets(selectedTickets);
+        if(selectedTickets.length === 0 || !userProfile?.organizationId) return;
+        const result = await unarchiveTickets(userProfile.organizationId, selectedTickets);
         if (result.success) {
             toast({
                 title: 'Tickets Unarchived',

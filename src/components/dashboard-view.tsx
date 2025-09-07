@@ -13,6 +13,8 @@ import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Toolti
 import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays } from 'date-fns';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
+import { useAuth } from '@/providers/auth-provider';
+
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
     <Card>
@@ -28,18 +30,21 @@ const StatCard = ({ title, value, icon: Icon }: { title: string, value: string |
 
 
 export function DashboardView() {
+    const { userProfile } = useAuth();
     const [tickets, setTickets] = useState<Email[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
+        if (!userProfile?.organizationId) return;
+
         const fetchTickets = async () => {
             setIsLoading(true);
             setError(null);
             try {
                 // Fetch all tickets including archived for historical data
-                const allTickets = await getTicketsFromDB({ fetchAll: true });
+                const allTickets = await getTicketsFromDB(userProfile.organizationId!, { fetchAll: true });
                 setTickets(allTickets);
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -55,7 +60,7 @@ export function DashboardView() {
         };
 
         fetchTickets();
-    }, [toast]);
+    }, [userProfile, toast]);
     
     const stats = useMemo(() => {
         const totalTickets = tickets.length;

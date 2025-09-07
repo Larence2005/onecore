@@ -87,8 +87,8 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
     return await cca.acquireTokenByClientCredential(tokenRequest);
 }
 
-async function getAndIncrementTicketCounter(): Promise<number> {
-    const counterRef = doc(db, 'counters', 'tickets');
+async function getAndIncrementTicketCounter(organizationId: string): Promise<number> {
+    const counterRef = doc(db, 'organizations', organizationId, 'counters', 'tickets');
     try {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
@@ -110,12 +110,12 @@ async function getAndIncrementTicketCounter(): Promise<number> {
 }
 
 
-async function getNextTicketNumber(): Promise<number> {
-    return getAndIncrementTicketCounter();
+async function getNextTicketNumber(organizationId: string): Promise<number> {
+    return getAndIncrementTicketCounter(organizationId);
 }
 
 
-export async function getLatestEmails(settings: Settings): Promise<void> {
+export async function getLatestEmails(settings: Settings, organizationId: string): Promise<void> {
     try {
         const authResponse = await getAccessToken(settings);
         if (!authResponse?.accessToken) {
@@ -142,19 +142,19 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
         for (const email of emailsToProcess) {
             if (!email.conversationId) continue;
 
-            const ticketsCollectionRef = collection(db, 'tickets');
+            const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
             const q = query(ticketsCollectionRef, where('conversationId', '==', email.conversationId));
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
                 // This is a new conversation thread, create a new ticket
-                 const conversationThread = await fetchAndStoreFullConversation(settings, email.conversationId);
+                 const conversationThread = await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
                  if (conversationThread.length === 0) continue;
 
                  const firstMessage = conversationThread[0];
                  const ticketId = firstMessage.id;
-                 const ticketDocRef = doc(db, 'tickets', ticketId);
-                 const ticketNumber = await getNextTicketNumber();
+                 const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', ticketId);
+                 const ticketNumber = await getNextTicketNumber(organizationId);
 
                  const newTicketData = {
                     id: ticketId,
@@ -176,7 +176,7 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
                 await setDoc(ticketDocRef, newTicketData);
             } else {
                  // Existing conversation, just update the cache
-                 await fetchAndStoreFullConversation(settings, email.conversationId);
+                 await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
             }
         }
     } catch (error) {
@@ -185,8 +185,9 @@ export async function getLatestEmails(settings: Settings): Promise<void> {
 }
 
 
-export async function getTicketsFromDB(options?: { includeArchived?: boolean, fetchAll?: boolean, agentEmail?: string }): Promise<Email[]> {
-    const ticketsCollectionRef = collection(db, 'tickets');
+export async function getTicketsFromDB(organizationId: string, options?: { includeArchived?: boolean, fetchAll?: boolean, agentEmail?: string }): Promise<Email[]> {
+    if (!organizationId) return [];
+    const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     let queries = [];
 
     if (options?.agentEmail) {
@@ -236,7 +237,7 @@ export async function getTicketsFromDB(options?: { includeArchived?: boolean, fe
 }
 
 
-export async function fetchAndStoreFullConversation(settings: Settings, conversationId: string): Promise<DetailedEmail[]> {
+export async function fetchAndStoreFullConversation(settings: Settings, organizationId: string, conversationId: string): Promise<DetailedEmail[]> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         // Can't fetch from API, return empty array. The caller should handle this.
@@ -255,7 +256,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
     const conversationData: { value: any[] } = await conversationResponse.json() as any;
     
     // Before storing, let's get the current ticket properties
-    const ticketsCollectionRef = collection(db, 'tickets');
+    const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     const q = query(ticketsCollectionRef, where('conversationId', '==', conversationId));
     const querySnapshot = await getDocs(q);
     
@@ -296,7 +297,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
     // Sort messages by date client-side
     conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
 
-    const conversationDocRef = doc(db, 'conversations', conversationId);
+    const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: conversationMessages });
 
     // When a conversation is updated, we also need to update the main ticket's bodyPreview
@@ -321,12 +322,12 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 }
 
 
-export async function getEmail(settings: Settings, id: string): Promise<DetailedEmail> {
+export async function getEmail(settings: Settings, organizationId: string, id: string): Promise<DetailedEmail> {
     let conversationId: string | undefined;
     let ticketId: string = id;
     
     // First, try to find the ticket document directly by the given ID.
-    const ticketDocRef = doc(db, 'tickets', id);
+    const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     const ticketDocSnap = await getDoc(ticketDocRef);
 
     if (ticketDocSnap.exists()) {
@@ -352,7 +353,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
     }
     
     // Now that we have the conversationId, find the main ticket document for this conversation.
-    const ticketsCollectionRef = collection(db, 'tickets');
+    const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     const q = query(ticketsCollectionRef, where('conversationId', '==', conversationId));
     const querySnapshot = await getDocs(q);
 
@@ -366,7 +367,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
     
     // Now get the conversation messages from our cache.
     let conversationMessages: DetailedEmail[] = [];
-    const conversationDocRef = doc(db, 'conversations', conversationId);
+    const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     const conversationDoc = await getDoc(conversationDocRef);
 
     if (conversationDoc.exists() && conversationDoc.data().messages) {
@@ -374,7 +375,7 @@ export async function getEmail(settings: Settings, id: string): Promise<Detailed
     } else {
         // If not in cache, try to fetch from API, but only if settings are configured.
         if (settings.clientId && settings.clientSecret && settings.tenantId) {
-            conversationMessages = await fetchAndStoreFullConversation(settings, conversationId);
+            conversationMessages = await fetchAndStoreFullConversation(settings, organizationId, conversationId);
         } else {
              console.log("Conversation not cached and API not configured. Some details may be missing.");
         }
@@ -471,6 +472,7 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
 
 export async function replyToEmailAction(
     settings: Settings,
+    organizationId: string,
     messageId: string,
     comment: string,
     conversationId: string | undefined,
@@ -529,7 +531,7 @@ export async function replyToEmailAction(
 
     // After successfully sending a reply, invalidate the cache
     if (conversationId) {
-        const conversationDocRef = doc(db, 'conversations', conversationId);
+        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
         try {
             await deleteDoc(conversationDocRef);
         } catch (error) {
@@ -543,8 +545,8 @@ export async function replyToEmailAction(
 
 
 
-export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
-    const ticketDocRef = doc(db, 'tickets', id);
+export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
+    const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
         await runTransaction(db, async (transaction) => {
             // --- READS FIRST ---
@@ -557,7 +559,7 @@ export async function updateTicket(id: string, data: { priority?: string, assign
             let conversationDocRef: any, conversationDoc: any;
 
             if (data.assignee && conversationId) {
-                conversationDocRef = doc(db, 'conversations', conversationId);
+                conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
                 conversationDoc = await transaction.get(conversationDocRef);
             }
 
@@ -594,11 +596,14 @@ export async function updateTicket(id: string, data: { priority?: string, assign
 }
 
 
-export async function archiveTickets(ticketIds: string[]) {
+export async function archiveTickets(organizationId: string, ticketIds: string[]) {
+    if (!organizationId) {
+        return { success: false, error: "Organization ID is required." };
+    }
     const batch = writeBatch(db);
     try {
         for (const id of ticketIds) {
-            const ticketDocRef = doc(db, 'tickets', id);
+            const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
             const ticketDoc = await getDoc(ticketDocRef);
             if(ticketDoc.exists()){
                 const currentStatus = ticketDoc.data().status;
@@ -617,11 +622,14 @@ export async function archiveTickets(ticketIds: string[]) {
 }
 
 
-export async function unarchiveTickets(ticketIds: string[]) {
+export async function unarchiveTickets(organizationId: string, ticketIds: string[]) {
+    if (!organizationId) {
+        return { success: false, error: "Organization ID is required." };
+    }
     const batch = writeBatch(db);
     try {
         for (const id of ticketIds) {
-            const ticketDocRef = doc(db, 'tickets', id);
+            const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
             const ticketDoc = await getDoc(ticketDocRef);
             if (ticketDoc.exists()) {
                 const data = ticketDoc.data();

@@ -185,11 +185,11 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
     const fetchEmail = useCallback(async () => {
-        if (!id) return;
+        if (!id || !userProfile?.organizationId) return;
 
         setIsLoading(true);
         try {
-            const detailedEmail = await getEmail(settings, id);
+            const detailedEmail = await getEmail(settings, userProfile.organizationId, id);
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
             setCurrentAssignee(detailedEmail.assignee);
@@ -208,7 +208,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         } finally {
             setIsLoading(false);
         }
-    }, [id, settings, toast]);
+    }, [id, settings, toast, userProfile?.organizationId]);
 
 
     useEffect(() => {
@@ -216,7 +216,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     }, [fetchEmail]);
     
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
-        if (!email) return;
+        if (!email || !userProfile?.organizationId) return;
 
         // Optimistically update the UI state
         if (field === 'priority') setCurrentPriority(value);
@@ -226,7 +226,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
         const ticketIdToUpdate = email.conversation?.[0]?.id || email.id;
 
-        const result = await updateTicket(ticketIdToUpdate, { [field]: value });
+        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value });
 
         if (!result.success) {
              toast({
@@ -296,7 +296,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
 
     const handleSendReply = async () => {
-        if (!isConfigured) {
+        if (!isConfigured || !userProfile?.organizationId) {
             toast({ variant: "destructive", title: "API Settings Required", description: "Please configure your Microsoft Graph API credentials in Settings to send replies." });
             return;
         }
@@ -317,7 +317,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                 }))
             );
 
-            await replyToEmailAction(settings, latestMessageId, replyContent, email?.conversationId, attachmentPayloads);
+            await replyToEmailAction(settings, userProfile.organizationId, latestMessageId, replyContent, email?.conversationId, attachmentPayloads);
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setAttachments([]);
@@ -325,7 +325,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             
             // After sending, refresh the conversation from the source
             if (email?.conversationId) {
-                await fetchAndStoreFullConversation(settings, email.conversationId);
+                await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
             }
             await fetchEmail();
 

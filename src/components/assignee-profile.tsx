@@ -50,7 +50,7 @@ export function AssigneeProfile({ email }: { email: string }) {
       setError(null);
       try {
         const [allTickets, allMembers] = await Promise.all([
-          getTicketsFromDB({ fetchAll: true }),
+          getTicketsFromDB(userProfile.organizationId, { fetchAll: true }),
           getOrganizationMembers(userProfile.organizationId)
         ]);
 
