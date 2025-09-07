@@ -143,7 +143,6 @@ export function TicketDetailContent({ id }: { id: string }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
-    const [hasCheckedForCreateLog, setHasCheckedForCreateLog] = useState(false);
     const previousEmailRef = useRef<DetailedEmail | null>(null);
 
     const [currentPriority, setCurrentPriority] = useState('');
@@ -208,6 +207,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             setCurrentType(detailedEmail.type || 'Incident');
             setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
             setCurrentTags(detailedEmail.tags || []);
+            // Set the initial state for comparison
             previousEmailRef.current = detailedEmail;
 
         } catch (err) {
@@ -285,24 +285,10 @@ export function TicketDetailContent({ id }: { id: string }) {
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
             const fetchedLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
             setActivityLog(fetchedLogs);
-
-            // Add the "Ticket Created" log if it doesn't exist and we haven't checked before
-            if (!hasCheckedForCreateLog) {
-                const hasCreateLog = fetchedLogs.some(log => log.type === 'Create');
-                if (!hasCreateLog && email.conversation && email.conversation.length > 0) {
-                     await addActivityLog(userProfile.organizationId!, email.id, {
-                        type: 'Create',
-                        details: 'Ticket created',
-                        date: email.conversation[0].receivedDateTime,
-                        user: email.senderEmail || 'System',
-                    });
-                }
-                setHasCheckedForCreateLog(true); // Mark as checked
-            }
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, email?.conversation, email?.senderEmail, hasCheckedForCreateLog]);
+    }, [email?.id, userProfile?.organizationId]);
     
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email || !userProfile?.organizationId) return;

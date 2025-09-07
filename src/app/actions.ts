@@ -182,6 +182,15 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     ticketNumber: ticketNumber,
                 };
                 await setDoc(ticketDocRef, newTicketData);
+
+                // Add the "Ticket Created" activity log here
+                await addActivityLog(organizationId, ticketId, {
+                    type: 'Create',
+                    details: 'Ticket created',
+                    date: firstMessage.receivedDateTime,
+                    user: firstMessage.senderEmail || 'System',
+                });
+
             } else {
                  // Existing conversation, just update the cache
                  await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
