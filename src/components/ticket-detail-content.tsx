@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember } fro
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, Settings as SettingsIcon } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -28,8 +28,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { TimelineItem } from './timeline-item';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
@@ -119,6 +120,12 @@ const downloadAttachment = (attachment: Attachment) => {
     document.body.removeChild(link);
 }
 
+interface ActivityLog {
+    type: string;
+    details: string;
+    date: string;
+}
+
 
 export function TicketDetailContent({ id }: { id: string }) {
     const { settings, isConfigured } = useSettings();
@@ -134,6 +141,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [attachments, setAttachments] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
+    const previousEmailRef = useRef<DetailedEmail | null>(null);
 
     const [currentPriority, setCurrentPriority] = useState('');
     const [currentAssignee, setCurrentAssignee] = useState('');
@@ -183,20 +192,75 @@ export function TicketDetailContent({ id }: { id: string }) {
         fetchAssignees();
     }, [userProfile]);
 
-
-    const fetchEmail = useCallback(async () => {
+    const fetchEmailData = useCallback(async () => {
         if (!id || !userProfile?.organizationId) return;
-
+    
         setIsLoading(true);
         try {
             const detailedEmail = await getEmail(settings, userProfile.organizationId, id);
-            setEmail(detailedEmail);
-            setCurrentPriority(detailedEmail.priority);
-            setCurrentAssignee(detailedEmail.assignee);
-            setCurrentStatus(detailedEmail.status);
-            setCurrentType(detailedEmail.type || 'Incident');
-            setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
-            setCurrentTags(detailedEmail.tags || []);
+            
+            if (detailedEmail.conversationId && detailedEmail.conversation && detailedEmail.conversation.length > 0) {
+                const ticketId = detailedEmail.conversation[0].id;
+                const ticketDocRef = doc(db, 'organizations', userProfile.organizationId, 'tickets', ticketId);
+
+                const unsubscribe = onSnapshot(ticketDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const ticketData = { id: docSnap.id, ...docSnap.data() } as DetailedEmail;
+
+                        // Generate Activity Log
+                        const newActivityLog: ActivityLog[] = [];
+                        const previousTicket = previousEmailRef.current;
+
+                        if (previousTicket) { // Only compare if there's a previous state
+                            if (ticketData.priority !== previousTicket.priority) {
+                                newActivityLog.push({ type: 'Priority', details: `changed from ${previousTicket.priority} to ${ticketData.priority}`, date: new Date().toISOString() });
+                            }
+                            if (ticketData.status !== previousTicket.status) {
+                                newActivityLog.push({ type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString() });
+                            }
+                             if (ticketData.assignee !== previousTicket.assignee) {
+                                const prevName = assignees.find(a => a.email === previousTicket.assignee)?.name || previousTicket.assignee;
+                                const newName = assignees.find(a => a.email === ticketData.assignee)?.name || ticketData.assignee;
+                                newActivityLog.push({ type: 'Assignee', details: `changed from ${prevName} to ${newName}`, date: new Date().toISOString() });
+                            }
+                             if (ticketData.type !== previousTicket.type) {
+                                newActivityLog.push({ type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString() });
+                            }
+                            if (ticketData.deadline !== previousTicket.deadline) {
+                                const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy')}` : 'removed';
+                                newActivityLog.push({ type: 'Deadline', details: detail, date: new Date().toISOString() });
+                            }
+                            
+                            const prevTags = new Set(previousTicket.tags || []);
+                            const newTags = new Set(ticketData.tags || []);
+                            const addedTags = [...newTags].filter(x => !prevTags.has(x));
+                            const removedTags = [...prevTags].filter(x => !newTags.has(x));
+
+                            if(addedTags.length > 0) newActivityLog.push({ type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString() });
+                            if(removedTags.length > 0) newActivityLog.push({ type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString() });
+                        }
+
+                        if(newActivityLog.length > 0){
+                           setActivityLog(prevLog => [...newActivityLog.reverse(), ...prevLog]);
+                        }
+
+                        // Update state and ref
+                        const fullTicketData = { ...detailedEmail, ...ticketData };
+                        setEmail(fullTicketData);
+                        setCurrentPriority(ticketData.priority);
+                        setCurrentAssignee(ticketData.assignee);
+                        setCurrentStatus(ticketData.status);
+                        setCurrentType(ticketData.type || 'Incident');
+                        setCurrentDeadline(ticketData.deadline ? parseISO(ticketData.deadline) : undefined);
+                        setCurrentTags(ticketData.tags || []);
+                        previousEmailRef.current = fullTicketData;
+                    }
+                });
+
+                return () => unsubscribe();
+            } else {
+                 setEmail(detailedEmail);
+            }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             setError(errorMessage);
@@ -208,21 +272,18 @@ export function TicketDetailContent({ id }: { id: string }) {
         } finally {
             setIsLoading(false);
         }
-    }, [id, settings, toast, userProfile?.organizationId]);
-
+    }, [id, settings, toast, userProfile?.organizationId, assignees]);
 
     useEffect(() => {
-        fetchEmail();
-    }, [fetchEmail]);
+        const unsubscribePromise = fetchEmailData();
+        return () => {
+            unsubscribePromise.then(unsubscribe => unsubscribe && unsubscribe());
+        };
+    }, [fetchEmailData]);
+    
     
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email || !userProfile?.organizationId) return;
-
-        // Optimistically update the UI state
-        if (field === 'priority') setCurrentPriority(value);
-        if (field === 'assignee') setCurrentAssignee(value);
-        if (field === 'status') setCurrentStatus(value);
-        if (field === 'type') setCurrentType(value);
 
         const ticketIdToUpdate = email.conversation?.[0]?.id || email.id;
 
@@ -234,17 +295,11 @@ export function TicketDetailContent({ id }: { id: string }) {
                 title: 'Update Failed',
                 description: result.error,
             });
-            // Re-fetch to revert optimistic updates
-            fetchEmail();
         } else {
             toast({
                 title: 'Ticket Updated',
                 description: `The ${field} has been changed.`,
             });
-             // Re-fetch to ensure UI is in sync with conversation updates
-             if(field === 'assignee' || field === 'priority' || field === 'status' || field === 'type'){
-                fetchEmail();
-             }
         }
     };
     
@@ -259,7 +314,6 @@ export function TicketDetailContent({ id }: { id: string }) {
             const newTag = tagInput.trim();
             if (!currentTags.includes(newTag)) {
                 const updatedTags = [...currentTags, newTag];
-                setCurrentTags(updatedTags); // Optimistic update
                 await handleUpdate('tags', updatedTags);
                 setTagInput('');
             }
@@ -268,7 +322,6 @@ export function TicketDetailContent({ id }: { id: string }) {
 
     const removeTag = async (tagToRemove: string) => {
         const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
-        setCurrentTags(updatedTags); // Optimistic update
         await handleUpdate('tags', updatedTags);
     };
 
@@ -327,7 +380,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             if (email?.conversationId) {
                 await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
             }
-            await fetchEmail();
+            await fetchEmailData();
 
         } catch (err)
             {
@@ -479,7 +532,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                         </SidebarMenuItem>
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                            <Settings />
+                            <SettingsIcon />
                             <span>Settings</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -629,6 +682,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                         
                         <aside className="w-full lg:w-[400px] lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto flex-shrink-0">
                             {isLoading && (
+                                <>
                                 <Card>
                                     <CardHeader>
                                         <Skeleton className="h-6 w-1/2" />
@@ -641,8 +695,19 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <Skeleton className="h-4 w-full" />
                                     </CardContent>
                                 </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <Skeleton className="h-6 w-1/2" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                    </CardContent>
+                                </Card>
+                                </>
                             )}
                             {!isLoading && email && (
+                                <>
                                 <Card>
                                     <CardHeader>
                                         <h2 className="text-lg font-bold">Properties</h2>
@@ -788,6 +853,28 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         </div>
                                     </CardContent>
                                 </Card>
+                                <Card>
+                                     <CardHeader>
+                                        <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {activityLog.length > 0 ? (
+                                            activityLog.map((log, index) => (
+                                                <TimelineItem key={index} type={log.type} date={log.date}>
+                                                    {log.details}
+                                                </TimelineItem>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">No recent activity.</p>
+                                        )}
+                                        {email && (
+                                             <TimelineItem type="Create" date={email.receivedDateTime}>
+                                                Ticket created
+                                            </TimelineItem>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                                </>
                             )}
                         </aside>
                     </div>

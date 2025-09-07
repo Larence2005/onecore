@@ -1,0 +1,52 @@
+
+"use client";
+
+import { formatDistanceToNow } from 'date-fns';
+import { parseISO } from 'date-fns';
+import { Tag, CalendarClock, UserCheck, Shield, CheckCircle, FileType, Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface TimelineItemProps {
+    type: 'Tags' | 'Deadline' | 'Assignee' | 'Priority' | 'Status' | 'Type' | 'Create' | string;
+    date: string;
+    children: React.ReactNode;
+}
+
+const getIcon = (type: TimelineItemProps['type']) => {
+    switch (type) {
+        case 'Tags':
+            return <Tag className="h-4 w-4" />;
+        case 'Deadline':
+            return <CalendarClock className="h-4 w-4" />;
+        case 'Assignee':
+            return <UserCheck className="h-4 w-4" />;
+        case 'Priority':
+            return <Shield className="h-4 w-4" />;
+        case 'Status':
+            return <CheckCircle className="h-4 w-4" />;
+        case 'Type':
+            return <FileType className="h-4 w-4" />;
+        case 'Create':
+            return <Pencil className="h-4 w-4" />;
+        default:
+            return <Pencil className="h-4 w-4" />;
+    }
+}
+
+export function TimelineItem({ type, date, children }: TimelineItemProps) {
+    return (
+        <div className="flex items-start gap-4">
+            <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+            )}>
+                {getIcon(type)}
+            </div>
+            <div className="flex-1 space-y-1">
+                <p className="text-sm text-foreground">{children}</p>
+                <time className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(parseISO(date), { addSuffix: true })}
+                </time>
+            </div>
+        </div>
+    );
+}
