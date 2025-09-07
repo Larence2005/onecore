@@ -78,7 +78,15 @@ const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
                 word-wrap: break-word;
                 overflow-wrap: break-word;
             }
-             img, table, td, th, div { max-width: 100% !important; height: auto !important; }
+             img, table, td, th, div { 
+                max-width: 100% !important; 
+                height: auto !important; 
+                overflow-wrap: break-word;
+                word-wrap: break-word;
+             }
+             table {
+                table-layout: fixed;
+             }
         </style>
         ${content || ''}
     `;
@@ -227,7 +235,6 @@ export function TicketDetailContent({ id }: { id: string }) {
         const unsubscribe = onSnapshot(ticketDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const ticketData = { id: docSnap.id, ...docSnap.data() } as DetailedEmail;
-
                 const previousTicket = previousEmailRef.current;
                 const currentUserEmail = user.email!;
 
@@ -910,6 +917,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
+
+    
 
     
 
