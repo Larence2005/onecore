@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -218,6 +218,12 @@ export function TicketDetailContent({ id }: { id: string }) {
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email) return;
 
+        // Optimistically update the UI state
+        if (field === 'priority') setCurrentPriority(value);
+        if (field === 'assignee') setCurrentAssignee(value);
+        if (field === 'status') setCurrentStatus(value);
+        if (field === 'type') setCurrentType(value);
+
         const ticketIdToUpdate = email.conversation?.[0]?.id || email.id;
 
         const result = await updateTicket(ticketIdToUpdate, { [field]: value });
@@ -235,6 +241,10 @@ export function TicketDetailContent({ id }: { id: string }) {
                 title: 'Ticket Updated',
                 description: `The ${field} has been changed.`,
             });
+             // Re-fetch to ensure UI is in sync with conversation updates
+             if(field === 'assignee' || field === 'priority' || field === 'status' || field === 'type'){
+                fetchEmail();
+             }
         }
     };
     
@@ -312,7 +322,13 @@ export function TicketDetailContent({ id }: { id: string }) {
             setReplyContent('');
             setAttachments([]);
             setIsReplying(false);
+            
+            // After sending, refresh the conversation from the source
+            if (email?.conversationId) {
+                await fetchAndStoreFullConversation(settings, email.conversationId);
+            }
             await fetchEmail();
+
         } catch (err)
             {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -649,7 +665,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <div className="grid grid-cols-1 gap-y-4">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                <Select value={currentPriority} onValueChange={(value) => {setCurrentPriority(value); handleUpdate('priority', value)}}>
+                                                <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue />
                                                     </SelectTrigger>
@@ -662,7 +678,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                <Select value={currentStatus} onValueChange={(value) => {setCurrentStatus(value); handleUpdate('status', value)}}>
+                                                <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
@@ -685,7 +701,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                <Select value={currentAssignee} onValueChange={(value) => {setCurrentAssignee(value); handleUpdate('assignee', value)}}>
+                                                <Select value={currentAssignee} onValueChange={(value) => { handleUpdate('assignee', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
@@ -708,7 +724,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                <Select value={currentType} onValueChange={(value) => {setCurrentType(value); handleUpdate('type', value)}}>
+                                                <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                            <span className="flex items-center gap-2">

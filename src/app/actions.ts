@@ -254,6 +254,28 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
 
     const conversationData: { value: any[] } = await conversationResponse.json() as any;
     
+    // Before storing, let's get the current ticket properties
+    const ticketsCollectionRef = collection(db, 'tickets');
+    const q = query(ticketsCollectionRef, where('conversationId', '==', conversationId));
+    const querySnapshot = await getDocs(q);
+    
+    let ticketProperties = {
+        priority: 'Low',
+        assignee: 'Unassigned',
+        status: 'Open',
+        type: 'Incident',
+    };
+
+    if (!querySnapshot.empty) {
+        const ticketData = querySnapshot.docs[0].data();
+        ticketProperties = {
+            priority: ticketData.priority || 'Low',
+            assignee: ticketData.assignee || 'Unassigned',
+            status: ticketData.status || 'Open',
+            type: ticketData.type || 'Incident',
+        };
+    }
+
     const conversationMessages: DetailedEmail[] = conversationData.value.map(msg => ({
         id: msg.id,
         subject: msg.subject,
@@ -263,10 +285,10 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         receivedDateTime: msg.receivedDateTime,
         bodyPreview: msg.bodyPreview,
         conversationId: msg.conversationId,
-        priority: 'Low',
-        assignee: 'Unassigned',
-        status: 'Open',
-        type: 'Incident',
+        priority: ticketProperties.priority,
+        assignee: ticketProperties.assignee,
+        status: ticketProperties.status,
+        type: ticketProperties.type,
         hasAttachments: msg.hasAttachments,
         attachments: msg.attachments,
     }));
@@ -283,10 +305,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, conversa
         const lastMessage = conversationMessages[conversationMessages.length - 1];
 
         // Find the corresponding ticket document
-        const ticketsCollectionRef = collection(db, 'tickets');
-        const q = query(ticketsCollectionRef, where('conversationId', '==', conversationId));
-        const querySnapshot = await getDocs(q);
-
         if (!querySnapshot.empty) {
             const ticketDocRef = querySnapshot.docs[0].ref;
             await updateDoc(ticketDocRef, {
@@ -528,28 +546,53 @@ export async function replyToEmailAction(
 export async function updateTicket(id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
     const ticketDocRef = doc(db, 'tickets', id);
     try {
-        const updateData: any = { ...data };
-
-        // If status is being updated to Resolved or Closed, set closedAt
-        if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
-            const docSnap = await getDoc(ticketDocRef);
-            if(docSnap.exists() && docSnap.data().status !== 'Resolved' && docSnap.data().status !== 'Closed') {
-                updateData.closedAt = new Date().toISOString();
+        await runTransaction(db, async (transaction) => {
+            const ticketDoc = await transaction.get(ticketDocRef);
+            if (!ticketDoc.exists()) {
+                throw new Error("Ticket not found!");
             }
-        }
-        
-        // If status is changed back to Open/Pending, clear closedAt
-        if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
-            updateData.closedAt = null;
-        }
 
-        await updateDoc(ticketDocRef, updateData);
+            const updateData: any = { ...data };
+
+            // If status is being updated to Resolved or Closed, set closedAt
+            if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
+                if(ticketDoc.data().status !== 'Resolved' && ticketDoc.data().status !== 'Closed') {
+                    updateData.closedAt = new Date().toISOString();
+                }
+            }
+            
+            // If status is changed back to Open/Pending, clear closedAt
+            if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
+                updateData.closedAt = null;
+            }
+
+            transaction.update(ticketDocRef, updateData);
+
+            // If assignee is changed, update the conversation as well
+            if (data.assignee) {
+                const conversationId = ticketDoc.data().conversationId;
+                if (conversationId) {
+                    const conversationDocRef = doc(db, 'conversations', conversationId);
+                    const conversationDoc = await transaction.get(conversationDocRef);
+                    if (conversationDoc.exists()) {
+                        const messages = (conversationDoc.data().messages || []).map((msg: DetailedEmail) => ({
+                            ...msg,
+                            assignee: data.assignee
+                        }));
+                        transaction.update(conversationDocRef, { messages });
+                    }
+                }
+            }
+        });
+
         return { success: true };
     } catch (error) {
         console.error("Failed to update ticket:", error);
-        return { success: false, error: "Failed to update ticket." };
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
     }
 }
+
 
 export async function archiveTickets(ticketIds: string[]) {
     const batch = writeBatch(db);
