@@ -78,8 +78,7 @@ const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
                 word-wrap: break-word;
                 overflow-wrap: break-word;
             }
-            img { max-width: 100% !important; height: auto !important; }
-            * { max-width: 100%; }
+             img, table, td, th, div { max-width: 100% !important; height: auto !important; }
         </style>
         ${content || ''}
     `;
@@ -911,5 +910,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
+
+    
 
     
