@@ -35,7 +35,7 @@ const getIcon = (type: TimelineItemProps['type']) => {
 }
 
 export function TimelineItem({ type, date, children, user }: TimelineItemProps) {
-    const isSystemUser = user === 'System' || !user.includes('@');
+    const isSystemUser = user === 'System' || (typeof user === 'string' && !user.includes('@'));
     return (
         <div className="flex items-start gap-4">
             <div className={cn(
@@ -54,5 +54,3 @@ export function TimelineItem({ type, date, children, user }: TimelineItemProps) 
         </div>
     );
 }
-
-    
