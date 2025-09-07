@@ -547,41 +547,41 @@ export async function updateTicket(id: string, data: { priority?: string, assign
     const ticketDocRef = doc(db, 'tickets', id);
     try {
         await runTransaction(db, async (transaction) => {
+            // --- READS FIRST ---
             const ticketDoc = await transaction.get(ticketDocRef);
             if (!ticketDoc.exists()) {
                 throw new Error("Ticket not found!");
             }
+            
+            const conversationId = ticketDoc.data().conversationId;
+            let conversationDocRef: any, conversationDoc: any;
 
+            if (data.assignee && conversationId) {
+                conversationDocRef = doc(db, 'conversations', conversationId);
+                conversationDoc = await transaction.get(conversationDocRef);
+            }
+
+            // --- WRITES AFTER ---
             const updateData: any = { ...data };
-
-            // If status is being updated to Resolved or Closed, set closedAt
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
                 if(ticketDoc.data().status !== 'Resolved' && ticketDoc.data().status !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
                 }
             }
-            
-            // If status is changed back to Open/Pending, clear closedAt
             if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
                 updateData.closedAt = null;
             }
-
+            
+            // Update the ticket
             transaction.update(ticketDocRef, updateData);
 
-            // If assignee is changed, update the conversation as well
-            if (data.assignee) {
-                const conversationId = ticketDoc.data().conversationId;
-                if (conversationId) {
-                    const conversationDocRef = doc(db, 'conversations', conversationId);
-                    const conversationDoc = await transaction.get(conversationDocRef);
-                    if (conversationDoc.exists()) {
-                        const messages = (conversationDoc.data().messages || []).map((msg: DetailedEmail) => ({
-                            ...msg,
-                            assignee: data.assignee
-                        }));
-                        transaction.update(conversationDocRef, { messages });
-                    }
-                }
+            // If assignee changed, update the conversation as well
+            if (data.assignee && conversationId && conversationDoc?.exists()) {
+                const messages = (conversationDoc.data().messages || []).map((msg: DetailedEmail) => ({
+                    ...msg,
+                    assignee: data.assignee
+                }));
+                transaction.update(conversationDocRef, { messages });
             }
         });
 
