@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 interface TimelineItemProps {
     type: 'Tags' | 'Deadline' | 'Assignee' | 'Priority' | 'Status' | 'Type' | 'Create' | string;
     date: string;
+    user: string;
     children: React.ReactNode;
 }
 
@@ -33,7 +34,8 @@ const getIcon = (type: TimelineItemProps['type']) => {
     }
 }
 
-export function TimelineItem({ type, date, children }: TimelineItemProps) {
+export function TimelineItem({ type, date, children, user }: TimelineItemProps) {
+    const isSystemUser = user === 'System' || !user.includes('@');
     return (
         <div className="flex items-start gap-4">
             <div className={cn(
@@ -42,7 +44,9 @@ export function TimelineItem({ type, date, children }: TimelineItemProps) {
                 {getIcon(type)}
             </div>
             <div className="flex-1 space-y-1">
-                <p className="text-sm text-foreground">{children}</p>
+                <p className="text-sm text-foreground">
+                    {children} by <span className="font-semibold">{isSystemUser ? 'System' : user}</span>
+                </p>
                 <time className="text-xs text-muted-foreground">
                     {formatDistanceToNow(parseISO(date), { addSuffix: true })}
                 </time>
@@ -50,3 +54,5 @@ export function TimelineItem({ type, date, children }: TimelineItemProps) {
         </div>
     );
 }
+
+    

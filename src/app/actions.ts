@@ -52,6 +52,7 @@ export interface ActivityLog {
     type: string;
     details: string;
     date: string;
+    user: string;
 }
 
 
@@ -808,3 +809,5 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     return { success: true };
 }
+
+    

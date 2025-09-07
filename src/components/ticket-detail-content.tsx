@@ -220,7 +220,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     }, [fetchEmailData]);
     
      useEffect(() => {
-        if (!email || !email.id || !userProfile?.organizationId) return;
+        if (!email || !email.id || !userProfile?.organizationId || !user?.email) return;
 
         const ticketDocRef = doc(db, 'organizations', userProfile.organizationId, 'tickets', email.id);
 
@@ -229,25 +229,26 @@ export function TicketDetailContent({ id }: { id: string }) {
                 const ticketData = { id: docSnap.id, ...docSnap.data() } as DetailedEmail;
 
                 const previousTicket = previousEmailRef.current;
+                const currentUserEmail = user.email!;
 
                 if (previousTicket) {
                     if (ticketData.priority !== previousTicket.priority) {
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Priority', details: `changed from ${previousTicket.priority} to ${ticketData.priority}`, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Priority', details: `changed from ${previousTicket.priority} to ${ticketData.priority}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                     if (ticketData.status !== previousTicket.status) {
-                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString() });
+                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                      if (ticketData.assignee !== previousTicket.assignee) {
                         const prevName = assignees.find(a => a.email === previousTicket.assignee)?.name || previousTicket.assignee;
                         const newName = assignees.find(a => a.email === ticketData.assignee)?.name || ticketData.assignee;
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Assignee', details: `changed from ${prevName} to ${newName}`, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Assignee', details: `changed from ${prevName} to ${newName}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                      if (ticketData.type !== previousTicket.type) {
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                     if (ticketData.deadline !== previousTicket.deadline) {
                         const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy')}` : 'removed';
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: detail, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                     
                     const prevTags = new Set(previousTicket.tags || []);
@@ -255,8 +256,8 @@ export function TicketDetailContent({ id }: { id: string }) {
                     const addedTags = [...newTags].filter(x => !prevTags.has(x));
                     const removedTags = [...prevTags].filter(x => !newTags.has(x));
 
-                    if(addedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString() });
-                    if(removedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString() });
+                    if(addedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString(), user: currentUserEmail });
+                    if(removedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString(), user: currentUserEmail });
                 }
 
                 // Update UI state and ref
@@ -266,7 +267,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, assignees]);
+    }, [email?.id, userProfile?.organizationId, assignees, user?.email]);
 
      useEffect(() => {
         if (!email || !email.id || !userProfile?.organizationId) return;
@@ -274,23 +275,24 @@ export function TicketDetailContent({ id }: { id: string }) {
         const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', email.id, 'activity');
         const q = query(activityCollectionRef, orderBy('date', 'desc'));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
             const fetchedLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
             setActivityLog(fetchedLogs);
 
             // Add the "Ticket Created" log if it doesn't exist
             const hasCreateLog = fetchedLogs.some(log => log.type === 'Create');
             if (!hasCreateLog && email.conversation && email.conversation.length > 0) {
-                 addActivityLog(userProfile.organizationId!, email.id, {
+                 await addActivityLog(userProfile.organizationId!, email.id, {
                     type: 'Create',
                     details: 'Ticket created',
                     date: email.conversation[0].receivedDateTime,
+                    user: email.senderEmail || 'System',
                 });
             }
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, email?.conversation]);
+    }, [email?.id, userProfile?.organizationId, email?.conversation, email?.senderEmail]);
     
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email || !userProfile?.organizationId) return;
@@ -886,7 +888,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                     <CardContent className="space-y-4">
                                         {activityLog.length > 0 ? (
                                             activityLog.map((log) => (
-                                                <TimelineItem key={log.id} type={log.type} date={log.date}>
+                                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
                                                     {log.details}
                                                 </TimelineItem>
                                             ))
@@ -904,3 +906,5 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
