@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion, arrayRemove, addDoc, orderBy } from 'firebase/firestore';
 import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
@@ -45,6 +45,13 @@ export interface NewAttachment {
     name: string;
     contentBytes: string; // Base64 encoded content
     contentType: string;
+}
+
+export interface ActivityLog {
+    id: string;
+    type: string;
+    details: string;
+    date: string;
 }
 
 
@@ -646,6 +653,38 @@ export async function unarchiveTickets(organizationId: string, ticketIds: string
         return { success: false, error: "Failed to unarchive tickets." };
     }
 }
+
+
+export async function addActivityLog(organizationId: string, ticketId: string, logEntry: Omit<ActivityLog, 'id'>) {
+    if (!organizationId || !ticketId) {
+        throw new Error("Organization ID and Ticket ID are required.");
+    }
+    try {
+        const activityCollectionRef = collection(db, 'organizations', organizationId, 'tickets', ticketId, 'activity');
+        await addDoc(activityCollectionRef, logEntry);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to add activity log:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getActivityLog(organizationId: string, ticketId: string): Promise<ActivityLog[]> {
+    if (!organizationId || !ticketId) {
+        return [];
+    }
+    try {
+        const activityCollectionRef = collection(db, 'organizations', organizationId, 'tickets', ticketId, 'activity');
+        const q = query(activityCollectionRef, orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+    } catch (error) {
+        console.error("Failed to get activity log:", error);
+        return [];
+    }
+}
+
 
 // --- Organization Actions ---
 

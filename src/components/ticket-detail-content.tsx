@@ -3,8 +3,8 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,7 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TimelineItem } from './timeline-item';
 
@@ -118,12 +118,6 @@ const downloadAttachment = (attachment: Attachment) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
-
-interface ActivityLog {
-    type: string;
-    details: string;
-    date: string;
 }
 
 
@@ -230,31 +224,30 @@ export function TicketDetailContent({ id }: { id: string }) {
 
         const ticketDocRef = doc(db, 'organizations', userProfile.organizationId, 'tickets', email.id);
 
-        const unsubscribe = onSnapshot(ticketDocRef, (docSnap) => {
+        const unsubscribe = onSnapshot(ticketDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const ticketData = { id: docSnap.id, ...docSnap.data() } as DetailedEmail;
 
-                const newActivityLog: ActivityLog[] = [];
                 const previousTicket = previousEmailRef.current;
 
                 if (previousTicket) {
                     if (ticketData.priority !== previousTicket.priority) {
-                        newActivityLog.push({ type: 'Priority', details: `changed from ${previousTicket.priority} to ${ticketData.priority}`, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Priority', details: `changed from ${previousTicket.priority} to ${ticketData.priority}`, date: new Date().toISOString() });
                     }
                     if (ticketData.status !== previousTicket.status) {
-                        newActivityLog.push({ type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString() });
+                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString() });
                     }
                      if (ticketData.assignee !== previousTicket.assignee) {
                         const prevName = assignees.find(a => a.email === previousTicket.assignee)?.name || previousTicket.assignee;
                         const newName = assignees.find(a => a.email === ticketData.assignee)?.name || ticketData.assignee;
-                        newActivityLog.push({ type: 'Assignee', details: `changed from ${prevName} to ${newName}`, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Assignee', details: `changed from ${prevName} to ${newName}`, date: new Date().toISOString() });
                     }
                      if (ticketData.type !== previousTicket.type) {
-                        newActivityLog.push({ type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString() });
                     }
                     if (ticketData.deadline !== previousTicket.deadline) {
                         const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy')}` : 'removed';
-                        newActivityLog.push({ type: 'Deadline', details: detail, date: new Date().toISOString() });
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: detail, date: new Date().toISOString() });
                     }
                     
                     const prevTags = new Set(previousTicket.tags || []);
@@ -262,12 +255,8 @@ export function TicketDetailContent({ id }: { id: string }) {
                     const addedTags = [...newTags].filter(x => !prevTags.has(x));
                     const removedTags = [...prevTags].filter(x => !newTags.has(x));
 
-                    if(addedTags.length > 0) newActivityLog.push({ type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString() });
-                    if(removedTags.length > 0) newActivityLog.push({ type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString() });
-                }
-
-                if(newActivityLog.length > 0){
-                   setActivityLog(prevLog => [...newActivityLog.reverse(), ...prevLog]);
+                    if(addedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString() });
+                    if(removedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString() });
                 }
 
                 // Update UI state and ref
@@ -278,6 +267,30 @@ export function TicketDetailContent({ id }: { id: string }) {
 
         return () => unsubscribe();
     }, [email?.id, userProfile?.organizationId, assignees]);
+
+     useEffect(() => {
+        if (!email || !email.id || !userProfile?.organizationId) return;
+
+        const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', email.id, 'activity');
+        const q = query(activityCollectionRef, orderBy('date', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+            setActivityLog(fetchedLogs);
+
+            // Add the "Ticket Created" log if it doesn't exist
+            const hasCreateLog = fetchedLogs.some(log => log.type === 'Create');
+            if (!hasCreateLog && email.conversation && email.conversation.length > 0) {
+                 addActivityLog(userProfile.organizationId!, email.id, {
+                    type: 'Create',
+                    details: 'Ticket created',
+                    date: email.conversation[0].receivedDateTime,
+                });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [email?.id, userProfile?.organizationId, email?.conversation]);
     
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email || !userProfile?.organizationId) return;
@@ -501,7 +514,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                         <SidebarHeader className="mb-8 px-4">
                             <div className="flex items-center gap-2">
                                 <Button variant="ghost" size="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
                                 </Button>
                                 <span className="font-bold text-lg">Onecore</span>
                             </div>
@@ -872,18 +885,13 @@ export function TicketDetailContent({ id }: { id: string }) {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         {activityLog.length > 0 ? (
-                                            activityLog.map((log, index) => (
-                                                <TimelineItem key={index} type={log.type} date={log.date}>
+                                            activityLog.map((log) => (
+                                                <TimelineItem key={log.id} type={log.type} date={log.date}>
                                                     {log.details}
                                                 </TimelineItem>
                                             ))
                                         ) : (
                                             <p className="text-sm text-muted-foreground">No recent activity.</p>
-                                        )}
-                                        {email && email.conversation && email.conversation.length > 0 && (
-                                             <TimelineItem type="Create" date={email.conversation[0].receivedDateTime}>
-                                                Ticket created
-                                            </TimelineItem>
                                         )}
                                     </CardContent>
                                 </Card>
