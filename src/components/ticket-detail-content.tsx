@@ -136,6 +136,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
+    const [hasCheckedForCreateLog, setHasCheckedForCreateLog] = useState(false);
     const previousEmailRef = useRef<DetailedEmail | null>(null);
 
     const [currentPriority, setCurrentPriority] = useState('');
@@ -220,7 +221,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     }, [fetchEmailData]);
     
      useEffect(() => {
-        if (!email || !email.id || !userProfile?.organizationId || !user?.email) return;
+        if (!email?.id || !userProfile?.organizationId || !user?.email) return;
 
         const ticketDocRef = doc(db, 'organizations', userProfile.organizationId, 'tickets', email.id);
 
@@ -246,7 +247,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                      if (ticketData.type !== previousTicket.type) {
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
-                    if (ticketData.deadline !== previousTicket.deadline) {
+                     if (ticketData.deadline !== previousTicket.deadline) {
                         const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy')}` : 'removed';
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
@@ -262,7 +263,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
                 // Update UI state and ref
                  setEmail(prevEmail => prevEmail ? ({ ...prevEmail, ...ticketData }) : ticketData);
-                 previousEmailRef.current = { ...email, ...ticketData };
+                 previousEmailRef.current = { ...(email || {}), ...ticketData } as DetailedEmail;
             }
         });
 
@@ -270,7 +271,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     }, [email?.id, userProfile?.organizationId, assignees, user?.email]);
 
      useEffect(() => {
-        if (!email || !email.id || !userProfile?.organizationId) return;
+        if (!email?.id || !userProfile?.organizationId) return;
 
         const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', email.id, 'activity');
         const q = query(activityCollectionRef, orderBy('date', 'desc'));
@@ -279,20 +280,23 @@ export function TicketDetailContent({ id }: { id: string }) {
             const fetchedLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
             setActivityLog(fetchedLogs);
 
-            // Add the "Ticket Created" log if it doesn't exist
-            const hasCreateLog = fetchedLogs.some(log => log.type === 'Create');
-            if (!hasCreateLog && email.conversation && email.conversation.length > 0) {
-                 await addActivityLog(userProfile.organizationId!, email.id, {
-                    type: 'Create',
-                    details: 'Ticket created',
-                    date: email.conversation[0].receivedDateTime,
-                    user: email.senderEmail || 'System',
-                });
+            // Add the "Ticket Created" log if it doesn't exist and we haven't checked before
+            if (!hasCheckedForCreateLog) {
+                const hasCreateLog = fetchedLogs.some(log => log.type === 'Create');
+                if (!hasCreateLog && email.conversation && email.conversation.length > 0) {
+                     await addActivityLog(userProfile.organizationId!, email.id, {
+                        type: 'Create',
+                        details: 'Ticket created',
+                        date: email.conversation[0].receivedDateTime,
+                        user: email.senderEmail || 'System',
+                    });
+                }
+                setHasCheckedForCreateLog(true); // Mark as checked
             }
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, email?.conversation, email?.senderEmail]);
+    }, [email?.id, userProfile?.organizationId, email?.conversation, email?.senderEmail, hasCheckedForCreateLog]);
     
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
         if (!email || !userProfile?.organizationId) return;
@@ -749,7 +753,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                              <div className="space-y-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-xs"><Calendar size={14} /> Submitted</div>
-                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
+                                                <div className="font-medium text-sm">{format(parseISO(email.conversation?.[0].receivedDateTime || email.receivedDateTime), 'MMMM d, yyyy')}</div>
                                             </div>
                                         </div>
 
@@ -906,5 +910,6 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
 
     
