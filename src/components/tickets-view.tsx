@@ -27,21 +27,29 @@ type TicketsViewProps = {
 
 const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
     return emails.filter(email => {
-        // Search filter (Subject, Sender)
+        // Search filter (Subject, Sender, Ticket Number)
         if (filters.search) {
             const searchTerm = filters.search.toLowerCase();
             const subjectMatch = email.subject.toLowerCase().includes(searchTerm);
             const senderMatch = email.sender.toLowerCase().includes(searchTerm);
-            if (!subjectMatch && !senderMatch) {
+            const ticketNumberMatch = email.ticketNumber?.toString().includes(searchTerm);
+
+            if (!subjectMatch && !senderMatch && !ticketNumberMatch) {
                 return false;
             }
         }
         
         // Tags filter
         if (filters.tags) {
-            const tagSearchTerm = filters.tags.toLowerCase();
-            if (!email.tags?.some(tag => tag.toLowerCase().includes(tagSearchTerm))) {
-                return false;
+            const tagSearchTerms = filters.tags.toLowerCase().split(',').map(t => t.trim()).filter(t => t);
+            if (tagSearchTerms.length > 0) {
+                const emailTags = (email.tags || []).map(t => t.toLowerCase());
+                const hasAllTags = tagSearchTerms.every(searchTerm => 
+                    emailTags.some(emailTag => emailTag.includes(searchTerm))
+                );
+                if (!hasAllTags) {
+                    return false;
+                }
             }
         }
 
