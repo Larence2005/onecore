@@ -64,7 +64,11 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:flex flex-col items-center justify-center w-1/2 bg-foreground text-background p-12">
+        <div className="hidden md:flex flex-col items-center justify-center w-1/2 bg-foreground text-background p-12 text-center">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold">Onecore Support</h1>
+            <p className="text-lg mt-2">Your unified ticketing system</p>
+          </div>
           <Image src="/logo.png" alt="Company Logo" width={150} height={150} />
         </div>
 
