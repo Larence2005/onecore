@@ -265,7 +265,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                     const prevTags = new Set(previousTicket.tags || []);
                     const newTags = new Set(ticketData.tags || []);
                     const addedTags = [...newTags].filter(x => !prevTags.has(x));
-                    const removedTags = [...prevTags].filter(x => !prevTags.has(x));
+                    const removedTags = [...prevTags].filter(x => !newTags.has(x));
 
                     if(addedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString(), user: currentUserEmail });
                     if(removedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString(), user: currentUserEmail });
