@@ -194,7 +194,7 @@ function HomePageContent() {
   return (
     <SidebarProvider>
       <div className={cn(
-        "grid min-h-screen w-full text-foreground",
+        "grid min-h-screen w-full",
         activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_280px]" : "lg:grid-cols-[240px_1fr]"
       )}>
         <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
@@ -222,43 +222,43 @@ function HomePageContent() {
               <SidebarMenu className="flex flex-col gap-2 px-4">
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
-                    <Pencil />
+                    <Pencil className="text-blue-500" />
                     <span>Compose</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
-                    <LayoutDashboard />
+                    <LayoutDashboard className="text-purple-500" />
                     <span>Dashboard</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
-                    <List />
+                    <List className="text-green-500" />
                     <span>Tickets</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                     <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
-                        <Archive />
+                        <Archive className="text-orange-500" />
                         <span>Archive</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
-                    <Users />
+                    <Users className="text-pink-500" />
                     <span>Clients</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
-                    <Building2 />
+                    <Building2 className="text-yellow-500" />
                     <span>Organization</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
-                    <Settings />
+                    <Settings className="text-gray-500" />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -319,5 +319,7 @@ export default function Home() {
       <HomePageContent />
   )
 }
+
+    
 
     

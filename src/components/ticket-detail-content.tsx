@@ -532,47 +532,47 @@ export function TicketDetailContent({ id }: { id: string }) {
                                 </div>
                             </div>
                         </SidebarFooter>
-                        <SidebarContent>
+                        <SidebarContent className="flex-grow">
                             <SidebarMenu className="flex flex-col gap-2 px-4">
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                    <Pencil />
+                                    <Pencil className="text-blue-500" />
                                     <span>Compose</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                    <LayoutDashboard />
+                                    <LayoutDashboard className="text-purple-500" />
                                     <span>Dashboard</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
-                                    <List />
+                                    <List className="text-green-500" />
                                     <span>Tickets</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                        <Archive />
+                                        <Archive className="text-orange-500" />
                                         <span>Archive</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                                    <Users />
+                                    <Users className="text-pink-500" />
                                     <span>Clients</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                                    <Building2 />
+                                    <Building2 className="text-yellow-500" />
                                     <span>Organization</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                                    <SettingsIcon />
+                                    <SettingsIcon className="text-gray-500" />
                                     <span>Settings</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>

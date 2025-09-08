@@ -109,7 +109,7 @@ export function AssigneeProfile({ email }: { email: string }) {
     <SidebarProvider>
             <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
                 <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
-                  <div className="flex-grow">
+                  <div className="flex-grow flex flex-col">
                     <SidebarHeader className="mb-8 px-4">
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon">
@@ -129,47 +129,47 @@ export function AssigneeProfile({ email }: { email: string }) {
                             </div>
                         </div>
                     </SidebarFooter>
-                    <SidebarContent>
+                    <SidebarContent className="flex-grow">
                         <SidebarMenu className="flex flex-col gap-2 px-4">
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                <Pencil />
+                                <Pencil className="text-blue-500" />
                                 <span>Compose</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                <LayoutDashboard />
+                                <LayoutDashboard className="text-purple-500" />
                                 <span>Dashboard</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
-                                <List />
+                                <List className="text-green-500" />
                                 <span>Tickets</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                    <Archive />
+                                    <Archive className="text-orange-500" />
                                     <span>Archive</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                                <Users />
+                                <Users className="text-pink-500" />
                                 <span>Clients</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('organization')} isActive>
-                                <Building2 />
+                                <Building2 className="text-yellow-500" />
                                 <span>Organization</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                                <Settings />
+                                <Settings className="text-gray-500" />
                                 <span>Settings</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
