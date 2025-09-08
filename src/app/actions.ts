@@ -160,12 +160,12 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                  if (conversationThread.length === 0) continue;
 
                  const firstMessage = conversationThread[0];
-                 const ticketId = firstMessage.id;
-                 const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', ticketId);
+                 const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
+                 const ticketId = ticketDocRef.id;
                  const ticketNumber = await getNextTicketNumber(organizationId);
 
                  const newTicketData = {
-                    id: ticketId,
+                    id: ticketId, // Store the document's own ID
                     title: firstMessage.subject || 'No Subject',
                     sender: firstMessage.sender || 'Unknown Sender',
                     senderEmail: firstMessage.senderEmail || 'Unknown Email',
@@ -225,7 +225,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
         const data = ticketDoc.data();
         
         return {
-            id: ticketDoc.id,
+            id: ticketDoc.id, // Ensure we use the firestore document ID
             subject: data.title || 'No Subject',
             sender: data.sender || 'Unknown Sender',
             senderEmail: data.senderEmail || 'Unknown Email',
@@ -339,8 +339,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
 }
 
 
-export async function getEmail(organizationId: string, id: string): Promise<DetailedEmail> {
-    // This function now only reads from the database.
+export async function getEmail(organizationId: string, id: string): Promise<DetailedEmail | null> {
     if (!organizationId || !id) {
         throw new Error("Organization ID and Ticket ID must be provided.");
     }
@@ -350,51 +349,27 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     const ticketDocSnap = await getDoc(ticketDocRef);
 
     if (!ticketDocSnap.exists()) {
-        throw new Error("Ticket not found in the database.");
+        // Return null instead of throwing an error to allow the frontend to handle it.
+        return null;
     }
     const ticketData = ticketDocSnap.data();
     const conversationId = ticketData.conversationId;
 
-    if (!conversationId) {
-        // This case should be rare, but we handle it gracefully.
-        // It means we have a ticket record without a conversation. We can still show its properties.
-        return {
-            id: id,
-            subject: ticketData.title || 'No Subject',
-            sender: ticketData.sender || 'Unknown Sender',
-            senderEmail: ticketData.senderEmail || 'Unknown Email',
-            bodyPreview: ticketData.bodyPreview || '',
-            receivedDateTime: ticketData.receivedDateTime,
-            priority: ticketData.priority || 'Low',
-            assignee: ticketData.assignee || 'Unassigned',
-            status: ticketData.status || 'Open',
-            type: ticketData.type || 'Incident',
-            conversationId: ticketData.conversationId,
-            tags: ticketData.tags || [],
-            deadline: ticketData.deadline,
-            closedAt: ticketData.closedAt,
-            ticketNumber: ticketData.ticketNumber,
-            body: { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
-            conversation: [] // No conversation to show
-        };
-    }
-
     // 2. Get the conversation messages from our Firestore cache.
     let conversationMessages: DetailedEmail[] = [];
-    const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-    const conversationDoc = await getDoc(conversationDocRef);
+    if (conversationId) {
+        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
+        const conversationDoc = await getDoc(conversationDocRef);
 
-    if (conversationDoc.exists() && conversationDoc.data().messages) {
-        conversationMessages = conversationDoc.data().messages as DetailedEmail[];
-    } else {
-        // If not in cache, don't throw an error. We'll just show the main ticket info.
-        console.log("Conversation not cached. Some details may be missing.");
+        if (conversationDoc.exists() && conversationDoc.data().messages) {
+            conversationMessages = conversationDoc.data().messages as DetailedEmail[];
+        }
     }
     
+    // If there are no cached messages, create a placeholder from the main ticket data.
     if (conversationMessages.length === 0) {
-        // If there are no cached messages, create a placeholder from the main ticket data.
         const placeholderEmail: DetailedEmail = {
-            id: id,
+            id: ticketData.id || id,
             subject: ticketData.title || 'No Subject',
             sender: ticketData.sender || 'Unknown Sender',
             senderEmail: ticketData.senderEmail || 'Unknown Email',
@@ -414,22 +389,26 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationMessages.push(placeholderEmail);
     }
     
-    const mainEmail = conversationMessages.find(m => m.id === id) || conversationMessages[0];
-
-    // 3. Merge data from the ticket and the conversation for a complete view
-    return {
-        ...mainEmail,
-        id: id, // Ensure the ID is the ticket ID
-        subject: ticketData.title || mainEmail.subject || 'No Subject',
-        priority: ticketData.priority || 'Low',
-        assignee: ticketData.assignee || 'Unassigned',
-        status: ticketData.status || 'Open',
-        type: ticketData.type || 'Incident',
-        tags: ticketData.tags || [],
+    // The main email details are taken from the ticket, as it's the source of truth.
+    // The conversation is supplemental.
+    const mainEmailDetails = {
+        id: ticketData.id || id,
+        subject: ticketData.title || 'No Subject',
+        sender: ticketData.sender,
+        senderEmail: ticketData.senderEmail,
+        bodyPreview: ticketData.bodyPreview,
+        receivedDateTime: ticketData.receivedDateTime,
+        priority: ticketData.priority,
+        assignee: ticketData.assignee,
+        status: ticketData.status,
+        type: ticketData.type,
+        tags: ticketData.tags,
         deadline: ticketData.deadline,
         closedAt: ticketData.closedAt,
-        conversationId: conversationId,
+        conversationId: ticketData.conversationId,
         ticketNumber: ticketData.ticketNumber,
+        // Find the full body from the first message if possible
+        body: conversationMessages[0]?.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
             // Ensure all messages in the thread reflect the current ticket properties
@@ -439,6 +418,8 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             type: ticketData.type || 'Incident',
         })),
     };
+
+    return mainEmailDetails;
 }
 
 

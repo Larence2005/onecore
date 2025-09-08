@@ -200,6 +200,10 @@ export function TicketDetailContent({ id }: { id: string }) {
         try {
             const detailedEmail = await getEmail(userProfile.organizationId, id);
             
+            if (!detailedEmail) {
+                throw new Error("Ticket not found in the database.");
+            }
+
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
             setCurrentAssignee(detailedEmail.assignee);
