@@ -168,10 +168,10 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
     const priorities = [
-        { value: 'Low', label: 'Low', color: 'text-green-500' },
-        { value: 'Medium', label: 'Medium', color: 'text-blue-500' },
-        { value: 'High', label: 'High', color: 'text-yellow-500' },
-        { value: 'Urgent', label: 'Urgent', color: 'text-red-500' },
+        { value: 'Low', label: 'Low', color: 'text-green-500', icon: Shield },
+        { value: 'Medium', label: 'Medium', color: 'text-blue-500', icon: Shield },
+        { value: 'High', label: 'High', color: 'text-yellow-500', icon: Shield },
+        { value: 'Urgent', label: 'Urgent', color: 'text-red-500', icon: Shield },
     ];
     
     const statuses = [
@@ -933,7 +933,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
-                                                                <div className={cn("h-2 w-2 rounded-full", priorityDetails.color.replace('text-','bg-'))} />
+                                                                {priorityDetails && <priorityDetails.icon className={cn("h-4 w-4", priorityDetails.color)} />}
                                                                 {priorityDetails.label}
                                                             </span>
                                                         </SelectValue>
@@ -942,7 +942,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         {priorities.map(p => (
                                                             <SelectItem key={p.value} value={p.value}>
                                                                  <span className="flex items-center gap-2">
-                                                                    <div className={cn("h-2 w-2 rounded-full", p.color.replace('text-','bg-'))} />
+                                                                    <p.icon className={cn("h-4 w-4", p.color)} />
                                                                     {p.label}
                                                                 </span>
                                                             </SelectItem>
