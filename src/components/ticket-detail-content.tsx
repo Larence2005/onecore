@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar as CalendarIcon, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import parse from 'html-react-parser';
 import RichTextEditor from './rich-text-editor';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/firestore';
@@ -342,6 +342,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
     
     const handleDeadlineChange = (date: Date | undefined) => {
+        setCurrentDeadline(date); // Optimistic update
         handleUpdate('deadline', date ? date.toISOString() : null);
     }
     
@@ -918,7 +919,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
                                             </div>
                                              <div className="space-y-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><Calendar size={14} /> Submitted</div>
+                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarIcon size={14} /> Submitted</div>
                                                 <div className="font-medium text-sm">{format(parseISO(email.conversation?.[0].receivedDateTime || email.receivedDateTime), 'MMMM d, yyyy')}</div>
                                             </div>
                                         </div>
@@ -1027,7 +1028,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         </Button>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-auto p-0" align="end">
-                                                        <CalendarIcon
+                                                        <Calendar
                                                             mode="single"
                                                             selected={currentDeadline}
                                                             onSelect={handleDeadlineChange}
@@ -1100,5 +1101,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
 
+
+    
 
     
