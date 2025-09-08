@@ -73,7 +73,9 @@ export default function SignupPage() {
                 <p className="text-lg mt-2">Your unified ticketing system</p>
             </div>
             <Image src="/logo.png" alt="Company Logo" width={150} height={150} />
-            <div />
+            <div>
+              <p className="text-xs">© 2025 | all rights reserved</p>
+            </div>
         </div>
 
         <div className="w-full md:w-1/2 p-8 sm:p-12">
