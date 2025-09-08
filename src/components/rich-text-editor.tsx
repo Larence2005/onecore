@@ -16,6 +16,7 @@ interface RichTextEditorProps {
 
 const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichTextEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const isResizing = useRef(false);
 
     const cleanupResizeHandles = useCallback(() => {
@@ -123,6 +124,16 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
             }
         }
     };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files.length > 0) {
+            handleFile(event.target.files[0]);
+        }
+    };
+
+    const handleLocalImageClick = () => {
+        fileInputRef.current?.click();
+    };
     
     const applyFormat = (command: string, value?: string) => {
         if (editorRef.current) {
@@ -173,7 +184,7 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
         { icon: Bold, tooltip: "Bold", onClick: () => applyFormat('bold') },
         { icon: Italic, tooltip: "Italic", onClick: () => applyFormat('italic') },
         { icon: Link, tooltip: "Insert Link", onClick: handleLink },
-        { icon: ImageIcon, tooltip: "Insert Image URL", onClick: handleImage },
+        { icon: ImageIcon, tooltip: "Insert Image from Local", onClick: handleLocalImageClick },
         { icon: TableIcon, tooltip: "Insert Table", onClick: handleTable },
         { icon: List, tooltip: "Unordered List", onClick: () => applyFormat('insertUnorderedList') },
         { icon: ListOrdered, tooltip: "Ordered List", onClick: () => applyFormat('insertOrderedList') },
@@ -214,6 +225,13 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
             <Paperclip className="h-4 w-4" />
         </Button>
       </div>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+        accept="image/*"
+      />
       <div
         ref={editorRef}
         contentEditable
