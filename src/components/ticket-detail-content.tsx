@@ -511,7 +511,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     return (
         <SidebarProvider>
             <div className="grid min-h-screen w-full bg-background text-foreground lg:grid-cols-[240px_1fr]">
-                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 bg-white">
+                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full bg-white">
                     <div className="flex flex-col flex-grow">
                         <SidebarHeader className="mb-8 px-4">
                             <div className="flex items-center gap-2">
