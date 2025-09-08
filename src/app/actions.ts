@@ -12,6 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
+import { isPast, parseISO } from 'date-fns';
 
 
 export interface Email {
@@ -630,7 +631,8 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                 throw new Error("Ticket not found!");
             }
             
-            const conversationId = ticketDoc.data().conversationId;
+            const ticketData = ticketDoc.data();
+            const conversationId = ticketData.conversationId;
             let conversationDocRef: any, conversationDoc: any;
 
             if (data.assignee && conversationId) {
@@ -640,15 +642,38 @@ export async function updateTicket(organizationId: string, id: string, data: { p
 
             // --- WRITES AFTER ---
             const updateData: any = { ...data };
+
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
-                if(ticketDoc.data().status !== 'Resolved' && ticketDoc.data().status !== 'Closed') {
+                // Set closedAt if it's not already set
+                if(ticketData.status !== 'Resolved' && ticketData.status !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
                 }
+                
+                // Check for overdue status
+                if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
+                    const currentTags = ticketData.tags || [];
+                    if (!currentTags.includes('Resolved Late')) {
+                         // Use the passed `data.tags` if it exists, otherwise use current tags.
+                        const baseTags = data.tags !== undefined ? data.tags : currentTags;
+                        updateData.tags = [...baseTags, 'Resolved Late'];
+                    }
+                }
             }
+            
             if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
                 updateData.closedAt = null;
             }
             
+            // Handle tags separately to avoid overwriting the "Resolved Late" tag logic
+            if (data.tags !== undefined) {
+                 // If updateData.tags is already set (by late logic), merge them.
+                 if (updateData.tags) {
+                     updateData.tags = [...new Set([...data.tags, ...updateData.tags])];
+                 } else {
+                     updateData.tags = data.tags;
+                 }
+            }
+
             // Update the ticket
             transaction.update(ticketDocRef, updateData);
 
