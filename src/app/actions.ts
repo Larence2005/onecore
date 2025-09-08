@@ -55,6 +55,13 @@ export interface ActivityLog {
     user: string;
 }
 
+export interface Recipient {
+    emailAddress: {
+        name: string;
+        address: string;
+    }
+}
+
 
 export interface DetailedEmail extends Email {
     body: {
@@ -65,6 +72,9 @@ export interface DetailedEmail extends Email {
     inReplyToId?: string;
     attachments?: Attachment[];
     hasAttachments?: boolean;
+    toRecipients?: Recipient[];
+    ccRecipients?: Recipient[];
+    bccRecipients?: Recipient[];
 }
 
 export interface OrganizationMember {
@@ -261,7 +271,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         return [];
     }
 
-    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments&$expand=attachments`, {
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments,toRecipients,ccRecipients,bccRecipients&$expand=attachments`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
 
@@ -309,6 +319,9 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         type: ticketProperties.type,
         hasAttachments: msg.hasAttachments,
         attachments: msg.attachments,
+        toRecipients: msg.toRecipients,
+        ccRecipients: msg.ccRecipients,
+        bccRecipients: msg.bccRecipients,
     }));
 
     // Sort messages by date client-side

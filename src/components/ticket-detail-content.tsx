@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -509,6 +509,11 @@ export function TicketDetailContent({ id }: { id: string }) {
         setForwardComment('');
     };
 
+    const renderRecipientList = (recipients: Recipient[] | undefined) => {
+        if (!recipients || recipients.length === 0) return null;
+        return recipients.map(r => r.emailAddress.name || r.emailAddress.address).join(', ');
+    }
+
     
     const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => (
         <Card key={message.id} className="overflow-hidden">
@@ -518,8 +523,23 @@ export function TicketDetailContent({ id }: { id: string }) {
                 </Avatar>
                 <div className="flex-1 grid gap-1 text-sm">
                     <div className="font-semibold">{message.sender}</div>
-                     <div className="text-xs text-muted-foreground">
-                        To: {email?.sender === message.sender ? 'Me' : email?.sender}
+                    <div className="text-xs text-muted-foreground">
+                        <p>
+                            <span className="font-semibold">From:</span> {message.senderEmail}
+                        </p>
+                        <p>
+                            <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
+                        </p>
+                        {message.ccRecipients && message.ccRecipients.length > 0 && (
+                            <p>
+                                <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                            </p>
+                        )}
+                        {message.bccRecipients && message.bccRecipients.length > 0 && (
+                            <p>
+                                <span className="font-semibold">BCC:</span> {renderRecipientList(message.bccRecipients)}
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="text-xs text-muted-foreground text-right">
