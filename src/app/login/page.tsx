@@ -65,8 +65,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
         <div className="hidden md:flex flex-col items-center justify-center w-1/2 bg-foreground text-background p-12">
-          <h1 className="text-4xl font-bold mb-4">Welcome Page</h1>
-          <p className="text-center">Sign in to your account</p>
+          <Image src="/logo.png" alt="Company Logo" width={150} height={150} />
         </div>
 
         <div className="w-full md:w-1/2 p-8 sm:p-12">
