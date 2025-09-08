@@ -5,6 +5,7 @@ import { Bold, Italic, Link, List, ListOrdered, Image as ImageIcon, Code, Paperc
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect, useCallback } from "react";
+import { TableIcon } from "./ui/table-icon";
 
 interface RichTextEditorProps {
     value: string; // Now expects HTML string
@@ -145,11 +146,35 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
         }
     }
 
+    const handleTable = () => {
+        const rows = prompt("Enter number of rows:");
+        const cols = prompt("Enter number of columns:");
+        if (rows && cols) {
+            const numRows = parseInt(rows, 10);
+            const numCols = parseInt(cols, 10);
+            if (!isNaN(numRows) && !isNaN(numCols) && numRows > 0 && numCols > 0) {
+                let table = '<table style="border-collapse: collapse; width: 100%;">';
+                for (let i = 0; i < numRows; i++) {
+                    table += '<tr>';
+                    for (let j = 0; j < numCols; j++) {
+                        table += '<td style="border: 1px solid black; padding: 8px;">&nbsp;</td>';
+                    }
+                    table += '</tr>';
+                }
+                table += '</table><p><br></p>'; // Add a line break after the table
+                applyFormat('insertHTML', table);
+            } else {
+                alert("Please enter valid numbers for rows and columns.");
+            }
+        }
+    };
+
     const toolbarButtons = [
         { icon: Bold, tooltip: "Bold", onClick: () => applyFormat('bold') },
         { icon: Italic, tooltip: "Italic", onClick: () => applyFormat('italic') },
         { icon: Link, tooltip: "Insert Link", onClick: handleLink },
         { icon: ImageIcon, tooltip: "Insert Image URL", onClick: handleImage },
+        { icon: TableIcon, tooltip: "Insert Table", onClick: handleTable },
         { icon: List, tooltip: "Unordered List", onClick: () => applyFormat('insertUnorderedList') },
         { icon: ListOrdered, tooltip: "Ordered List", onClick: () => applyFormat('insertOrderedList') },
     ];
