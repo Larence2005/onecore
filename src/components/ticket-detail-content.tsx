@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, ArrowRightFromBracket } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -715,7 +715,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     Reply
                                                 </Button>
                                                 <Button variant="outline" onClick={handleForwardClick}>
-                                                    <ArrowRightFromBracket className="mr-2 h-4 w-4" />
+                                                    <Share className="mr-2 h-4 w-4" />
                                                     Forward
                                                 </Button>
                                            </>
@@ -1067,6 +1067,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
+
+    
 
     
 
