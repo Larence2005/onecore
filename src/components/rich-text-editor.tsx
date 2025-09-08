@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bold, Italic, Link, List, ListOrdered, Image as ImageIcon, Code, Paperclip } from "lucide-react";
+import { Bold, Italic, Link, List, ListOrdered, Image as ImageIcon, Code, Paperclip, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect, useCallback } from "react";
@@ -177,6 +177,11 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
         { icon: TableIcon, tooltip: "Insert Table", onClick: handleTable },
         { icon: List, tooltip: "Unordered List", onClick: () => applyFormat('insertUnorderedList') },
         { icon: ListOrdered, tooltip: "Ordered List", onClick: () => applyFormat('insertOrderedList') },
+        { icon: AlignLeft, tooltip: "Align Left", onClick: () => applyFormat('justifyLeft') },
+        { icon: AlignCenter, tooltip: "Align Center", onClick: () => applyFormat('justifyCenter') },
+        { icon: AlignRight, tooltip: "Align Right", onClick: () => applyFormat('justifyRight') },
+        { icon: AlignJustify, tooltip: "Align Justify", onClick: () => applyFormat('justifyFull') },
+        { icon: RemoveFormatting, tooltip: "Clear Formatting", onClick: () => applyFormat('removeFormat') },
     ];
     
     useEffect(() => {
@@ -198,7 +203,7 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
   return (
     <div className={cn("rounded-md border border-input focus-within:ring-2 focus-within:ring-ring", className)}>
       <div className="p-2 border-b border-input flex justify-between items-center flex-wrap">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
             {toolbarButtons.map(btn => (
                 <Button key={btn.tooltip} variant="ghost" size="icon" className="h-8 w-8" type="button" onClick={btn.onClick} title={btn.tooltip}>
                     <btn.icon className="h-4 w-4"/>
