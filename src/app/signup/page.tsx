@@ -20,9 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/providers/auth-provider";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
-import { Mail } from 'lucide-react';
+import Image from "next/image";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address."),
@@ -66,71 +65,75 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-        <Card className="w-full max-w-sm">
-            <CardHeader>
-                <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
-                <CardDescription>Enter your details to get started.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                            <Input type="email" placeholder="name@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                        <>
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                        </>
-                    ) : (
-                        "Sign Up"
-                    )}
-                    </Button>
-                </form>
-                </Form>
-            </CardContent>
-            <CardFooter className="text-sm">
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
+        <div className="hidden md:flex flex-col items-center justify-center w-1/2 bg-foreground text-background p-12">
+            <h1 className="text-4xl font-bold mb-4">Welcome</h1>
+            <p className="text-center">Create your account to get started</p>
+        </div>
+
+        <div className="w-full md:w-1/2 p-8 sm:p-12">
+            <div className="mb-8 text-left">
+                <h2 className="text-2xl font-bold text-primary">Create Your Account</h2>
+            </div>
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="font-semibold">Email Address</FormLabel>
+                    <FormControl>
+                        <Input type="email" placeholder="your@email.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="font-semibold">Password</FormLabel>
+                    <FormControl>
+                        <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="font-semibold">Confirm Password</FormLabel>
+                    <FormControl>
+                        <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <Button type="submit" className="w-full font-bold py-3" disabled={isSubmitting}>
+                {isSubmitting ? (
+                    <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                    </>
+                ) : (
+                    "SUBMIT"
+                )}
+                </Button>
+            </form>
+            </Form>
+            <div className="mt-8 text-center text-sm">
                 <p>Already have an account? <Link href="/login" className="font-medium text-primary hover:underline">Log in</Link></p>
-            </CardFooter>
-        </Card>
+            </div>
+        </div>
+      </div>
     </div>
   );
 }
