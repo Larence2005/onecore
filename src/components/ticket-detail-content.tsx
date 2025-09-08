@@ -198,7 +198,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     
         setIsLoading(true);
         try {
-            const detailedEmail = await getEmail(settings, userProfile.organizationId, id);
+            const detailedEmail = await getEmail(userProfile.organizationId, id);
             
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
@@ -221,7 +221,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         } finally {
             setIsLoading(false);
         }
-    }, [id, settings, toast, userProfile?.organizationId]);
+    }, [id, toast, userProfile?.organizationId]);
 
     useEffect(() => {
         fetchEmailData();
