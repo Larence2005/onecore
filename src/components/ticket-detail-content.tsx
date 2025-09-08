@@ -511,8 +511,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     return (
         <SidebarProvider>
             <div className="grid min-h-screen w-full bg-background text-foreground lg:grid-cols-[240px_1fr]">
-                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6">
-                    <SidebarContent className="flex-grow flex flex-col">
+                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 bg-white">
+                    <div className="flex flex-col flex-grow">
                         <SidebarHeader className="mb-8 px-4">
                             <div className="flex items-center gap-2">
                                 <Button variant="ghost" size="icon">
@@ -521,51 +521,53 @@ export function TicketDetailContent({ id }: { id: string }) {
                                 <span className="font-bold text-lg">Onecore</span>
                             </div>
                         </SidebarHeader>
-                        <SidebarMenu className="flex flex-col gap-2 px-4">
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                            <Pencil />
-                            <span>Compose</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                            <LayoutDashboard />
-                            <span>Dashboard</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
-                            <List />
-                            <span>Tickets</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                <Archive />
-                                <span>Archive</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                            <Users />
-                            <span>Clients</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                            <Building2 />
-                            <span>Organization</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                            <SettingsIcon />
-                            <span>Settings</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarContent>
+                        <SidebarContent className="flex-grow">
+                            <SidebarMenu className="flex flex-col gap-2 px-4">
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                                    <Pencil />
+                                    <span>Compose</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
+                                    <LayoutDashboard />
+                                    <span>Dashboard</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                                    <List />
+                                    <span>Tickets</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                                        <Archive />
+                                        <span>Archive</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
+                                    <Users />
+                                    <span>Clients</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
+                                    <Building2 />
+                                    <span>Organization</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
+                                    <SettingsIcon />
+                                    <span>Settings</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </SidebarContent>
+                    </div>
                     <SidebarFooter className="mt-auto p-4">
                         <div className="flex items-center gap-4">
                             <Avatar className="h-9 w-9">
@@ -573,7 +575,8 @@ export function TicketDetailContent({ id }: { id: string }) {
                             </Avatar>
                             <div className="flex flex-col">
                                 <span className="font-medium text-sm">{user.email}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>                            </div>
+                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                            </div>
                         </div>
                     </SidebarFooter>
                 </Sidebar>
@@ -907,6 +910,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
+
+    
 
     
 
