@@ -24,8 +24,12 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal, Send, RefreshCw } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
 
+const emailListRegex = /^$|^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(, *[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})*$/;
+
 const formSchema = z.object({
   recipient: z.string().email("Invalid email address."),
+  cc: z.string().regex(emailListRegex, { message: "Invalid CC email format." }).optional(),
+  bcc: z.string().regex(emailListRegex, { message: "Invalid BCC email format." }).optional(),
   subject: z.string().min(1, "Subject is required."),
   body: z.string().min(1, "Email body is required."),
 });
@@ -39,6 +43,8 @@ export function SendEmailForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       recipient: "",
+      cc: "",
+      bcc: "",
       subject: "",
       body: "",
     },
@@ -108,6 +114,32 @@ export function SendEmailForm() {
                 </FormItem>
               )}
             />
+             <FormField
+              control={form.control}
+              name="cc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CC</FormLabel>
+                  <FormControl>
+                    <Input placeholder="cc@example.com, another@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="bcc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>BCC</FormLabel>
+                  <FormControl>
+                    <Input placeholder="bcc@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="subject"
@@ -162,3 +194,5 @@ export function SendEmailForm() {
     </Card>
   );
 }
+
+    

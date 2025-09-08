@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { TimelineItem } from './timeline-item';
+import { Label } from './ui/label';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
@@ -138,6 +139,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [error, setError] = useState<string | null>(null);
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
+    const [replyCc, setReplyCc] = useState('');
+    const [replyBcc, setReplyBcc] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -398,11 +401,13 @@ export function TicketDetailContent({ id }: { id: string }) {
                 }))
             );
 
-            await replyToEmailAction(settings, userProfile.organizationId, latestMessageId, replyContent, email?.conversationId, attachmentPayloads);
+            await replyToEmailAction(settings, userProfile.organizationId, latestMessageId, replyContent, email?.conversationId, attachmentPayloads, replyCc, replyBcc);
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setAttachments([]);
             setIsReplying(false);
+            setReplyCc('');
+            setReplyBcc('');
             
             // After sending, refresh the conversation from the source
             if (email?.conversationId) {
@@ -425,6 +430,8 @@ export function TicketDetailContent({ id }: { id: string }) {
 
     const handleReplyClick = () => {
         setReplyContent('');
+        setReplyCc('');
+        setReplyBcc('');
         setIsReplying(true);
     };
 
@@ -432,6 +439,8 @@ export function TicketDetailContent({ id }: { id: string }) {
         setIsReplying(false);
         setReplyContent('');
         setAttachments([]);
+        setReplyCc('');
+        setReplyBcc('');
     };
 
     
@@ -653,6 +662,14 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     </Alert>
                                                 ) : (
                                                     <>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="reply-cc">Cc</Label>
+                                                            <Input id="reply-cc" placeholder="cc@example.com" value={replyCc} onChange={(e) => setReplyCc(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="reply-bcc">Bcc</Label>
+                                                            <Input id="reply-bcc" placeholder="bcc@example.com" value={replyBcc} onChange={(e) => setReplyBcc(e.target.value)} />
+                                                        </div>
                                                         <RichTextEditor
                                                             value={replyContent}
                                                             onChange={setReplyContent}
@@ -910,6 +927,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     );
 }
 
+
+    
 
     
 

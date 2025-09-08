@@ -422,8 +422,14 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     return mainEmailDetails;
 }
 
+const parseRecipients = (recipients: string | undefined): { emailAddress: { address: string } }[] => {
+    if (!recipients) return [];
+    return recipients.split(/[,; ]+/).filter(email => email.trim() !== '').map(email => ({
+        emailAddress: { address: email.trim() }
+    }));
+};
 
-export async function sendEmailAction(settings: Settings, emailData: {recipient: string, subject: string, body: string}): Promise<{ success: boolean }> {
+export async function sendEmailAction(settings: Settings, emailData: {recipient: string, subject: string, body: string, cc?: string, bcc?: string}): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
@@ -443,6 +449,8 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
                     },
                 },
             ],
+            ccRecipients: parseRecipients(emailData.cc),
+            bccRecipients: parseRecipients(emailData.bcc),
         },
         saveToSentItems: 'true',
     };
@@ -470,37 +478,53 @@ export async function replyToEmailAction(
     messageId: string,
     comment: string,
     conversationId: string | undefined,
-    attachments: NewAttachment[]
+    attachments: NewAttachment[],
+    cc: string | undefined,
+    bcc: string | undefined
 ): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
-    let replyPayload: any;
+    let replyPayload: any = {
+        comment: comment,
+        message: {
+            ccRecipients: parseRecipients(cc),
+            bccRecipients: parseRecipients(bcc),
+        }
+    };
 
     if (attachments && attachments.length > 0) {
-        // Use the 'message' object for replies with attachments
-        replyPayload = {
-            message: {
-                body: {
-                    contentType: 'HTML',
-                    content: comment,
-                },
-                attachments: attachments.map(att => ({
-                    '@odata.type': '#microsoft.graph.fileAttachment',
-                    name: att.name,
-                    contentBytes: att.contentBytes,
-                    contentType: att.contentType,
-                })),
-            },
-        };
-    } else {
-        // Use the simpler 'comment' for replies without attachments
-        replyPayload = {
-            comment: comment,
-        };
+        replyPayload.message.attachments = attachments.map(att => ({
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: att.name,
+            contentBytes: att.contentBytes,
+            contentType: att.contentType,
+        }));
     }
+    
+    // Note: The 'reply' endpoint doesn't directly support adding new recipients or attachments in one go.
+    // The standard 'reply' action with a simple 'comment' body is simpler.
+    // For advanced scenarios like adding attachments or changing recipients, creating a draft reply and then sending it is the robust way.
+    // However, for this implementation, we try a more direct approach which might have limitations depending on the exact API version/behavior.
+    // The Graph API for `reply` *can* take a `message` object to create a more complex reply draft. Let's build that.
+
+    const finalPayload = {
+        comment: comment, // The text part of the reply
+        message: { // The message object part of the reply
+            // MS Graph automatically adds the original sender to 'toRecipients' when replying.
+            // We can add CC and BCC recipients here.
+            ccRecipients: parseRecipients(cc),
+            bccRecipients: parseRecipients(bcc),
+            attachments: attachments.map(att => ({
+                '@odata.type': '#microsoft.graph.fileAttachment',
+                name: att.name,
+                contentBytes: att.contentBytes,
+                contentType: att.contentType,
+            })),
+        }
+    };
 
 
     const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`, {
@@ -509,7 +533,7 @@ export async function replyToEmailAction(
             Authorization: `Bearer ${authResponse.accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(replyPayload),
+        body: JSON.stringify(finalPayload),
     });
     
     if (response.status !== 202) {
@@ -795,4 +819,5 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     return { success: true };
 }
+    
     
