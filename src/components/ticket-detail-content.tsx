@@ -3,12 +3,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Calendar, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, ArrowRightFromBracket } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -137,10 +137,18 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [email, setEmail] = useState<DetailedEmail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [replyCc, setReplyCc] = useState('');
     const [replyBcc, setReplyBcc] = useState('');
+    
+    const [isForwarding, setIsForwarding] = useState(false);
+    const [forwardTo, setForwardTo] = useState('');
+    const [forwardCc, setForwardCc] = useState('');
+    const [forwardBcc, setForwardBcc] = useState('');
+    const [forwardComment, setForwardComment] = useState('');
+
     const [isSending, setIsSending] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -160,10 +168,10 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
     const priorities = [
-        { value: 'Low', label: 'Low' },
-        { value: 'Medium', label: 'Medium' },
-        { value: 'High', label: 'High' },
-        { value: 'Urgent', label: 'Urgent' },
+        { value: 'Low', label: 'Low', color: 'text-green-500' },
+        { value: 'Medium', label: 'Medium', color: 'text-blue-500' },
+        { value: 'High', label: 'High', color: 'text-yellow-500' },
+        { value: 'Urgent', label: 'Urgent', color: 'text-red-500' },
     ];
     
     const statuses = [
@@ -427,8 +435,49 @@ export function TicketDetailContent({ id }: { id: string }) {
             setIsSending(false);
         }
     };
+    
+    const handleSendForward = async () => {
+        if (!isConfigured || !userProfile?.organizationId) {
+            toast({ variant: "destructive", title: "API Settings Required" });
+            return;
+        }
+        if (!forwardTo.trim()) {
+            toast({ variant: "destructive", title: "Forward recipient is required." });
+            return;
+        }
+        setIsSending(true);
+        try {
+            const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
+            if (!latestMessageId) throw new Error("Could not determine message to forward.");
+
+            await forwardEmailAction(settings, userProfile.organizationId, latestMessageId, forwardComment, forwardTo, forwardCc, forwardBcc);
+            
+            toast({ title: "Email Forwarded!", description: "Your email has been forwarded successfully." });
+            setIsForwarding(false);
+            setForwardTo('');
+            setForwardCc('');
+            setForwardBcc('');
+            setForwardComment('');
+
+            if (email?.conversationId) {
+                await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
+            }
+            await fetchEmailData();
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            toast({
+                variant: "destructive",
+                title: "Failed to forward email.",
+                description: errorMessage,
+            });
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     const handleReplyClick = () => {
+        setIsForwarding(false);
         setReplyContent('');
         setReplyCc('');
         setReplyBcc('');
@@ -441,6 +490,23 @@ export function TicketDetailContent({ id }: { id: string }) {
         setAttachments([]);
         setReplyCc('');
         setReplyBcc('');
+    };
+
+    const handleForwardClick = () => {
+        setIsReplying(false);
+        setForwardTo('');
+        setForwardCc('');
+        setForwardBcc('');
+        setForwardComment('');
+        setIsForwarding(true);
+    };
+
+    const handleCancelForward = () => {
+        setIsForwarding(false);
+        setForwardTo('');
+        setForwardCc('');
+        setForwardBcc('');
+        setForwardComment('');
     };
 
     
@@ -515,6 +581,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     
     const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
+    const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
 
 
     return (
@@ -641,11 +708,17 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             renderMessageCard(email, true)
                                         )}
                                     </div>
-                                    <div className="flex justify-between items-center mt-4">
-                                        {!isReplying && (
-                                            <Button onClick={handleReplyClick}>
-                                                Reply
-                                            </Button>
+                                    <div className="flex justify-start items-center mt-4 gap-2">
+                                        {!isReplying && !isForwarding && (
+                                           <>
+                                                <Button onClick={handleReplyClick}>
+                                                    Reply
+                                                </Button>
+                                                <Button variant="outline" onClick={handleForwardClick}>
+                                                    <ArrowRightFromBracket className="mr-2 h-4 w-4" />
+                                                    Forward
+                                                </Button>
+                                           </>
                                         )}
                                     </div>
 
@@ -724,6 +797,63 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </CardContent>
                                         </Card>
                                     )}
+                                     {isForwarding && (
+                                        <Card>
+                                            <CardHeader>
+                                                <h3 className="text-lg font-semibold">Forward Email</h3>
+                                            </CardHeader>
+                                            <CardContent className="p-4 space-y-4">
+                                                 {!isConfigured ? (
+                                                     <Alert>
+                                                        <SettingsIcon className="h-4 w-4" />
+                                                        <AlertTitle>API Configuration Needed</AlertTitle>
+                                                        <AlertDescription>
+                                                            Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to forward emails.
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                ) : (
+                                                    <>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="forward-to">To</Label>
+                                                            <Input id="forward-to" placeholder="recipient@example.com" value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="forward-cc">Cc</Label>
+                                                            <Input id="forward-cc" placeholder="cc@example.com" value={forwardCc} onChange={(e) => setForwardCc(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="forward-bcc">Bcc</Label>
+                                                            <Input id="forward-bcc" placeholder="bcc@example.com" value={forwardBcc} onChange={(e) => setForwardBcc(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="forward-comment">Comment (optional)</Label>
+                                                            <RichTextEditor
+                                                                value={forwardComment}
+                                                                onChange={setForwardComment}
+                                                                onAttachmentClick={() => toast({ title: "Attachments not supported for forwarding yet."})}
+                                                            />
+                                                        </div>
+                                                         <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" onClick={handleCancelForward}>Cancel</Button>
+                                                            <Button onClick={handleSendForward} disabled={isSending}>
+                                                                {isSending ? (
+                                                                    <>
+                                                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                        Forwarding...
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Send className="mr-2 h-4 w-4" />
+                                                                        Forward
+                                                                    </>
+                                                                )}
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -780,11 +910,21 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
                                                 <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue />
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                <div className={cn("h-2 w-2 rounded-full", priorityDetails.color.replace('text-','bg-'))} />
+                                                                {priorityDetails.label}
+                                                            </span>
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {priorities.map(p => (
-                                                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                                                            <SelectItem key={p.value} value={p.value}>
+                                                                 <span className="flex items-center gap-2">
+                                                                    <div className={cn("h-2 w-2 rounded-full", p.color.replace('text-','bg-'))} />
+                                                                    {p.label}
+                                                                </span>
+                                                            </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>

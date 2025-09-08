@@ -562,6 +562,55 @@ export async function replyToEmailAction(
 }
 
 
+export async function forwardEmailAction(
+    settings: Settings,
+    organizationId: string,
+    messageId: string,
+    comment: string,
+    to: string,
+    cc: string | undefined,
+    bcc: string | undefined
+): Promise<{ success: boolean }> {
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token. Check your API settings.');
+    }
+
+    const toRecipients = parseRecipients(to);
+    if (toRecipients.length === 0) {
+        throw new Error("Forward recipient is required.");
+    }
+
+    const forwardPayload = {
+        comment: comment,
+        toRecipients: toRecipients,
+        ccRecipients: parseRecipients(cc),
+        bccRecipients: parseRecipients(bcc),
+    };
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/forward`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(forwardPayload),
+    });
+
+    if (response.status !== 202) {
+        const errorText = await response.text();
+        console.error("Failed to forward email. Status:", response.status, "Body:", errorText);
+        try {
+            const error = JSON.parse(errorText);
+            throw new Error(`Failed to forward email: ${error.error?.message || response.statusText}`);
+        } catch (e) {
+            throw new Error(`Failed to forward email: ${response.statusText} - ${errorText}`);
+        }
+    }
+
+    return { success: true };
+}
+
 
 export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
