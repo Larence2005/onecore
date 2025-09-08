@@ -11,6 +11,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase
 export interface UserProfile {
   uid: string;
   email: string;
+  name?: string;
   organizationId?: string;
   organizationName?: string;
   organizationOwnerUid?: string;
@@ -47,10 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let foundOrg = false;
     for (const orgDoc of allOrgsSnapshot.docs) {
         const members = orgDoc.data().members as {name: string, email: string}[];
-        if (members && members.some(member => member.email === user.email)) {
+        const memberInfo = members?.find(member => member.email === user.email);
+        if (memberInfo) {
             setUserProfile({
                 uid: user.uid,
                 email: user.email,
+                name: memberInfo.name,
                 organizationId: orgDoc.id,
                 organizationName: orgDoc.data().name,
                 organizationOwnerUid: orgDoc.data().owner,
@@ -66,15 +69,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const ownerOrgSnapshot = await getDocs(q);
         if (!ownerOrgSnapshot.empty) {
             const orgDoc = ownerOrgSnapshot.docs[0];
+            const ownerMemberInfo = (orgDoc.data().members as {name: string, email: string}[])?.find(m => m.email === user.email);
             setUserProfile({
                 uid: user.uid,
                 email: user.email,
+                name: ownerMemberInfo?.name || user.email,
                 organizationId: orgDoc.id,
                 organizationName: orgDoc.data().name,
                 organizationOwnerUid: orgDoc.data().owner,
             });
         } else {
-            setUserProfile({ uid: user.uid, email: user.email });
+            setUserProfile({ uid: user.uid, email: user.email, name: user.email });
         }
     }
   }, []);
