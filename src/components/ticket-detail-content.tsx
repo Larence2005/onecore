@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Calendar as CalendarIcon, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, Settings as SettingsIcon, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -919,7 +919,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                 <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
                                             </div>
                                              <div className="space-y-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarIcon size={14} /> Submitted</div>
+                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
                                                 <div className="font-medium text-sm">{format(parseISO(email.conversation?.[0].receivedDateTime || email.receivedDateTime), 'MMMM d, yyyy')}</div>
                                             </div>
                                         </div>
