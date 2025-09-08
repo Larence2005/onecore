@@ -511,7 +511,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
     const renderRecipientList = (recipients: Recipient[] | undefined) => {
         if (!recipients || recipients.length === 0) return null;
-        return recipients.map(r => r.emailAddress.name || r.emailAddress.address).join(', ');
+        return recipients.map(r => r.emailAddress.address).join(', ');
     }
 
     
@@ -1099,3 +1099,4 @@ export function TicketDetailContent({ id }: { id: string }) {
     
 
     
+
