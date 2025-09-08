@@ -69,7 +69,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
 
     const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
-    const isLate = email.deadline && email.closedAt && isPast(parseISO(email.deadline), parseISO(email.closedAt));
+    const isResolvedLate = email.deadline && email.closedAt && new Date(email.closedAt) > new Date(email.deadline);
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type', value: string) => {
@@ -124,7 +124,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 <Link href={`/tickets/${email.id}`} className="flex-1 min-w-0 w-full cursor-pointer">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {isOverdue && <Badge variant="destructive">Overdue</Badge>}
-                        {isLate && <Badge variant="destructive" className="bg-orange-500">Late</Badge>}
+                        {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
                         {email.tags?.map(tag => (
                            <Badge key={tag} variant="outline">{tag}</Badge>
                         ))}
