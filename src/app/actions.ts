@@ -359,7 +359,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     if (!organizationId || !id) {
         throw new Error("Organization ID and Ticket ID must be provided.");
     }
-    
+
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     const ticketDocSnap = await getDoc(ticketDocRef);
 
@@ -373,14 +373,10 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     if (conversationId) {
         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
         const conversationDoc = await getDoc(conversationDocRef);
-
         if (conversationDoc.exists() && conversationDoc.data().messages) {
             conversationMessages = conversationDoc.data().messages as DetailedEmail[];
         }
     }
-    
-    const originalSender = conversationMessages.length > 0 ? conversationMessages[0].sender : ticketData.sender;
-    const originalSenderEmail = conversationMessages.length > 0 ? conversationMessages[0].senderEmail : ticketData.senderEmail;
 
     if (conversationMessages.length === 0) {
         const placeholderEmail: DetailedEmail = {
@@ -404,13 +400,16 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationMessages.push(placeholderEmail);
     }
     
+    // The first message in the sorted conversation is the one we use for body content
     const firstMessage = conversationMessages[0];
 
+    // The main email object uses the ticket's data for core properties
+    // and the first message's data for the initial body content.
     const mainEmailDetails: DetailedEmail = {
         id: ticketData.id || id,
         subject: ticketData.title || 'No Subject',
-        sender: originalSender,
-        senderEmail: originalSenderEmail,
+        sender: ticketData.sender || 'Unknown Sender', // Always use the ticket's original sender
+        senderEmail: ticketData.senderEmail || 'Unknown Email', // Always use the ticket's original sender email
         bodyPreview: ticketData.bodyPreview,
         receivedDateTime: ticketData.receivedDateTime,
         priority: ticketData.priority,
@@ -423,6 +422,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationId: ticketData.conversationId,
         ticketNumber: ticketData.ticketNumber,
         body: firstMessage.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
+        // The conversation array is the thread of messages.
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
             priority: ticketData.priority || 'Low',
@@ -434,6 +434,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
 
     return mainEmailDetails;
 }
+
 
 
 const parseRecipients = (recipients: string | undefined): { emailAddress: { address: string } }[] => {
@@ -651,13 +652,6 @@ export async function updateTicket(organizationId: string, id: string, data: { p
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
                 if(ticketData.status !== 'Resolved' && ticketData.status !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
-                }
-                 // Check for "Resolved Late" tag logic
-                if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
-                    const currentTags = ticketData.tags || [];
-                    if (!currentTags.includes('Resolved Late')) {
-                        updateData.tags = [...currentTags, 'Resolved Late'];
-                    }
                 }
             }
             
@@ -927,4 +921,5 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     return { success: true };
 }
+    
     

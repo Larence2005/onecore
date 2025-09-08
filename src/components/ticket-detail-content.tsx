@@ -920,7 +920,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                             </div>
                                              <div className="space-y-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
-                                                <div className="font-medium text-sm">{format(parseISO(email.conversation?.[0].receivedDateTime || email.receivedDateTime), 'MMMM d, yyyy')}</div>
+                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
                                             </div>
                                         </div>
 
@@ -1088,3 +1088,5 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
