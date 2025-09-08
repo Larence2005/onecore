@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/f
 import { db } from '@/lib/firebase';
 import { TimelineItem } from './timeline-item';
 import { Label } from './ui/label';
+import { TableIcon } from './ui/table-icon';
 
 
 const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
@@ -168,10 +169,10 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
     const priorities = [
-        { value: 'Low', label: 'Low', color: 'text-green-500', icon: Shield },
-        { value: 'Medium', label: 'Medium', color: 'text-blue-500', icon: Shield },
-        { value: 'High', label: 'High', color: 'text-yellow-500', icon: Shield },
-        { value: 'Urgent', label: 'Urgent', color: 'text-red-500', icon: Shield },
+        { value: 'Low', label: 'Low', color: 'bg-green-500' },
+        { value: 'Medium', label: 'Medium', color: 'bg-blue-500' },
+        { value: 'High', label: 'High', color: 'bg-yellow-500' },
+        { value: 'Urgent', label: 'Urgent', color: 'bg-red-500' },
     ];
     
     const statuses = [
@@ -419,10 +420,13 @@ export function TicketDetailContent({ id }: { id: string }) {
             setReplyBcc('');
             
             // After sending, refresh the conversation from the source
+            // Let the background sync handle updates
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds for Graph API to process
             if (email?.conversationId) {
                 await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
             }
             await fetchEmailData();
+
 
         } catch (err)
             {
@@ -933,7 +937,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
-                                                                {priorityDetails && <priorityDetails.icon className={cn("h-4 w-4", priorityDetails.color)} />}
+                                                                <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
                                                                 {priorityDetails.label}
                                                             </span>
                                                         </SelectValue>
@@ -942,7 +946,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         {priorities.map(p => (
                                                             <SelectItem key={p.value} value={p.value}>
                                                                  <span className="flex items-center gap-2">
-                                                                    <p.icon className={cn("h-4 w-4", p.color)} />
+                                                                    <span className={cn("h-2 w-2 rounded-full",p.color)} />
                                                                     {p.label}
                                                                 </span>
                                                             </SelectItem>

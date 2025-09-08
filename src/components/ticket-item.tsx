@@ -69,7 +69,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
 
     const isOverdue = email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
-    const isResolvedLate = email.deadline && email.closedAt && new Date(email.closedAt) > new Date(email.deadline);
+    const isResolvedLate = !!(email.tags?.includes('Resolved Late'));
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
     const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type', value: string) => {
@@ -125,7 +125,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {isOverdue && <Badge variant="destructive">Overdue</Badge>}
                         {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
-                        {email.tags?.map(tag => (
+                        {email.tags?.filter(t => t !== 'Resolved Late').map(tag => (
                            <Badge key={tag} variant="outline">{tag}</Badge>
                         ))}
                     </div>
@@ -224,3 +224,4 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         </li>
     );
 }
+

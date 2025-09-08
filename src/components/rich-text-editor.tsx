@@ -246,3 +246,4 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
 };
 
 export default RichTextEditor;
+

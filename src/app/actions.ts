@@ -343,7 +343,8 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
             await updateDoc(ticketDocRef, {
                 bodyPreview: lastMessage.bodyPreview,
                 receivedDateTime: lastMessage.receivedDateTime,
-                // DO NOT update sender and senderEmail here, as it overwrites the original ticket creator
+                sender: querySnapshot.docs[0].data().sender,
+                senderEmail: querySnapshot.docs[0].data().senderEmail,
             });
         }
     }
@@ -642,6 +643,13 @@ export async function updateTicket(organizationId: string, id: string, data: { p
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
                 if(ticketData.status !== 'Resolved' && ticketData.status !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
+                }
+                 // Check for "Resolved Late"
+                if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
+                    const currentTags = ticketData.tags || [];
+                    if (!currentTags.includes('Resolved Late')) {
+                        updateData.tags = arrayUnion('Resolved Late');
+                    }
                 }
             }
             
