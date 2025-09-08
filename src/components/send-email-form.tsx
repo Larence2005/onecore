@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,13 +16,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { sendEmailAction } from "@/app/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal, Send, RefreshCw } from "lucide-react";
+import RichTextEditor from "./rich-text-editor";
 
 const formSchema = z.object({
   recipient: z.string().email("Invalid email address."),
@@ -84,7 +85,7 @@ export function SendEmailForm() {
   }
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="max-w-2xl w-full">
       <CardHeader>
         <CardTitle className="font-headline">Compose Email</CardTitle>
         <CardDescription>
@@ -127,10 +128,15 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>Body</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Write your message here..."
-                      className="resize-y min-h-[150px]"
-                      {...field}
+                    <RichTextEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      onAttachmentClick={() => {
+                        toast({
+                          title: "Attachments not supported",
+                          description: "This feature is not yet implemented for new emails."
+                        })
+                      }}
                     />
                   </FormControl>
                   <FormMessage />

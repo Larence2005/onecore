@@ -433,7 +433,7 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
         message: {
             subject: emailData.subject,
             body: {
-                contentType: 'Text',
+                contentType: 'HTML', // Send as HTML
                 content: emailData.body,
             },
             toRecipients: [
