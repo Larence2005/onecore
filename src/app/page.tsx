@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
@@ -178,6 +178,10 @@ function HomePageContent() {
     }
   }
 
+  const onApplyFilters = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+  }, []);
+
   if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -186,11 +190,6 @@ function HomePageContent() {
     );
   }
   
-  const onApplyFilters = useCallback((newFilters: FilterState) => {
-    setFilters(newFilters);
-  }, []);
-
-
   return (
     <SidebarProvider>
       <div className={cn(
@@ -198,71 +197,71 @@ function HomePageContent() {
         activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_280px]" : "lg:grid-cols-[240px_1fr]"
       )}>
         <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
-          <SidebarHeader className="mb-8 px-4">
+            <SidebarHeader className="mb-8 px-4">
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
                 </Button>
                 <span className="font-bold text-lg">Onecore</span>
               </div>
-          </SidebarHeader>
-          <SidebarFooter className="p-4">
-            <div className="flex items-center gap-4">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                    <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                    <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
-                </div>
-            </div>
-          </SidebarFooter>
-          <SidebarContent className="flex-grow">
-            <SidebarMenu className="flex flex-col gap-2 px-4">
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
-                  <Pencil className="text-blue-500" />
-                  <span>Compose</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
-                  <LayoutDashboard className="text-purple-500" />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
-                  <List className="text-green-500" />
-                  <span>Tickets</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
-                      <Archive className="text-orange-500" />
-                      <span>Archive</span>
+            </SidebarHeader>
+            <SidebarFooter className="p-4">
+              <div className="flex items-center gap-4">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                      <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                      <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                  </div>
+              </div>
+            </SidebarFooter>
+            <SidebarContent className="flex-grow">
+              <SidebarMenu className="flex flex-col gap-2 px-4">
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
+                    <Pencil className="text-blue-500" />
+                    <span>Compose</span>
                   </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
-                  <Users className="text-pink-500" />
-                  <span>Clients</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
-                  <Building2 className="text-yellow-500" />
-                  <span>Organization</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
-                  <Settings className="text-gray-500" />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
+                    <LayoutDashboard className="text-purple-500" />
+                    <span>Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
+                    <List className="text-green-500" />
+                    <span>Tickets</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
+                        <Archive className="text-orange-500" />
+                        <span>Archive</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
+                    <Users className="text-pink-500" />
+                    <span>Clients</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
+                    <Building2 className="text-yellow-500" />
+                    <span>Organization</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
+                    <Settings className="text-gray-500" />
+                    <span>Settings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarContent>
         </Sidebar>
 
         <main className="flex-1 flex flex-col min-w-0">
