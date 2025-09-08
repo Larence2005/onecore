@@ -1032,6 +1032,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                             mode="single"
                                                             selected={currentDeadline}
                                                             onSelect={handleDeadlineChange}
+                                                            initialFocus
                                                         />
                                                     </PopoverContent>
                                                 </Popover>
