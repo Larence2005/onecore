@@ -333,9 +333,8 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: conversationMessages });
 
-    // When a conversation is updated, we also need to update the main ticket's bodyPreview
+    // When a conversation is updated, we also need to update the main ticket's bodyPreview and received time
     if (conversationMessages.length > 0) {
-        const firstMessage = conversationMessages[0];
         const lastMessage = conversationMessages[conversationMessages.length - 1];
 
         // Find the corresponding ticket document
@@ -344,8 +343,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
             await updateDoc(ticketDocRef, {
                 bodyPreview: lastMessage.bodyPreview,
                 receivedDateTime: lastMessage.receivedDateTime,
-                sender: lastMessage.sender,
-                senderEmail: lastMessage.senderEmail,
+                // DO NOT update sender and senderEmail here, as it overwrites the original ticket creator
             });
         }
     }
@@ -922,4 +920,5 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     return { success: true };
 }
     
+
     
