@@ -194,11 +194,11 @@ function HomePageContent() {
   return (
     <SidebarProvider>
       <div className={cn(
-        "grid min-h-screen w-full bg-background text-foreground",
+        "grid min-h-screen w-full text-foreground",
         activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_280px]" : "lg:grid-cols-[240px_1fr]"
       )}>
         <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
-          <div className="flex-grow">
+          <div className="flex-grow flex flex-col">
             <SidebarHeader className="mb-8 px-4">
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon">

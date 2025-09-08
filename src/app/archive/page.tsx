@@ -52,7 +52,7 @@ export default function ArchivePage() {
 
     return (
         <SidebarProvider>
-            <div className="grid min-h-screen w-full bg-background text-foreground lg:grid-cols-[240px_1fr]">
+            <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
                 <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                     <div className="flex-grow">
                         <SidebarHeader className="mb-8 px-4">
