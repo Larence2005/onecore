@@ -12,6 +12,7 @@ import { Search } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { getOrganizationMembers } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
+import { cn } from '@/lib/utils';
 
 export interface FilterState {
   search: string;
@@ -83,7 +84,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null].filter(Boolean).length;
 
   return (
-    <aside className="hidden lg:block w-72 border-l bg-card">
+    <aside className="hidden lg:block w-72 border-l">
       <div className="sticky top-0 h-screen flex flex-col">
         <div className="flex-shrink-0 p-4 border-b">
           <div className="flex justify-between items-center mb-4">
@@ -104,7 +105,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
             />
           </div>
         </div>
-        <div className="flex-grow overflow-y-auto">
+        <div className="flex-grow overflow-y-auto no-scrollbar">
           <Accordion type="multiple" defaultValue={['status', 'priority', 'type', 'agents', 'groups', 'tags', 'created']} className="w-full">
             <AccordionItem value="status">
               <AccordionTrigger className="px-4 text-base font-semibold">Status</AccordionTrigger>
