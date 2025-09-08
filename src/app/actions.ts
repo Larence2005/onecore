@@ -560,17 +560,9 @@ export async function replyToEmailAction(
         }
     }
 
-    // After successfully sending a reply, invalidate the cache
-    if (conversationId) {
-        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-        try {
-            await deleteDoc(conversationDocRef);
-        } catch (error) {
-            console.error("Failed to delete conversation cache:", error);
-            // Don't throw, just log. The cache will expire or be overwritten eventually.
-        }
-    }
-
+    // After successfully sending a reply, DO NOT invalidate the cache immediately.
+    // Let the background sync handle it to prevent race conditions.
+    
     return { success: true };
 }
 
@@ -919,6 +911,7 @@ export async function deleteMemberFromOrganization(organizationId: string, email
 
     return { success: true };
 }
+    
     
 
     
