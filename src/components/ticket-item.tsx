@@ -121,7 +121,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                     {email.ticketNumber && <span className="text-sm font-medium text-muted-foreground">#{email.ticketNumber}</span>}
                 </div>
                 
-                <Link href={`/tickets/${email.id}`} className="flex-grow min-w-0 w-full cursor-pointer">
+                <Link href={`/tickets/${email.id}`} className="flex-1 min-w-0 w-full cursor-pointer">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {isOverdue && <Badge variant="destructive">Overdue</Badge>}
                         {isLate && <Badge variant="destructive" className="bg-orange-500">Late</Badge>}
@@ -129,7 +129,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                            <Badge key={tag} variant="outline">{tag}</Badge>
                         ))}
                     </div>
-                    <p className="font-medium text-foreground whitespace-nowrap overflow-hidden text-ellipsis">{email.subject}</p>
+                    <p className="font-medium text-foreground truncate">{email.subject}</p>
 
                     <p className="text-sm text-muted-foreground truncate">
                         {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}
