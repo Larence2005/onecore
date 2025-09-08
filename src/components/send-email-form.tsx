@@ -108,7 +108,7 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>Recipient</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
+                    <Input placeholder="name@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -121,7 +121,7 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>CC</FormLabel>
                   <FormControl>
-                    <Input placeholder="cc@example.com, another@example.com" {...field} />
+                    <Input placeholder="cc@example.com, another@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,7 +134,7 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>BCC</FormLabel>
                   <FormControl>
-                    <Input placeholder="bcc@example.com" {...field} />
+                    <Input placeholder="bcc@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -147,7 +147,7 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>Subject</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your email subject" {...field} />
+                    <Input placeholder="Your email subject" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

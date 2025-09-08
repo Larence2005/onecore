@@ -69,10 +69,10 @@ export default function SignupPage() {
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
         <div className="hidden md:flex flex-col items-center justify-between w-1/2 bg-foreground text-background p-12 text-center">
             <div>
-                <h1 className="text-4xl font-bold">Onecore Support</h1>
+                <h3 className="text-3xl font-bold">Onecore Support</h3>
                 <p className="text-lg mt-2">Your unified ticketing system</p>
             </div>
-            <Image src="/logo.png" alt="Company Logo" width={150} height={150} />
+            <Image src="/logo.png" alt="Company Logo" width={200} height={200} />
             <div>
               <p className="text-xs">© 2025 | All Rights Reserved</p>
             </div>
