@@ -8,7 +8,7 @@ import {
     AuthenticationResult
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion, arrayRemove, addDoc, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion, arrayRemove, addDoc, orderBy, limit } from 'firebase/firestore';
 import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
@@ -54,6 +54,8 @@ export interface ActivityLog {
     details: string;
     date: string;
     user: string;
+    ticketId?: string;
+    ticketSubject?: string;
 }
 
 export interface Recipient {
@@ -650,6 +652,13 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                 if(ticketData.status !== 'Resolved' && ticketData.status !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
                 }
+                 // Check for "Resolved Late" tag logic
+                if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
+                    const currentTags = ticketData.tags || [];
+                    if (!currentTags.includes('Resolved Late')) {
+                        updateData.tags = [...currentTags, 'Resolved Late'];
+                    }
+                }
             }
             
             if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
@@ -756,6 +765,41 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
     } catch (error) {
         console.error("Failed to get activity log:", error);
+        return [];
+    }
+}
+
+export async function getAllActivityLogs(organizationId: string): Promise<ActivityLog[]> {
+    if (!organizationId) {
+        return [];
+    }
+
+    try {
+        const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
+        const ticketsSnapshot = await getDocs(ticketsCollectionRef);
+        let allLogs: ActivityLog[] = [];
+
+        for (const ticketDoc of ticketsSnapshot.docs) {
+            const ticketData = ticketDoc.data();
+            const activityCollectionRef = collection(ticketDoc.ref, 'activity');
+            const activitySnapshot = await getDocs(activityCollectionRef);
+            
+            const logs = activitySnapshot.docs.map(logDoc => ({
+                id: logDoc.id,
+                ...(logDoc.data() as Omit<ActivityLog, 'id'>),
+                ticketId: ticketDoc.id,
+                ticketSubject: ticketData.title || 'No Subject'
+            }));
+            
+            allLogs = allLogs.concat(logs);
+        }
+
+        // Sort all logs by date descending and take the most recent ones
+        allLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        return allLogs.slice(0, 20); // Limit to the 20 most recent activities
+    } catch (error) {
+        console.error("Failed to get all activity logs:", error);
         return [];
     }
 }

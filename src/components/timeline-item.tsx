@@ -36,17 +36,23 @@ const getIcon = (type: TimelineItemProps['type']) => {
 
 export function TimelineItem({ type, date, children, user }: TimelineItemProps) {
     const isSystemUser = user === 'System' || (typeof user === 'string' && !user.includes('@'));
+    
+    // Handle cases where `user` might be null or undefined, or not a string
+    const displayUser = typeof user === 'string' ? (isSystemUser ? 'System' : user) : 'Unknown';
+
     return (
         <div className="flex items-start gap-4">
             <div className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                "flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground flex-shrink-0"
             )}>
                 {getIcon(type)}
             </div>
-            <div className="flex-1 space-y-1">
-                <p className="text-sm text-foreground">
-                    {children} by <span className="font-semibold">{isSystemUser ? 'System' : user}</span>
-                </p>
+            <div className="flex-1 space-y-1 min-w-0">
+                <div className="text-sm text-foreground">
+                    <span className="font-semibold">{displayUser}</span>
+                    <span className="text-muted-foreground"> {type === "Create" ? 'created a ticket' : 'updated the ticket'}</span>
+                </div>
+                <div className="text-sm text-foreground break-words">{children}</div>
                 <time className="text-xs text-muted-foreground">
                     {formatDistanceToNow(parseISO(date), { addSuffix: true })}
                 </time>

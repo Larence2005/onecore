@@ -2,18 +2,19 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import type { Email } from '@/app/actions';
-import { getTicketsFromDB } from '@/app/actions';
+import type { Email, ActivityLog } from '@/app/actions';
+import { getTicketsFromDB, getAllActivityLogs } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock } from 'lucide-react';
+import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays } from 'date-fns';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { useAuth } from '@/providers/auth-provider';
+import { TimelineItem } from './timeline-item';
 
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
@@ -32,6 +33,7 @@ const StatCard = ({ title, value, icon: Icon }: { title: string, value: string |
 export function DashboardView() {
     const { userProfile } = useAuth();
     const [tickets, setTickets] = useState<Email[]>([]);
+    const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
@@ -39,13 +41,19 @@ export function DashboardView() {
     useEffect(() => {
         if (!userProfile?.organizationId) return;
 
-        const fetchTickets = async () => {
+        const fetchData = async () => {
             setIsLoading(true);
             setError(null);
             try {
                 // Fetch all tickets including archived for historical data
-                const allTickets = await getTicketsFromDB(userProfile.organizationId!, { fetchAll: true });
+                const [allTickets, allLogs] = await Promise.all([
+                    getTicketsFromDB(userProfile.organizationId!, { fetchAll: true }),
+                    getAllActivityLogs(userProfile.organizationId!)
+                ]);
+
                 setTickets(allTickets);
+                setActivityLogs(allLogs);
+
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
                 setError(errorMessage);
@@ -59,7 +67,7 @@ export function DashboardView() {
             }
         };
 
-        fetchTickets();
+        fetchData();
     }, [userProfile, toast]);
     
     const stats = useMemo(() => {
@@ -294,6 +302,32 @@ export function DashboardView() {
                     </CardContent>
                 </Card>
             </div>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Activity className="h-5 w-5" />
+                        All Activity
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+                    {activityLogs.length > 0 ? (
+                        activityLogs.map((log) => (
+                            <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                <div className="flex flex-wrap items-center gap-x-2">
+                                   <span>{log.details} on ticket</span> 
+                                   <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
+                                        {log.ticketSubject}
+                                   </Link>
+                                </div>
+                            </TimelineItem>
+                        ))
+                    ) : (
+                        <div className="text-center text-sm text-muted-foreground py-8">
+                             <p>No recent activity across all tickets.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }
