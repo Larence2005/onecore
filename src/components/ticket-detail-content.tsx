@@ -1026,7 +1026,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                             {currentDeadline ? format(currentDeadline, 'MMMM d, yyyy') : 'Set deadline'}
                                                         </Button>
                                                     </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                    <PopoverContent className="w-auto p-0" align="end">
                                                         <CalendarIcon
                                                             mode="single"
                                                             selected={currentDeadline}
@@ -1098,6 +1098,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
     
 
+
+
+
     
-
-
