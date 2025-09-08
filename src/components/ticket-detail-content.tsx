@@ -164,17 +164,17 @@ export function TicketDetailContent({ id }: { id: string }) {
     ];
     
     const statuses = [
-        { value: 'Open', label: 'Open', icon: CircleDot },
-        { value: 'Pending', label: 'Pending', icon: Clock },
-        { value: 'Resolved', label: 'Resolved', icon: CheckCircle },
-        { value: 'Closed', label: 'Closed', icon: CheckCircle2 },
+        { value: 'Open', label: 'Open', icon: CircleDot, color: 'text-blue-500' },
+        { value: 'Pending', label: 'Pending', icon: Clock, color: 'text-orange-500' },
+        { value: 'Resolved', label: 'Resolved', icon: CheckCircle, color: 'text-green-500' },
+        { value: 'Closed', label: 'Closed', icon: CheckCircle2, color: 'text-gray-500' },
     ];
 
     const types = [
-        { value: 'Questions', label: 'Questions', icon: HelpCircle },
-        { value: 'Incident', label: 'Incident', icon: ShieldAlert },
-        { value: 'Problem', label: 'Problem', icon: Bug },
-        { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb },
+        { value: 'Questions', label: 'Questions', icon: HelpCircle, color: 'text-blue-500' },
+        { value: 'Incident', label: 'Incident', icon: ShieldAlert, color: 'text-orange-500' },
+        { value: 'Problem', label: 'Problem', icon: Bug, color: 'text-red-500' },
+        { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb, color: 'text-purple-500' },
     ];
     
     useEffect(() => {
@@ -778,7 +778,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                             <span className="flex items-center gap-2">
-                                                                {statusDetails && <statusDetails.icon className="h-4 w-4" />}
+                                                                {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
                                                                 {statusDetails?.label}
                                                             </span>
                                                         </SelectValue>
@@ -787,7 +787,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         {statuses.map(s => (
                                                             <SelectItem key={s.value} value={s.value}>
                                                                 <span className="flex items-center gap-2">
-                                                                    <s.icon className="h-4 w-4" />
+                                                                    <s.icon className={cn("h-4 w-4", s.color)} />
                                                                     {s.label}
                                                                 </span>
                                                             </SelectItem>
@@ -824,7 +824,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                         <SelectValue>
                                                            <span className="flex items-center gap-2">
-                                                                {typeDetails && <typeDetails.icon className="h-4 w-4" />}
+                                                                {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
                                                                 {typeDetails?.label}
                                                             </span>
                                                         </SelectValue>
@@ -833,7 +833,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         {types.map(t => (
                                                             <SelectItem key={t.value} value={t.value}>
                                                                 <span className="flex items-center gap-2">
-                                                                    <t.icon className="h-4 w-4" />
+                                                                    <t.icon className={cn("h-4 w-4", t.color)} />
                                                                     {t.label}
                                                                 </span>
                                                             </SelectItem>
