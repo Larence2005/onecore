@@ -74,7 +74,7 @@ export default function SignupPage() {
             </div>
             <Image src="/logo.png" alt="Company Logo" width={150} height={150} />
             <div>
-              <p className="text-xs">© 2025 | all rights reserved</p>
+              <p className="text-xs">© 2025 | All Rights Reserved</p>
             </div>
         </div>
 
