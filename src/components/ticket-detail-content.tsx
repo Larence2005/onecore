@@ -758,11 +758,11 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="reply-cc">Cc</Label>
-                                                            <Input id="reply-cc" placeholder="cc@example.com" value={replyCc} onChange={(e) => setReplyCc(e.target.value)} />
+                                                            <Input id="reply-cc" placeholder="cc@example.com" value={replyCc} onChange={(e) => setReplyCc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="reply-bcc">Bcc</Label>
-                                                            <Input id="reply-bcc" placeholder="bcc@example.com" value={replyBcc} onChange={(e) => setReplyBcc(e.target.value)} />
+                                                            <Input id="reply-bcc" placeholder="bcc@example.com" value={replyBcc} onChange={(e) => setReplyBcc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                                                         </div>
                                                         <RichTextEditor
                                                             value={replyContent}
@@ -836,15 +836,15 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-to">To</Label>
-                                                            <Input id="forward-to" placeholder="recipient@example.com" value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} />
+                                                            <Input id="forward-to" placeholder="recipient@example.com" value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-cc">Cc</Label>
-                                                            <Input id="forward-cc" placeholder="cc@example.com" value={forwardCc} onChange={(e) => setForwardCc(e.target.value)} />
+                                                            <Input id="forward-cc" placeholder="cc@example.com" value={forwardCc} onChange={(e) => setForwardCc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-bcc">Bcc</Label>
-                                                            <Input id="forward-bcc" placeholder="bcc@example.com" value={forwardBcc} onChange={(e) => setForwardBcc(e.target.value)} />
+                                                            <Input id="forward-bcc" placeholder="bcc@example.com" value={forwardBcc} onChange={(e) => setForwardBcc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-comment">Comment (optional)</Label>
@@ -1102,6 +1102,8 @@ export function TicketDetailContent({ id }: { id: string }) {
 
 
 
+
+    
 
     
 
