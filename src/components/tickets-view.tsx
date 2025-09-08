@@ -163,7 +163,7 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                      </Button>
                 </div>
             )}
-             <div className="flex-grow overflow-y-auto">
+             <div className="flex-grow overflow-y-auto no-scrollbar">
                 {isLoading ? (
                     <div className="space-y-4">
                         {[...Array(5)].map((_, i) => (
