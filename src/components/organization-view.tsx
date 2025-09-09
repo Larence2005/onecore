@@ -177,7 +177,10 @@ export function OrganizationView() {
         }
         setIsCreating(true);
         try {
-            await createOrganization(organizationName, user.uid, user.email);
+            // This is incorrect. The user's name should come from the signup form.
+            // But for now, we'll use their email as a placeholder name if needed.
+            const userName = user.displayName || user.email;
+            await createOrganization(organizationName, user.uid, userName, user.email);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
             await fetchUserProfile(user);
         } catch (error) {
@@ -405,7 +408,7 @@ export function OrganizationView() {
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
                                                                     <AlertDialogAction onClick={() => handleDeleteMember()} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                                                                         {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                                                         Delete
@@ -462,7 +465,7 @@ export function OrganizationView() {
                             <span className="text-sm text-muted-foreground">Rows per page</span>
                             <Select value={String(membersPerPage)} onValueChange={(value) => { setMembersPerPage(Number(value)); setCurrentPage(1); }}>
                                 <SelectTrigger className="h-8 w-[70px]">
-                                    <SelectValue placeholder={membersPerPage} />
+                                    <SelectValue placeholder={String(membersPerPage)} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="10">10</SelectItem>
