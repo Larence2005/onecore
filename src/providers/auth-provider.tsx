@@ -127,9 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Organization does not exist, create new user and new organization
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const user = userCredential.user;
-        if (user) {
+        if (user && user.email) {
             // Pass the user's name from the signup form to the organization creation
-            await createOrganization(data.organizationName, user.uid, user.email);
+            await createOrganization(data.organizationName, user.uid, data.name, user.email);
         }
         return userCredential;
     }

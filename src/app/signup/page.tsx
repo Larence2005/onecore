@@ -22,16 +22,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw } from "lucide-react";
 import Image from "next/image";
-
-const formSchema = z.object({
-  organizationName: z.string().min(1, "Organization name is required."),
-  email: z.string().email("Invalid email address."),
-  password: z.string().min(6, "Password must be at least 6 characters."),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-});
+import { signUpSchema } from "@/lib/types";
 
 
 export default function SignupPage() {
@@ -40,17 +31,18 @@ export default function SignupPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof signUpSchema>>({
+    resolver: zodResolver(signUpSchema),
     defaultValues: {
       organizationName: "",
+      name: "",
       email: "",
       password: "",
       confirmPassword: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof signUpSchema>) {
     setIsSubmitting(true);
     try {
       await signup(values);
@@ -94,6 +86,19 @@ export default function SignupPage() {
                       <FormLabel className="font-semibold">Organization Name</FormLabel>
                       <FormControl>
                         <Input placeholder="Your Company, Inc." {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

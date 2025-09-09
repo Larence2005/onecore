@@ -798,12 +798,12 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
 
 // --- Organization Actions ---
 
-export async function createOrganization(name: string, uid: string, email: string) {
+export async function createOrganization(name: string, uid: string, userName: string, email: string) {
     const organizationRef = doc(collection(db, "organizations"));
     await setDoc(organizationRef, {
         name: name,
         owner: uid,
-        members: [{ name: 'Admin', email: email }] // Add owner as first member
+        members: [{ name: userName, email: email }] // Add owner as first member
     });
     
     return { success: true, organizationId: organizationRef.id };
