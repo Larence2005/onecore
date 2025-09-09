@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -41,6 +41,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Badge } from './ui/badge';
 
 
 export function OrganizationView() {
@@ -343,88 +344,107 @@ export function OrganizationView() {
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
+                                    <TableHead>Type</TableHead>
                                     {isOwner && <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedMembers.length > 0 ? paginatedMembers.map((member) => (
-                                    <TableRow key={member.email}>
-                                        <TableCell className="font-medium">
-                                            <Link href={`/assignees/${encodeURIComponent(member.email)}`} className="hover:underline">
-                                                {member.name}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                                        {isOwner && (
-                                            <TableCell>
-                                                 <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
-                                                    <AlertDialog>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </DropdownMenuItem>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    This action will delete {member.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteMember()} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                    {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                    Delete
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                    <DialogContent>
-                                                        <DialogHeader>
-                                                            <DialogTitle>Edit Member</DialogTitle>
-                                                        </DialogHeader>
-                                                        <div className="space-y-4 py-4">
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-name">Name</Label>
-                                                                <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-email">Email</Label>
-                                                                <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
-                                                            </div>
-                                                        </div>
-                                                        <DialogFooter>
-                                                            <DialogClose asChild>
-                                                                <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
-                                                            </DialogClose>
-                                                            <Button onClick={handleUpdateMember} disabled={isUpdating}>
-                                                                {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                Save Changes
-                                                            </Button>
-                                                        </DialogFooter>
-                                                    </DialogContent>
-                                                </Dialog>
+                                {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
+                                    const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
+                                    return (
+                                        <TableRow key={member.email}>
+                                            <TableCell className="font-medium">
+                                                <Link href={`/assignees/${encodeURIComponent(member.email)}`} className="hover:underline">
+                                                    {member.name}
+                                                </Link>
                                             </TableCell>
-                                        )}
-                                    </TableRow>
-                                )) : (
+                                            <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                                            <TableCell>
+                                                {memberIsOwner ? (
+                                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
+                                                        <Crown className="mr-1 h-3 w-3" />
+                                                        Admin
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline">
+                                                        <UserIcon className="mr-1 h-3 w-3" />
+                                                        Agent
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            {isOwner && (
+                                                <TableCell>
+                                                    <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
+                                                        <AlertDialog>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        Edit
+                                                                    </DropdownMenuItem>
+                                                                    {!memberIsOwner && (
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                                Delete
+                                                                            </DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                    )}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        This action will delete {member.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteMember()} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                        {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                        Delete
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                        <DialogContent>
+                                                            <DialogHeader>
+                                                                <DialogTitle>Edit Member</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="space-y-4 py-4">
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="update-name">Name</Label>
+                                                                    <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="update-email">Email</Label>
+                                                                    <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                                </div>
+                                                            </div>
+                                                            <DialogFooter>
+                                                                <DialogClose asChild>
+                                                                    <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
+                                                                </DialogClose>
+                                                                <Button onClick={handleUpdateMember} disabled={isUpdating}>
+                                                                    {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                    Save Changes
+                                                                </Button>
+                                                            </DialogFooter>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    );
+                                }) : (
                                     <TableRow>
-                                        <TableCell colSpan={isOwner ? 3 : 2} className="h-24 text-center">
+                                        <TableCell colSpan={isOwner ? 4 : 3} className="h-24 text-center">
                                             No members found.
                                         </TableCell>
                                     </TableRow>

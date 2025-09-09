@@ -81,6 +81,7 @@ export interface DetailedEmail extends Email {
 }
 
 export interface OrganizationMember {
+    uid?: string;
     name: string;
     email: string;
 }
@@ -842,17 +843,31 @@ export async function addMemberToOrganization(organizationId: string, name: stri
 
 export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
     if (!organizationId) return [];
-    
+
     const organizationRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(organizationRef);
 
-    if (orgDoc.exists()) {
-        const data = orgDoc.data();
-        return (data.members || []) as OrganizationMember[];
+    if (!orgDoc.exists()) {
+        return [];
     }
 
-    return [];
+    const memberData = (orgDoc.data().members || []) as { name: string, email: string }[];
+    const membersWithUid: OrganizationMember[] = await Promise.all(
+        memberData.map(async (member) => {
+            try {
+                const userRecord = await adminAuth.getUserByEmail(member.email);
+                return { ...member, uid: userRecord.uid };
+            } catch (error) {
+                // User might not exist in Firebase Auth yet if they haven't signed up
+                // console.warn(`Could not find user in Auth for email: ${member.email}`);
+                return { ...member, uid: undefined };
+            }
+        })
+    );
+
+    return membersWithUid;
 }
+
 
 
 export async function updateMemberInOrganization(organizationId: string, originalEmail: string, newName: string, newEmail: string) {
