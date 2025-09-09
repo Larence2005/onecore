@@ -164,7 +164,7 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
             const numRows = parseInt(rows, 10);
             const numCols = parseInt(cols, 10);
             if (!isNaN(numRows) && !isNaN(numCols) && numRows > 0 && numCols > 0) {
-                let table = '<table style="border-collapse: collapse; width: 100%;">';
+                let table = '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; border: 1px solid black;">';
                 for (let i = 0; i < numRows; i++) {
                     table += '<tr>';
                     for (let j = 0; j < numCols; j++) {
