@@ -77,23 +77,23 @@ export function SettingsForm() {
   if (isConfigured && !isEditing) {
     return (
         <Card className="max-w-2xl w-full">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                    API Configured
-                </CardTitle>
-                <CardDescription>
-                    Your API credentials are saved and active.
-                </CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="h-6 w-6 text-green-500" />
+                        API Configured
+                    </CardTitle>
+                    <CardDescription>
+                        Your API credentials are saved and active.
+                    </CardDescription>
+                </div>
+                <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">
                     Your application is connected to the Microsoft Graph API. You can now send and receive emails.
                 </p>
             </CardContent>
-            <CardFooter>
-                 <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
-            </CardFooter>
         </Card>
     );
   }
