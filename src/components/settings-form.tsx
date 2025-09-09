@@ -76,7 +76,7 @@ export function SettingsForm() {
   // If settings are configured and we are not in editing mode, show the success state.
   if (isConfigured && !isEditing) {
     return (
-        <Card className="max-w-md w-full">
+        <Card className="max-w-2xl w-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-6 w-6 text-green-500" />

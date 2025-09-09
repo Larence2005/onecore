@@ -38,7 +38,7 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
             case 'organization':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><OrganizationView /></div>;
             case 'settings':
-                return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
+                return <div className="flex-1 w-full p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
             case 'compose':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SendEmailForm /></div>;
             case 'archive':
@@ -48,7 +48,7 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
         }
     };
 
-    if (activeView === 'tickets' || activeView === 'archive' || activeView === 'analytics') {
+    if (activeView === 'tickets' || activeView === 'archive' || activeView === 'analytics' || activeView === 'settings') {
         return (
             <div className="flex-1 flex flex-col overflow-y-auto">
                 {renderView()}
