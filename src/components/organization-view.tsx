@@ -150,6 +150,10 @@ export function OrganizationView() {
         }
     };
     
+    const handleDeleteClick = (member: OrganizationMember) => {
+        setDeletingMember(member);
+    };
+
     const handleDeleteMember = async () => {
         if (!deletingMember || !userProfile?.organizationId) return;
         setIsDeleting(true);
@@ -177,8 +181,6 @@ export function OrganizationView() {
         }
         setIsCreating(true);
         try {
-            // This is incorrect. The user's name should come from the signup form.
-            // But for now, we'll use their email as a placeholder name if needed.
             const userName = user.displayName || user.email;
             await createOrganization(organizationName, user.uid, userName, user.email);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
@@ -378,7 +380,7 @@ export function OrganizationView() {
                                             {isOwner && (
                                                 <TableCell>
                                                     <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
-                                                        <AlertDialog>
+                                                        <AlertDialog open={deletingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingMember(null); }}>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
                                                                     <Button variant="ghost" size="icon">
@@ -392,7 +394,7 @@ export function OrganizationView() {
                                                                     </DropdownMenuItem>
                                                                     {!memberIsOwner && (
                                                                         <AlertDialogTrigger asChild>
-                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                            <DropdownMenuItem onClick={() => handleDeleteClick(member)} onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
                                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                                 Delete
                                                                             </DropdownMenuItem>
@@ -404,12 +406,12 @@ export function OrganizationView() {
                                                                 <AlertDialogHeader>
                                                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                                     <AlertDialogDescription>
-                                                                        This action will delete {member.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                                                                        This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
                                                                     </AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteMember()} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                    <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                                                                         {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                                                         Delete
                                                                     </AlertDialogAction>
@@ -458,7 +460,7 @@ export function OrganizationView() {
                 </CardContent>
                  <CardFooter className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                        Showing {Math.min(membersPerPage, paginatedMembers.length)} of {members.length} members.
+                        Showing {Math.min(membersPerPage * currentPage, members.length)} of {members.length} members.
                     </div>
                     <div className="flex items-center gap-4">
                          <div className="flex items-center gap-2">
@@ -491,3 +493,5 @@ export function OrganizationView() {
         </div>
     );
 }
+
+    

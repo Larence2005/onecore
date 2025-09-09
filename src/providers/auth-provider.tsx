@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const ownerOrgSnapshot = await getDocs(q);
         if (!ownerOrgSnapshot.empty) {
             const orgDoc = ownerOrgSnapshot.docs[0];
-            const ownerMemberInfo = (orgDoc.data().members as {name: string, email: string}[])?.find(m => m.email === user.email);
+            const ownerMemberInfo = (orgDoc.data().members as {name: string, email: string, uid: string}[])?.find(m => m.email === user.email);
             setUserProfile({
                 uid: user.uid,
                 email: user.email,
@@ -116,8 +116,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
             const user = userCredential.user;
             
-            // Note: The user profile will be fetched onAuthStateChanged, linking them to the org.
-            // No need to explicitly add them to the members list again as they were pre-invited.
+            // Add UID to member entry
+            const updatedMembers = members.map(member => 
+                member.email === data.email ? { ...member, uid: user.uid } : member
+            );
+            await updateDoc(orgDoc.ref, { members: updatedMembers });
+
             return userCredential;
         } else {
             // User is not invited to this existing organization
@@ -169,3 +173,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

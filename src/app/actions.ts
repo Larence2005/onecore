@@ -803,7 +803,7 @@ export async function createOrganization(name: string, uid: string, userName: st
     await setDoc(organizationRef, {
         name: name,
         owner: uid,
-        members: [{ name: userName, email: email }] // Add owner as first member
+        members: [{ name: userName, email: email, uid: uid }] // Add owner as first member with UID
     });
     
     return { success: true, organizationId: organizationRef.id };
@@ -851,10 +851,17 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
         return [];
     }
 
-    const memberData = (orgDoc.data().members || []) as { name: string, email: string }[];
+    const memberData = (orgDoc.data().members || []) as OrganizationMember[];
+    
+    // The UID should now be part of the member data itself, but we can have a fallback
+    // for older data or other scenarios.
     const membersWithUid: OrganizationMember[] = await Promise.all(
         memberData.map(async (member) => {
+            if (member.uid) {
+                return member; // UID is already present
+            }
             try {
+                // Fallback to fetch from Auth if UID is missing
                 const userRecord = await adminAuth.getUserByEmail(member.email);
                 return { ...member, uid: userRecord.uid };
             } catch (error) {
@@ -896,7 +903,7 @@ export async function updateMemberInOrganization(organizationId: string, origina
         }
         
         const updatedMembers = members.map(m => 
-            m.email === originalEmail ? { name: newName, email: newEmail } : m
+            m.email === originalEmail ? { ...m, name: newName, email: newEmail } : m
         );
         
         transaction.update(organizationRef, { members: updatedMembers });
@@ -977,3 +984,5 @@ export async function deleteOrganization(organizationId: string) {
     
     return { success: true };
 }
+
+    
