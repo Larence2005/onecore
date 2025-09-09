@@ -76,6 +76,12 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  a {
+    @apply text-blue-600;
+  }
+  .dark a {
+    @apply text-blue-400;
+  }
 }
 
 .text-ellipsis {
