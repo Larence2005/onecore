@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
-import { cn } from "@/lib/utils";
+import { CheckCircle } from "lucide-react";
 
 const formSchema = z.object({
   clientId: z.string().min(1, "Client ID is required."),
@@ -31,7 +31,7 @@ const formSchema = z.object({
 export function SettingsForm() {
   const { settings, saveSettings, isConfigured } = useSettings();
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(!isConfigured);
+  const [isEditing, setIsEditing] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,10 +43,12 @@ export function SettingsForm() {
   });
 
   useEffect(() => {
-    // If the component loads and settings are not configured, force editing mode.
-    // Otherwise, respect the user's choice to toggle.
+    // If settings are not configured, always be in editing mode.
+    // Otherwise, start in view mode.
     if (!isConfigured) {
       setIsEditing(true);
+    } else {
+        setIsEditing(false);
     }
   }, [isConfigured]);
   
@@ -56,7 +58,10 @@ export function SettingsForm() {
         tenantId: settings.tenantId,
         clientSecret: settings.clientSecret,
     });
-    setIsEditing(false);
+    // Only allow canceling back to view mode if settings were already configured.
+    if(isConfigured) {
+        setIsEditing(false);
+    }
   };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -68,6 +73,32 @@ export function SettingsForm() {
     setIsEditing(false);
   }
 
+  // If settings are configured and we are not in editing mode, show the success state.
+  if (isConfigured && !isEditing) {
+    return (
+        <Card className="max-w-md w-full">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                    API Configured
+                </CardTitle>
+                <CardDescription>
+                    Your API credentials are saved and active.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Your application is connected to the Microsoft Graph API. You can now send and receive emails.
+                </p>
+            </CardContent>
+            <CardFooter>
+                 <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
+            </CardFooter>
+        </Card>
+    );
+  }
+
+  // Otherwise, show the form (either for initial setup or for editing).
   return (
     <Card className="max-w-2xl w-full">
         <Form {...form}>
@@ -86,7 +117,7 @@ export function SettingsForm() {
                         <FormItem>
                         <FormLabel>Client ID</FormLabel>
                         <FormControl>
-                            <Input placeholder="Enter your Client ID" {...field} disabled={!isEditing} />
+                            <Input placeholder="Enter your Client ID" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -99,7 +130,7 @@ export function SettingsForm() {
                         <FormItem>
                         <FormLabel>Tenant ID</FormLabel>
                         <FormControl>
-                            <Input placeholder="Enter your Tenant ID" {...field} disabled={!isEditing} />
+                            <Input placeholder="Enter your Tenant ID" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -112,32 +143,19 @@ export function SettingsForm() {
                         <FormItem>
                         <FormLabel>Client Secret</FormLabel>
                         <FormControl>
-                            <Input type="password" placeholder={field.value ? "**********" : "Enter your Client Secret"} {...field} disabled={!isEditing} />
+                            <Input type="password" placeholder={field.value ? "**********" : "Enter your Client Secret"} {...field} />
                         </FormControl>
-                        {!isEditing && isConfigured && (
-                            <FormDescription>
-                                Your client secret is saved. Click Edit to change it.
-                            </FormDescription>
-                        )}
-                         {isEditing && (
-                            <FormDescription>
-                                Your client secret is sensitive and will be stored securely.
-                            </FormDescription>
-                        )}
+                        <FormDescription>
+                            Your client secret is sensitive and will be stored securely.
+                        </FormDescription>
                         <FormMessage />
                         </FormItem>
                     )}
                     />
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2">
-                    {isEditing ? (
-                        <>
-                           {isConfigured && <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>}
-                           <Button type="submit">Save Settings</Button>
-                        </>
-                    ) : (
-                        <Button type="button" onClick={() => setIsEditing(true)}>Edit</Button>
-                    )}
+                   {isConfigured && <Button type="button" variant="ghost" onClick={handleCancel}>Cancel</Button>}
+                   <Button type="submit">Save Settings</Button>
                 </CardFooter>
             </form>
         </Form>
