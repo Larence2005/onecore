@@ -676,7 +676,14 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                     <p>Hello,</p>
                     <p>You have been assigned a new ticket.</p>
                     <p><b>Ticket #${ticketData.ticketNumber}: ${ticketData.title}</b></p>
-                    <p>You can view the ticket details here: <a href="https://ticketflow-klvln.web.app/tickets/${id}">View Ticket</a></p>
+                    <hr>
+                    <p><b>From:</b> ${ticketData.sender} (${ticketData.senderEmail})</p>
+                    <p><b>Content:</b></p>
+                    <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9;">
+                        ${ticketData.bodyPreview}
+                    </div>
+                    <br>
+                    <p>You can view the full ticket details here: <a href="https://ticketflow-klvln.web.app/tickets/${id}">View Ticket</a></p>
                     <p>Thank you,</p>
                     <p>Onecore Support Team</p>
                 `;
@@ -1008,3 +1015,4 @@ export async function deleteOrganization(organizationId: string) {
     return { success: true };
 }
     
+
