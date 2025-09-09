@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, deleteOrganization } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -56,6 +56,7 @@ export function OrganizationView() {
     
     const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
     
     const [updatedOrganizationName, setUpdatedOrganizationName] = useState(userProfile?.organizationName || '');
     const [isUpdatingOrg, setIsUpdatingOrg] = useState(false);
@@ -179,6 +180,7 @@ export function OrganizationView() {
             await updateOrganization(userProfile.organizationId, updatedOrganizationName);
             await fetchUserProfile(user!);
             toast({ title: 'Organization Updated', description: `Organization name changed to "${updatedOrganizationName}".` });
+            setIsSettingsDialogOpen(false);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
             toast({ variant: 'destructive', title: 'Update Failed', description: errorMessage });
@@ -247,43 +249,112 @@ export function OrganizationView() {
                     <div>
                         <CardTitle className="flex items-center gap-2"><Users /> {userProfile.organizationName || 'Your Organization'}</CardTitle>
                         <CardDescription>
-                            Invite members to your organization. They can sign up with the invited email to join.
+                            Invite and manage your organization's members.
                         </CardDescription>
                     </div>
-                     <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button disabled={!isOwner}>
-                                <UserPlus className="mr-2 h-4 w-4" /> Add New Member
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add New Member</DialogTitle>
-                                <DialogDescription>
-                                    Invite a new person to your organization. They will be able to sign up with their email.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="new-member-name">Name</Label>
-                                    <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="new-member-email">Email</Label>
-                                    <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button type="button" variant="secondary" onClick={resetAddMemberForm}>Cancel</Button>
-                                </DialogClose>
-                                <Button onClick={handleAddMember} disabled={isAddingMember}>
-                                    {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                    Add Member
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                     {isOwner && (
+                        <div className="flex items-center gap-2">
+                            <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button>
+                                        <UserPlus className="mr-2 h-4 w-4" /> Add Member
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Member</DialogTitle>
+                                        <DialogDescription>
+                                            Invite a new person to your organization. They will be able to sign up with their email.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-name">Name</Label>
+                                            <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-email">Email</Label>
+                                            <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button type="button" variant="secondary" onClick={resetAddMemberForm}>Cancel</Button>
+                                        </DialogClose>
+                                        <Button onClick={handleAddMember} disabled={isAddingMember}>
+                                            {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                            Add Member
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+
+                             <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline">
+                                        <Settings className="mr-2 h-4 w-4" /> Settings
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Organization Settings</DialogTitle>
+                                        <DialogDescription>Manage your organization's name.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-2 py-4">
+                                        <Label htmlFor="org-update-name">Organization Name</Label>
+                                        <Input
+                                            id="org-update-name"
+                                            value={updatedOrganizationName}
+                                            onChange={(e) => setUpdatedOrganizationName(e.target.value)}
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button type="button" variant="secondary">Cancel</Button>
+                                        </DialogClose>
+                                        <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg || updatedOrganizationName === userProfile.organizationName}>
+                                            {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                            Save Changes
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                            
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete your organization, including all tickets, conversations, and member data. To confirm, please type your organization name: <strong className="text-foreground">{userProfile.organizationName}</strong>
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <div className="py-4">
+                                        <Input
+                                            value={deleteConfirmationInput}
+                                            onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                                            placeholder="Type organization name to confirm"
+                                        />
+                                    </div>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel onClick={() => setDeleteConfirmationInput('')}>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            disabled={!isDeleteConfirmationValid || isDeletingOrg}
+                                            onClick={handleDeleteOrganization}
+                                            className="bg-destructive hover:bg-destructive/90"
+                                        >
+                                            {isDeletingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                            Delete Forever
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                     )}
                 </CardHeader>
                 <CardContent>
                     <h3 className="font-semibold mb-4">Members ({members.length})</h3>
@@ -360,75 +431,6 @@ export function OrganizationView() {
                     </div>
                 </CardContent>
             </Card>
-
-             {isOwner && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Organization Settings</CardTitle>
-                        <CardDescription>Manage your organization's name.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <Label htmlFor="org-update-name">Organization Name</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    id="org-update-name"
-                                    value={updatedOrganizationName}
-                                    onChange={(e) => setUpdatedOrganizationName(e.target.value)}
-                                />
-                                <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg || updatedOrganizationName === userProfile.organizationName}>
-                                    {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-            
-            {isOwner && (
-                <Card className="border-destructive">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle /> Danger Zone</CardTitle>
-                        <CardDescription>
-                            Deleting your organization is a permanent action that cannot be undone.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive">Delete Organization</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete your organization, including all tickets, conversations, and member data. To confirm, please type your organization name: <strong className="text-foreground">{userProfile.organizationName}</strong>
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <div className="py-4">
-                                     <Input
-                                        value={deleteConfirmationInput}
-                                        onChange={(e) => setDeleteConfirmationInput(e.target.value)}
-                                        placeholder="Type organization name to confirm"
-                                    />
-                                </div>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel onClick={() => setDeleteConfirmationInput('')}>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        disabled={!isDeleteConfirmationValid || isDeletingOrg}
-                                        onClick={handleDeleteOrganization}
-                                        className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                        {isDeletingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                        Delete Forever
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </CardContent>
-                </Card>
-            )}
         </div>
     );
 }
