@@ -33,6 +33,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 
 export function OrganizationView() {
@@ -255,11 +260,18 @@ export function OrganizationView() {
                      {isOwner && (
                         <div className="flex items-center gap-2">
                             <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button>
-                                        <UserPlus className="mr-2 h-4 w-4" /> Add Member
-                                    </Button>
-                                </DialogTrigger>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="icon">
+                                                <UserPlus className="h-4 w-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Add Member</p>
+                                    </TooltipContent>
+                                </Tooltip>
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Add New Member</DialogTitle>
@@ -290,11 +302,18 @@ export function OrganizationView() {
                             </Dialog>
 
                              <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline">
-                                        <Settings className="mr-2 h-4 w-4" /> Settings
-                                    </Button>
-                                </DialogTrigger>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="icon">
+                                                <Settings className="h-4 w-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Organization Settings</p>
+                                    </TooltipContent>
+                                </Tooltip>
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Organization Settings</DialogTitle>
@@ -321,11 +340,18 @@ export function OrganizationView() {
                             </Dialog>
                             
                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </Button>
-                                </AlertDialogTrigger>
+                                 <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="icon">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Delete Organization</p>
+                                    </TooltipContent>
+                                </Tooltip>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -434,3 +460,5 @@ export function OrganizationView() {
         </div>
     );
 }
+
+    
