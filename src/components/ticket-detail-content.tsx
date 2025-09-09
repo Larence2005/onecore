@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -35,7 +36,31 @@ import { Label } from './ui/label';
 import { TableIcon } from './ui/table-icon';
 
 
-const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
+const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
+    if (!attachments || !htmlContent) {
+        return htmlContent || '';
+    }
+
+    let processedHtml = htmlContent;
+
+    // Find all inline attachments
+    const inlineAttachments = attachments.filter(att => att.isInline);
+
+    inlineAttachments.forEach(att => {
+        if (att.contentId) {
+            // The src in the img tag will be `cid:contentId`
+            const cid = att.contentId;
+            const regex = new RegExp(`cid:${cid}`, 'g');
+            const dataUri = `data:${att.contentType};base64,${att.contentBytes}`;
+            processedHtml = processedHtml.replace(regex, dataUri);
+        }
+    });
+
+    return processedHtml;
+};
+
+
+const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: string, attachments: Attachment[] | undefined }) => {
     // Regex to find common reply headers
     const replyHeaderRegex = /(<br\s*\/?>\s*)?(On\s.*wrote:|From:.*|Sent:.*|To:.*|Subject:.*)/is;
     const blockquoteRegex = /<blockquote.*?>/is;
@@ -59,15 +84,17 @@ const CollapsibleEmailContent = ({ htmlContent }: { htmlContent: string }) => {
         return -1;
     };
 
-    const splitIndex = findSplitIndex(htmlContent);
+    const processedHtml = prepareHtmlContent(htmlContent, attachments);
+
+    const splitIndex = findSplitIndex(processedHtml);
 
     let mainContent, quotedContent;
 
     if (splitIndex !== -1) {
-        mainContent = htmlContent.substring(0, splitIndex);
-        quotedContent = htmlContent.substring(splitIndex);
+        mainContent = processedHtml.substring(0, splitIndex);
+        quotedContent = processedHtml.substring(splitIndex);
     } else {
-        mainContent = htmlContent;
+        mainContent = processedHtml;
         quotedContent = null;
     }
 
@@ -520,62 +547,66 @@ export function TicketDetailContent({ id }: { id: string }) {
     }
 
     
-    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => (
-        <Card key={message.id} className="overflow-hidden">
-            <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
-                 <Avatar className="h-10 w-10">
-                    <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 grid gap-1 text-sm">
-                    <div className="font-semibold">{message.sender}</div>
-                    <div className="text-xs text-muted-foreground">
-                        <p>
-                            <span className="font-semibold">From:</span> {message.senderEmail}
-                        </p>
-                        <p>
-                            <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
-                        </p>
-                        {message.ccRecipients && message.ccRecipients.length > 0 && (
+    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => {
+        const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
+
+        return (
+            <Card key={message.id} className="overflow-hidden">
+                <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
+                    <Avatar className="h-10 w-10">
+                        <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 grid gap-1 text-sm">
+                        <div className="font-semibold">{message.sender}</div>
+                        <div className="text-xs text-muted-foreground">
                             <p>
-                                <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                                <span className="font-semibold">From:</span> {message.senderEmail}
                             </p>
-                        )}
-                        {message.bccRecipients && message.bccRecipients.length > 0 && (
                             <p>
-                                <span className="font-semibold">BCC:</span> {renderRecipientList(message.bccRecipients)}
+                                <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
                             </p>
-                        )}
-                    </div>
-                </div>
-                <div className="text-xs text-muted-foreground text-right">
-                    {format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}
-                </div>
-            </CardHeader>
-            <CardContent className="p-0">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                    {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
-                    {message.body.contentType === 'html' ? (
-                        <CollapsibleEmailContent htmlContent={message.body.content} />
-                    ) : (
-                        <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
-                    )}
-                </div>
-                {message.attachments && message.attachments.length > 0 && (
-                    <div className="p-4 border-t">
-                        <h3 className="text-sm font-medium mb-2">Attachments</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {message.attachments.map(att => (
-                                <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
-                                    <Paperclip className="mr-2 h-4 w-4" />
-                                    {att.name}
-                                </Button>
-                            ))}
+                            {message.ccRecipients && message.ccRecipients.length > 0 && (
+                                <p>
+                                    <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                                </p>
+                            )}
+                            {message.bccRecipients && message.bccRecipients.length > 0 && (
+                                <p>
+                                    <span className="font-semibold">BCC:</span> {renderRecipientList(message.bccRecipients)}
+                                </p>
+                            )}
                         </div>
                     </div>
-                )}
-            </CardContent>
-        </Card>
-    );
+                    <div className="text-xs text-muted-foreground text-right">
+                        {format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                        {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
+                        {message.body.contentType === 'html' ? (
+                            <CollapsibleEmailContent htmlContent={message.body.content} attachments={message.attachments} />
+                        ) : (
+                            <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
+                        )}
+                    </div>
+                    {regularAttachments.length > 0 && (
+                        <div className="p-4 border-t">
+                            <h3 className="text-sm font-medium mb-2">Attachments</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {regularAttachments.map(att => (
+                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
+                                        <Paperclip className="mr-2 h-4 w-4" />
+                                        {att.name}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        );
+    }
 
     const handleLogout = async () => {
         try {
