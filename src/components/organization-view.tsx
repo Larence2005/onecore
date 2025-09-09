@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, deleteOrganization } from '@/app/actions';
+import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
 import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings } from 'lucide-react';
 import Link from 'next/link';
@@ -65,8 +65,6 @@ export function OrganizationView() {
     
     const [updatedOrganizationName, setUpdatedOrganizationName] = useState(userProfile?.organizationName || '');
     const [isUpdatingOrg, setIsUpdatingOrg] = useState(false);
-    const [isDeletingOrg, setIsDeletingOrg] = useState(false);
-    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
 
     const fetchMembers = async () => {
@@ -194,22 +192,6 @@ export function OrganizationView() {
         }
     };
     
-    const handleDeleteOrganization = async () => {
-        if (!userProfile?.organizationId || !user) return;
-        setIsDeletingOrg(true);
-        try {
-            await deleteOrganization(userProfile.organizationId);
-            toast({ title: 'Organization Deleted', description: 'The organization has been permanently deleted.' });
-            await fetchUserProfile(user);
-            await logout(); // Log out the user as they no longer belong to an org
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-            toast({ variant: 'destructive', title: 'Deletion Failed', description: errorMessage });
-        } finally {
-            setIsDeletingOrg(false);
-        }
-    };
-    
     if(loading) {
         return <p>Loading...</p>;
     }
@@ -245,7 +227,6 @@ export function OrganizationView() {
     }
     
     const isOwner = user?.uid === userProfile.organizationOwnerUid;
-    const isDeleteConfirmationValid = deleteConfirmationInput === userProfile.organizationName;
 
     return (
         <div className="space-y-8 max-w-4xl w-full">
@@ -338,47 +319,6 @@ export function OrganizationView() {
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
-                            
-                            <AlertDialog>
-                                 <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" size="icon">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Delete Organization</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete your organization, including all tickets, conversations, and member data. To confirm, please type your organization name: <strong className="text-foreground">{userProfile.organizationName}</strong>
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <div className="py-4">
-                                        <Input
-                                            value={deleteConfirmationInput}
-                                            onChange={(e) => setDeleteConfirmationInput(e.target.value)}
-                                            placeholder="Type organization name to confirm"
-                                        />
-                                    </div>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setDeleteConfirmationInput('')}>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            disabled={!isDeleteConfirmationValid || isDeletingOrg}
-                                            onClick={handleDeleteOrganization}
-                                            className="bg-destructive hover:bg-destructive/90"
-                                        >
-                                            {isDeletingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                            Delete Forever
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
                         </div>
                      )}
                 </CardHeader>
