@@ -910,9 +910,8 @@ export async function deleteMemberFromOrganization(organizationId: string, email
              throw new Error("Member not found to delete.");
         }
 
-        await updateDoc(organizationRef, {
-            members: arrayRemove(memberToDelete)
-        });
+        const updatedMembers = members.filter(m => m.email !== email);
+        transaction.update(organizationRef, { members: updatedMembers });
     });
 
     return { success: true };
@@ -933,42 +932,7 @@ export async function deleteOrganization(organizationId: string) {
     }
 
     const orgDocRef = doc(db, 'organizations', organizationId);
-    const batch = writeBatch(db);
-
-    // Delete all tickets and their activity logs
-    const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
-    const ticketsSnapshot = await getDocs(ticketsCollectionRef);
-    for (const ticketDoc of ticketsSnapshot.docs) {
-        const activityCollectionRef = collection(ticketDoc.ref, 'activity');
-        const activitySnapshot = await getDocs(activityCollectionRef);
-        activitySnapshot.forEach(activityDoc => {
-            batch.delete(activityDoc.ref);
-        });
-        batch.delete(ticketDoc.ref);
-    }
-
-    // Delete all conversations
-    const conversationsCollectionRef = collection(db, 'organizations', organizationId, 'conversations');
-    const conversationsSnapshot = await getDocs(conversationsCollectionRef);
-    conversationsSnapshot.forEach(convoDoc => {
-        batch.delete(convoDoc.ref);
-    });
-
-    // Delete all counters
-    const countersCollectionRef = collection(db, 'organizations', organizationId, 'counters');
-    const countersSnapshot = await getDocs(countersCollectionRef);
-    countersSnapshot.forEach(counterDoc => {
-        batch.delete(counterDoc.ref);
-    });
+    await deleteDoc(orgDocRef);
     
-    // Delete the main organization document
-    batch.delete(orgDocRef);
-    
-    // Delete all user settings associated with this organization - This is harder without a direct link.
-    // For now, we will skip this step as user settings are keyed by UID, not org ID.
-    // A more robust solution might involve a Cloud Function triggered on org deletion.
-
-    await batch.commit();
-
     return { success: true };
 }
