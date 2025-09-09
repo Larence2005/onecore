@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useAuth } from "@/providers/auth-provider";
+import { deleteUserAccount } from "@/app/actions";
+import { useRouter } from "next/navigation";
+
 
 const formSchema = z.object({
   clientId: z.string().min(1, "Client ID is required."),
@@ -41,8 +45,12 @@ const formSchema = z.object({
 
 export function SettingsForm() {
   const { settings, saveSettings, isConfigured } = useSettings();
+  const { user, userProfile, logout } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -84,13 +92,40 @@ export function SettingsForm() {
     setIsEditing(false);
   }
   
-  const handleDeleteAccount = () => {
-    // Placeholder for account deletion logic
-    toast({
-        variant: "destructive",
-        title: "Account Deletion Requested",
-        description: "This feature is not yet implemented.",
-    });
+  const handleDeleteAccount = async () => {
+    if (!user || !userProfile) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to delete an account.",
+        });
+        return;
+    }
+    setIsDeleting(true);
+    try {
+        const isOwner = user.uid === userProfile.organizationOwnerUid;
+        const result = await deleteUserAccount(user.uid, userProfile.organizationId, isOwner);
+
+        if (result.success) {
+            toast({
+                title: "Account Deleted",
+                description: "Your account and all associated data have been successfully deleted.",
+            });
+            await logout(); // Sign out the user
+            router.push('/login'); // Redirect to login page
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: errorMessage,
+        });
+    } finally {
+        setIsDeleting(false);
+    }
   }
 
   // If settings are configured and we are not in editing mode, show the success state.
@@ -135,15 +170,17 @@ export function SettingsForm() {
                             <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                                This action cannot be undone. This will permanently delete your account and remove all your data from our servers. If you are the organization owner, this will delete the entire organization.
                             </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                                 onClick={handleDeleteAccount}
+                                disabled={isDeleting}
                                 className={buttonVariants({ variant: "destructive" })}
                             >
+                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                 Continue
                             </AlertDialogAction>
                             </AlertDialogFooter>
@@ -237,15 +274,17 @@ export function SettingsForm() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                            This action cannot be undone. This will permanently delete your account and remove all your data from our servers. If you are the organization owner, this will delete the entire organization.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                          <AlertDialogAction
                             onClick={handleDeleteAccount}
+                            disabled={isDeleting}
                             className={buttonVariants({ variant: "destructive" })}
                          >
+                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                             Continue
                         </AlertDialogAction>
                         </AlertDialogFooter>

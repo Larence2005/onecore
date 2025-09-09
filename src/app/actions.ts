@@ -932,7 +932,59 @@ export async function deleteOrganization(organizationId: string) {
     }
 
     const orgDocRef = doc(db, 'organizations', organizationId);
-    await deleteDoc(orgDocRef);
+    
+    // Deleting subcollections is a bit more involved.
+    // For this app, subcollections are: tickets, conversations, counters
+    const ticketsRef = collection(orgDocRef, 'tickets');
+    const ticketsSnap = await getDocs(ticketsRef);
+    const batch = writeBatch(db);
+    ticketsSnap.forEach(ticketDoc => {
+        // Here you could also delete sub-sub-collections like 'activity'
+        batch.delete(ticketDoc.ref);
+    });
+    
+    const convosRef = collection(orgDocRef, 'conversations');
+    const convosSnap = await getDocs(convosRef);
+    convosSnap.forEach(convoDoc => {
+        batch.delete(convoDoc.ref);
+    });
+
+    const countersRef = collection(orgDocRef, 'counters');
+    const countersSnap = await getDocs(countersRef);
+    countersSnap.forEach(counterDoc => {
+        batch.delete(counterDoc.ref);
+    });
+
+    // Delete the organization doc itself
+    batch.delete(orgDocRef);
+    
+    await batch.commit();
     
     return { success: true };
+}
+
+export async function deleteUserAccount(uid: string, organizationId?: string, isOwner?: boolean) {
+    if (!uid) {
+        throw new Error("User ID is required.");
+    }
+
+    try {
+        // If the user is an owner of an organization, delete the entire organization.
+        if (organizationId && isOwner) {
+            await deleteOrganization(organizationId);
+        }
+
+        // Delete user's settings document
+        const userSettingsRef = doc(db, 'users', uid);
+        await deleteDoc(userSettingsRef);
+
+        // Finally, delete the user from Firebase Authentication
+        await adminAuth.deleteUser(uid);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete user account:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during account deletion.";
+        return { success: false, error: errorMessage };
+    }
 }
