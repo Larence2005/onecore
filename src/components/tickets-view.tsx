@@ -157,13 +157,20 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
     };
 
     const isAllSelected = filteredEmails.length > 0 && selectedTickets.length === filteredEmails.length;
+    const isSomeSelected = selectedTickets.length > 0 && selectedTickets.length < filteredEmails.length;
 
 
     return (
         <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
             {selectedTickets.length > 0 && (
                 <div className="flex-shrink-0 flex items-center justify-between p-2 mb-4 bg-muted border rounded-lg">
-                     <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-4">
+                         <Checkbox
+                            id="select-all-top"
+                            checked={isAllSelected}
+                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                            aria-label="Select all"
+                         />
                          <span className="text-sm font-medium">{selectedTickets.length} selected</span>
                      </div>
                      <Button variant="outline" size="sm" onClick={handleArchive}>
