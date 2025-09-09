@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData } from '@/lib/types';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 import { createOrganization } from '@/app/actions';
 
 
@@ -101,12 +101,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserProfile]);
 
   const signup = async (data: SignUpFormData) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const user = userCredential.user;
-    if (user) {
-      await createOrganization(data.organizationName, user.uid, user.email!);
+    const organizationsRef = collection(db, "organizations");
+    const q = query(organizationsRef, where("name", "==", data.organizationName));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        // Organization exists
+        const orgDoc = querySnapshot.docs[0];
+        const members = orgDoc.data().members as { name: string, email: string }[];
+        const isInvited = members.some(member => member.email === data.email);
+
+        if (isInvited) {
+            // User is invited, create user and link to org
+            const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+            const user = userCredential.user;
+            
+            // Note: The user profile will be fetched onAuthStateChanged, linking them to the org.
+            // No need to explicitly add them to the members list again as they were pre-invited.
+            return userCredential;
+        } else {
+            // User is not invited to this existing organization
+            throw new Error("An organization with this name already exists. You must be invited to join.");
+        }
+    } else {
+        // Organization does not exist, create new user and new organization
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const user = userCredential.user;
+        if (user) {
+            // Pass the user's name from the signup form to the organization creation
+            await createOrganization(data.organizationName, user.uid, user.email);
+        }
+        return userCredential;
     }
-    return userCredential;
   }
 
   const login = (data: LoginFormData) => {
