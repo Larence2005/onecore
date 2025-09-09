@@ -8,9 +8,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization } from '@/app/actions';
+import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, deleteOrganization } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -36,7 +36,7 @@ import {
 
 
 export function OrganizationView() {
-    const { user, userProfile, loading, fetchUserProfile } = useAuth();
+    const { user, userProfile, loading, fetchUserProfile, logout } = useAuth();
     const { toast } = useToast();
     const [organizationName, setOrganizationName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -56,6 +56,11 @@ export function OrganizationView() {
     
     const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    
+    const [updatedOrganizationName, setUpdatedOrganizationName] = useState(userProfile?.organizationName || '');
+    const [isUpdatingOrg, setIsUpdatingOrg] = useState(false);
+    const [isDeletingOrg, setIsDeletingOrg] = useState(false);
+    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
 
     const fetchMembers = async () => {
@@ -68,6 +73,7 @@ export function OrganizationView() {
     useEffect(() => {
         if (userProfile?.organizationId) {
             fetchMembers();
+            setUpdatedOrganizationName(userProfile.organizationName || '');
         }
     }, [userProfile]);
     
@@ -162,6 +168,40 @@ export function OrganizationView() {
             setIsCreating(false);
         }
     };
+
+    const handleUpdateOrganization = async () => {
+        if (!userProfile?.organizationId || !updatedOrganizationName.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Organization name cannot be empty.' });
+            return;
+        }
+        setIsUpdatingOrg(true);
+        try {
+            await updateOrganization(userProfile.organizationId, updatedOrganizationName);
+            await fetchUserProfile(user!);
+            toast({ title: 'Organization Updated', description: `Organization name changed to "${updatedOrganizationName}".` });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Update Failed', description: errorMessage });
+        } finally {
+            setIsUpdatingOrg(false);
+        }
+    };
+    
+    const handleDeleteOrganization = async () => {
+        if (!userProfile?.organizationId || !user) return;
+        setIsDeletingOrg(true);
+        try {
+            await deleteOrganization(userProfile.organizationId);
+            toast({ title: 'Organization Deleted', description: 'The organization has been permanently deleted.' });
+            await fetchUserProfile(user);
+            await logout(); // Log out the user as they no longer belong to an org
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Deletion Failed', description: errorMessage });
+        } finally {
+            setIsDeletingOrg(false);
+        }
+    };
     
     if(loading) {
         return <p>Loading...</p>;
@@ -196,6 +236,9 @@ export function OrganizationView() {
             </Card>
         );
     }
+    
+    const isOwner = user?.uid === userProfile.organizationOwnerUid;
+    const isDeleteConfirmationValid = deleteConfirmationInput === userProfile.organizationName;
 
     return (
         <div className="space-y-8 max-w-4xl w-full">
@@ -209,7 +252,7 @@ export function OrganizationView() {
                     </div>
                      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button>
+                            <Button disabled={!isOwner}>
                                 <UserPlus className="mr-2 h-4 w-4" /> Add New Member
                             </Button>
                         </DialogTrigger>
@@ -253,68 +296,139 @@ export function OrganizationView() {
                                         <p className="text-sm text-muted-foreground">{member.email}</p>
                                     </div>
                                 </Link>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(member)}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Edit Member</DialogTitle>
-                                            </DialogHeader>
-                                            <div className="space-y-4 py-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="update-name">Name</Label>
-                                                    <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="update-email">Email</Label>
-                                                    <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
-                                                </div>
-                                            </div>
-                                            <DialogFooter>
-                                                 <DialogClose asChild>
-                                                    <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
-                                                 </DialogClose>
-                                                <Button onClick={handleUpdateMember} disabled={isUpdating}>
-                                                    {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Save Changes
+                                 {isOwner && (
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(member)}>
+                                                    <Pencil className="h-4 w-4" />
                                                 </Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Edit Member</DialogTitle>
+                                                </DialogHeader>
+                                                <div className="space-y-4 py-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="update-name">Name</Label>
+                                                        <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="update-email">Email</Label>
+                                                        <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                    </div>
+                                                </div>
+                                                <DialogFooter>
+                                                    <DialogClose asChild>
+                                                        <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
+                                                    </DialogClose>
+                                                    <Button onClick={handleUpdateMember} disabled={isUpdating}>
+                                                        {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                        Save Changes
+                                                    </Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
 
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeletingMember(member)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                     {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Delete
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeletingMember(member)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                        {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {members.length === 0 && <p className="text-sm text-muted-foreground">No members yet. Add one to get started.</p>}
                     </div>
                 </CardContent>
             </Card>
+
+             {isOwner && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Organization Settings</CardTitle>
+                        <CardDescription>Manage your organization's name.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <Label htmlFor="org-update-name">Organization Name</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    id="org-update-name"
+                                    value={updatedOrganizationName}
+                                    onChange={(e) => setUpdatedOrganizationName(e.target.value)}
+                                />
+                                <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg || updatedOrganizationName === userProfile.organizationName}>
+                                    {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+            
+            {isOwner && (
+                <Card className="border-destructive">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle /> Danger Zone</CardTitle>
+                        <CardDescription>
+                            Deleting your organization is a permanent action that cannot be undone.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">Delete Organization</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete your organization, including all tickets, conversations, and member data. To confirm, please type your organization name: <strong className="text-foreground">{userProfile.organizationName}</strong>
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <div className="py-4">
+                                     <Input
+                                        value={deleteConfirmationInput}
+                                        onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                                        placeholder="Type organization name to confirm"
+                                    />
+                                </div>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setDeleteConfirmationInput('')}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        disabled={!isDeleteConfirmationValid || isDeletingOrg}
+                                        onClick={handleDeleteOrganization}
+                                        className="bg-destructive hover:bg-destructive/90"
+                                    >
+                                        {isDeletingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                        Delete Forever
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

@@ -343,8 +343,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
             await updateDoc(ticketDocRef, {
                 bodyPreview: lastMessage.bodyPreview,
                 receivedDateTime: lastMessage.receivedDateTime,
-                sender: querySnapshot.docs[0].data().sender,
-                senderEmail: querySnapshot.docs[0].data().senderEmail,
             });
         }
     }
@@ -920,6 +918,57 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     return { success: true };
 }
     
-    
+export async function updateOrganization(organizationId: string, name: string) {
+    if (!organizationId || !name.trim()) {
+        throw new Error("Organization ID and name are required.");
+    }
+    const orgDocRef = doc(db, 'organizations', organizationId);
+    await updateDoc(orgDocRef, { name });
+    return { success: true };
+}
 
+export async function deleteOrganization(organizationId: string) {
+    if (!organizationId) {
+        throw new Error("Organization ID is required.");
+    }
+
+    const orgDocRef = doc(db, 'organizations', organizationId);
+    const batch = writeBatch(db);
+
+    // Delete all tickets and their activity logs
+    const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
+    const ticketsSnapshot = await getDocs(ticketsCollectionRef);
+    for (const ticketDoc of ticketsSnapshot.docs) {
+        const activityCollectionRef = collection(ticketDoc.ref, 'activity');
+        const activitySnapshot = await getDocs(activityCollectionRef);
+        activitySnapshot.forEach(activityDoc => {
+            batch.delete(activityDoc.ref);
+        });
+        batch.delete(ticketDoc.ref);
+    }
+
+    // Delete all conversations
+    const conversationsCollectionRef = collection(db, 'organizations', organizationId, 'conversations');
+    const conversationsSnapshot = await getDocs(conversationsCollectionRef);
+    conversationsSnapshot.forEach(convoDoc => {
+        batch.delete(convoDoc.ref);
+    });
+
+    // Delete all counters
+    const countersCollectionRef = collection(db, 'organizations', organizationId, 'counters');
+    const countersSnapshot = await getDocs(countersCollectionRef);
+    countersSnapshot.forEach(counterDoc => {
+        batch.delete(counterDoc.ref);
+    });
     
+    // Delete the main organization document
+    batch.delete(orgDocRef);
+    
+    // Delete all user settings associated with this organization - This is harder without a direct link.
+    // For now, we will skip this step as user settings are keyed by UID, not org ID.
+    // A more robust solution might involve a Cloud Function triggered on org deletion.
+
+    await batch.commit();
+
+    return { success: true };
+}
