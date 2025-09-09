@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState, useEffect } from "react";
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -33,8 +34,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/providers/auth-provider";
-import { deleteUserAccount } from "@/app/actions";
+import { deleteOrganization } from "@/app/actions";
 import { useRouter } from "next/navigation";
+import { db } from "@/lib/firebase";
+import { doc, deleteDoc } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -93,7 +96,7 @@ export function SettingsForm() {
   }
   
   const handleDeleteAccount = async () => {
-    if (!user || !userProfile) {
+    if (!user || !userProfile || !user.email) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -101,23 +104,45 @@ export function SettingsForm() {
         });
         return;
     }
+    
+    const password = prompt("For your security, please re-enter your password to delete your account:");
+    if (!password) {
+        toast({
+            title: "Deletion Canceled",
+            description: "Password not provided.",
+        });
+        return;
+    }
+
     setIsDeleting(true);
     try {
+        const credential = EmailAuthProvider.credential(user.email, password);
+        // Re-authenticate the user
+        await reauthenticateWithCredential(user, credential);
+        
+        // If re-authentication is successful, proceed with deletion
         const isOwner = user.uid === userProfile.organizationOwnerUid;
-        const result = await deleteUserAccount(user.uid, userProfile.organizationId, isOwner);
-
-        if (result.success) {
-            toast({
-                title: "Account Deleted",
-                description: "Your account and all associated data have been successfully deleted.",
-            });
-            await logout(); // Sign out the user
-            router.push('/login'); // Redirect to login page
-        } else {
-            throw new Error(result.error);
+        if (isOwner && userProfile.organizationId) {
+            await deleteOrganization(userProfile.organizationId);
         }
+
+        // Delete user's settings document
+        const userSettingsRef = doc(db, 'users', user.uid);
+        await deleteDoc(userSettingsRef);
+
+        // Finally, delete the user from Firebase Authentication
+        await deleteUser(user);
+
+        toast({
+            title: "Account Deleted",
+            description: "Your account and all associated data have been successfully deleted.",
+        });
+        
+        // No need to call logout(), deleteUser signs them out.
+        router.push('/login'); 
+
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during account deletion.";
         toast({
             variant: "destructive",
             title: "Deletion Failed",
@@ -145,26 +170,21 @@ export function SettingsForm() {
                     </div>
                     <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Your application is connected to the Microsoft Graph API. You can now send and receive emails.
-                    </p>
-                </CardContent>
             </Card>
              <Card className="border-destructive">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <AlertTriangle className="text-destructive" />
-                        Delete Account
-                    </CardTitle>
-                    <CardDescription>
-                        Permanently delete your account and all associated data. This action is irreversible and cannot be undone.
-                    </CardDescription>
-                </CardHeader>
-                <CardFooter>
+                <CardHeader className="flex flex-row items-start justify-between">
+                    <div className="space-y-1.5">
+                        <CardTitle className="flex items-center gap-2">
+                            <AlertTriangle className="text-destructive" />
+                            Delete Account
+                        </CardTitle>
+                        <CardDescription>
+                            Permanently delete your account and all associated data.
+                        </CardDescription>
+                    </div>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive">Delete Account</Button>
+                            <Button variant="destructive">Delete</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -186,7 +206,7 @@ export function SettingsForm() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                </CardFooter>
+                </CardHeader>
             </Card>
         </div>
     );
@@ -256,19 +276,19 @@ export function SettingsForm() {
             </Form>
         </Card>
         <Card className="border-destructive">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="text-destructive" />
-                    Delete Account
-                </CardTitle>
-                <CardDescription>
-                    Permanently delete your account and all associated data. This action is irreversible and cannot be undone.
-                </CardDescription>
-            </CardHeader>
-            <CardFooter>
+            <CardHeader className="flex flex-row items-start justify-between">
+                <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2">
+                        <AlertTriangle className="text-destructive" />
+                        Delete Account
+                    </CardTitle>
+                    <CardDescription>
+                        Permanently delete your account and all associated data.
+                    </CardDescription>
+                </div>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Delete Account</Button>
+                        <Button variant="destructive">Delete</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
@@ -290,7 +310,7 @@ export function SettingsForm() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </CardFooter>
+            </CardHeader>
         </Card>
     </div>
   );

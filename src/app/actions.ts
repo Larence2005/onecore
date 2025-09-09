@@ -962,29 +962,3 @@ export async function deleteOrganization(organizationId: string) {
     
     return { success: true };
 }
-
-export async function deleteUserAccount(uid: string, organizationId?: string, isOwner?: boolean) {
-    if (!uid) {
-        throw new Error("User ID is required.");
-    }
-
-    try {
-        // If the user is an owner of an organization, delete the entire organization.
-        if (organizationId && isOwner) {
-            await deleteOrganization(organizationId);
-        }
-
-        // Delete user's settings document
-        const userSettingsRef = doc(db, 'users', uid);
-        await deleteDoc(userSettingsRef);
-
-        // Finally, delete the user from Firebase Authentication
-        await adminAuth.deleteUser(uid);
-
-        return { success: true };
-    } catch (error) {
-        console.error("Failed to delete user account:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during account deletion.";
-        return { success: false, error: errorMessage };
-    }
-}
