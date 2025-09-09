@@ -318,7 +318,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         if(field === 'type') setCurrentType(value);
         if(field === 'deadline') setCurrentDeadline(value);
 
-        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value });
+        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, settings);
 
         if (!result.success) {
              toast({
@@ -1092,7 +1092,5 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
 
     

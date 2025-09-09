@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User } from 'lucide-react';
 import { useAuth } from "@/providers/auth-provider";
+import { useSettings } from "@/providers/settings-provider";
 
 
 type TicketItemProps = {
@@ -46,6 +47,7 @@ const types = [
 
 export function TicketItem({ email, isSelected, onSelect, isArchivedView = false }: TicketItemProps) {
     const { userProfile } = useAuth();
+    const { settings } = useSettings();
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [currentStatus, setCurrentStatus] = useState(email.status);
@@ -80,7 +82,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         if (field === 'status') setCurrentStatus(value);
         if (field === 'type') setCurrentType(value);
 
-        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: value });
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: value }, settings);
         if (result.success) {
             toast({
                 title: 'Ticket Updated',

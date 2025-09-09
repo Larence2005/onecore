@@ -617,7 +617,7 @@ export async function forwardEmailAction(
 }
 
 
-export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }) {
+export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }, settings: Settings | null) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
         await runTransaction(db, async (transaction) => {
@@ -666,6 +666,29 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                     assignee: data.assignee
                 }));
                 transaction.update(conversationDocRef, { messages });
+            }
+
+            // If assignee changed, send a notification
+            if (data.assignee && data.assignee !== ticketData.assignee && data.assignee !== 'Unassigned' && settings) {
+                const newAssigneeEmail = data.assignee;
+                const emailSubject = `You have been assigned a new ticket: #${ticketData.ticketNumber}`;
+                const emailBody = `
+                    <p>Hello,</p>
+                    <p>You have been assigned a new ticket.</p>
+                    <p><b>Ticket #${ticketData.ticketNumber}: ${ticketData.title}</b></p>
+                    <p>You can view the ticket details here: <a href="https://ticketflow-klvln.web.app/tickets/${id}">View Ticket</a></p>
+                    <p>Thank you,</p>
+                    <p>Onecore Support Team</p>
+                `;
+                 // This is a fire-and-forget, but we handle the promise to avoid unhandled rejection warnings.
+                 // We don't want the main transaction to fail if the email notification fails.
+                 sendEmailAction(settings, {
+                    recipient: newAssigneeEmail,
+                    subject: emailSubject,
+                    body: emailBody
+                }).catch(error => {
+                    console.error("Failed to send assignment notification email:", error);
+                });
             }
         });
 
@@ -984,5 +1007,4 @@ export async function deleteOrganization(organizationId: string) {
     
     return { success: true };
 }
-
     
