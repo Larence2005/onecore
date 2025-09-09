@@ -77,12 +77,6 @@ export default function ArchivePage() {
                         <SidebarContent className="flex-grow">
                             <SidebarMenu className="flex flex-col gap-2 px-4">
                                 <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                    <Pencil className="text-blue-500" />
-                                    <span>Compose</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
                                     <LayoutDashboard className="text-purple-500" />
                                     <span>Dashboard</span>
@@ -92,6 +86,12 @@ export default function ArchivePage() {
                                     <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
                                     <List className="text-green-500" />
                                     <span>Tickets</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                                    <Pencil className="text-blue-500" />
+                                    <span>Compose</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
@@ -140,3 +140,5 @@ export default function ArchivePage() {
         </SidebarProvider>
     );
 }
+
+    

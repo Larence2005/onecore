@@ -26,7 +26,7 @@ function HomePageContent() {
   const { user, userProfile, loading, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeView, setActiveView] = useState<View>('tickets');
+  const [activeView, setActiveView] = useState<View>('analytics');
   
   const { settings, isConfigured } = useSettings();
   const { toast } = useToast();
@@ -219,12 +219,6 @@ function HomePageContent() {
             <SidebarContent className="flex-grow">
               <SidebarMenu className="flex flex-col gap-2 px-4">
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
-                    <Pencil className="text-blue-500" />
-                    <span>Compose</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
                     <LayoutDashboard className="text-purple-500" />
                     <span>Dashboard</span>
@@ -234,6 +228,12 @@ function HomePageContent() {
                   <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
                     <List className="text-green-500" />
                     <span>Tickets</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
+                    <Pencil className="text-blue-500" />
+                    <span>Compose</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -299,3 +299,5 @@ export default function Home() {
       <HomePageContent />
   )
 }
+
+    
