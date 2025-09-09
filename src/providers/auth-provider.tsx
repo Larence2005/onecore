@@ -6,6 +6,7 @@ import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, sign
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { createOrganization } from '@/app/actions';
 
 
 export interface UserProfile {
@@ -99,8 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [fetchUserProfile]);
 
-  const signup = (data: SignUpFormData) => {
-    return createUserWithEmailAndPassword(auth, data.email, data.password);
+  const signup = async (data: SignUpFormData) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const user = userCredential.user;
+    if (user) {
+      await createOrganization(data.organizationName, user.uid, user.email!);
+    }
+    return userCredential;
   }
 
   const login = (data: LoginFormData) => {

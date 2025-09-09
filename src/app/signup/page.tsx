@@ -24,6 +24,7 @@ import { RefreshCw } from "lucide-react";
 import Image from "next/image";
 
 const formSchema = z.object({
+  organizationName: z.string().min(1, "Organization name is required."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
   confirmPassword: z.string()
@@ -42,6 +43,7 @@ export default function SignupPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      organizationName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -84,6 +86,19 @@ export default function SignupPage() {
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                 <FormField
+                  control={form.control}
+                  name="organizationName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Organization Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Your Company, Inc." {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                 control={form.control}
                 name="email"
