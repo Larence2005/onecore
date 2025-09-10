@@ -853,12 +853,11 @@ export async function createOrganization(name: string, uid: string, userName: st
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string, password?: string) {
+export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
     if (!organizationId || !email || !name) {
         throw new Error("Organization ID, member name, and email are required.");
     }
     
-    // Check if the member email already exists in the organization
     const organizationRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(organizationRef);
     if(orgDoc.exists()){
@@ -868,7 +867,6 @@ export async function addMemberToOrganization(organizationId: string, name: stri
         }
     }
     
-    // Add the member to the organization's members list in Firestore
     await updateDoc(organizationRef, {
         members: arrayUnion({ name, email })
     });
@@ -886,28 +884,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
         return [];
     }
 
-    const memberData = (orgDoc.data().members || []) as OrganizationMember[];
-    
-    // The UID should now be part of the member data itself, but we can have a fallback
-    // for older data or other scenarios.
-    const membersWithUid: OrganizationMember[] = await Promise.all(
-        memberData.map(async (member) => {
-            if (member.uid) {
-                return member; // UID is already present
-            }
-            try {
-                // Fallback to fetch from Auth if UID is missing
-                const userRecord = await adminAuth.getUserByEmail(member.email);
-                return { ...member, uid: userRecord.uid };
-            } catch (error) {
-                // User might not exist in Firebase Auth yet if they haven't signed up
-                // console.warn(`Could not find user in Auth for email: ${member.email}`);
-                return { ...member, uid: undefined };
-            }
-        })
-    );
-
-    return membersWithUid;
+    return (orgDoc.data().members || []) as OrganizationMember[];
 }
 
 
@@ -1098,4 +1075,5 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
         name: companyDoc.data().name,
     };
 }
+    
     
