@@ -359,7 +359,7 @@ export function OrganizationView() {
                                     return (
                                         <TableRow key={member.email}>
                                             <TableCell className="font-medium">
-                                                <Link href={`/assignees/${encodeURIComponent(member.email)}`} className="hover:underline">
+                                                <Link href={`/contacts/${encodeURIComponent(member.email)}`} className="hover:underline">
                                                     {member.name}
                                                 </Link>
                                             </TableCell>

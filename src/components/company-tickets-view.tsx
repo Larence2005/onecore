@@ -348,7 +348,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                         {employees.map((employee) => (
                                                             <TableRow key={employee.email}>
                                                                 <TableCell className="font-medium">
-                                                                    <Link href={`/assignees/${encodeURIComponent(employee.email)}`} className="hover:underline">
+                                                                    <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
                                                                         {employee.name}
                                                                     </Link>
                                                                 </TableCell>
