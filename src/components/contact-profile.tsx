@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers, getEmail } from "@/app/actions";
-import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
+import { getTicketsFromDB, getOrganizationMembers, getEmail, getCompanies, updateCompanyEmployee } from "@/app/actions";
+import type { Email, OrganizationMember, DetailedEmail, ActivityLog, Company, Employee } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,21 +12,30 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TicketItem } from "@/components/ticket-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ArrowLeft, Mail, Ticket, Forward, Users as UsersIcon } from "lucide-react";
+import { Terminal, ArrowLeft, Mail, Ticket, Forward, Users as UsersIcon, Building as BuildingIcon, Home, Phone, Pencil, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Archive } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
+import { PropertyItem } from "./property-item";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 interface ProfileData {
     name: string;
     email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    companyId?: string;
+    companyName?: string;
 }
 
 export function ContactProfile({ email }: { email: string }) {
@@ -45,6 +54,14 @@ export function ContactProfile({ email }: { email: string }) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatedName, setUpdatedName] = useState('');
+  const [updatedEmail, setUpdatedEmail] = useState('');
+  const [updatedAddress, setUpdatedAddress] = useState('');
+  const [updatedMobile, setUpdatedMobile] = useState('');
+  const [updatedLandline, setUpdatedLandline] = useState('');
+
   useEffect(() => {
     if (!loading && !user) {
         router.push('/login');
@@ -52,94 +69,140 @@ export function ContactProfile({ email }: { email: string }) {
   }, [user, loading, router]);
 
 
-  useEffect(() => {
-    const fetchData = async () => {
-        if (!user || !userProfile?.organizationId) {
-            if(loading) return;
-            setError("You must be part of an organization to view profiles.");
-            setIsLoading(false);
-            return;
-        }
+  const fetchData = useCallback(async () => {
+    if (!user || !userProfile?.organizationId) {
+        if(loading) return;
+        setError("You must be part of an organization to view profiles.");
+        setIsLoading(false);
+        return;
+    }
 
-        setIsLoading(true);
-        setError(null);
-        try {
-            // First, try to find the person in the organization members to get their name
-            const orgMembers = await getOrganizationMembers(userProfile.organizationId);
-            const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
-            
-            setIsInternalMember(!!member);
-            
-            // If not found, they are an external contact. Use their email as their name.
-            const name = member ? member.name : email;
-            setProfileData({ name, email });
+    setIsLoading(true);
+    setError(null);
+    try {
+        const orgMembers = await getOrganizationMembers(userProfile.organizationId);
+        const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+        setIsInternalMember(!!member);
+        
+        let foundProfile: ProfileData = { name: email, email };
 
-
-            // Then, fetch all tickets to find where this contact was involved.
-            const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
-            
-            const tempSubmittedTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
-            const tempCcTickets: Email[] = [];
-            const tempBccTickets: Email[] = [];
-            const tempForwardedActivities: ActivityLog[] = [];
-            const tempInvolvedTickets = new Map<string, Email>();
-
-            for (const ticket of allTickets) {
-                // Fetch full conversation to check recipients
-                const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
-                if (detailedTicket?.conversation) {
-                    let isCc = false;
-                    let isBcc = false;
-                    for (const message of detailedTicket.conversation) {
-                        if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
-                            isCc = true;
-                        }
-                        if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
-                            isBcc = true;
-                        }
-                    }
-                    if (isCc) tempCcTickets.push(ticket);
-                    if (isBcc) tempBccTickets.push(ticket);
+        if (member) {
+            foundProfile = { ...foundProfile, ...member };
+        } else {
+             const allCompanies = await getCompanies(userProfile.organizationId);
+             for(const company of allCompanies) {
+                const employeeDocRef = doc(db, 'organizations', userProfile.organizationId, 'companies', company.id, 'employees', email);
+                const employeeDoc = await getDoc(employeeDocRef);
+                if (employeeDoc.exists()) {
+                    const employeeData = employeeDoc.data() as Employee;
+                    foundProfile = {
+                        ...employeeData,
+                        companyId: company.id,
+                        companyName: company.name
+                    };
+                    break;
                 }
-
-                // Check activity log for forwards
-                const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
-                const q = query(activityCollectionRef, where('type', '==', 'Forward'));
-                const activitySnapshot = await getDocs(q);
-                activitySnapshot.forEach(doc => {
-                    const log = doc.data() as Omit<ActivityLog, 'id'>;
-                    if (log.details.toLowerCase().includes(email.toLowerCase())) {
-                        tempForwardedActivities.push({
-                            id: doc.id, ...log, ticketId: ticket.id, ticketSubject: ticket.subject
-                        });
-                        tempInvolvedTickets.set(ticket.id, ticket);
-                    }
-                });
-            }
-            
-            setSubmittedTickets(tempSubmittedTickets);
-            setCcTickets(tempCcTickets);
-            setBccTickets(tempBccTickets);
-            setForwardedActivities(tempForwardedActivities);
-            setInvolvedTickets(tempInvolvedTickets);
-
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            setError(errorMessage);
-            toast({
-                variant: "destructive",
-                title: "Failed to load profile.",
-                description: errorMessage,
-            });
-        } finally {
-            setIsLoading(false);
+             }
         }
-    };
+        
+        setProfileData(foundProfile);
+        setUpdatedName(foundProfile.name);
+        setUpdatedEmail(foundProfile.email);
+        setUpdatedAddress(foundProfile.address || '');
+        setUpdatedMobile(foundProfile.mobile || '');
+        setUpdatedLandline(foundProfile.landline || '');
 
-    if(!loading && user && userProfile) {
-        fetchData();
+
+        // Then, fetch all tickets to find where this contact was involved.
+        const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+        
+        const tempSubmittedTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
+        const tempCcTickets: Email[] = [];
+        const tempBccTickets: Email[] = [];
+        const tempForwardedActivities: ActivityLog[] = [];
+        const tempInvolvedTickets = new Map<string, Email>();
+
+        for (const ticket of allTickets) {
+            // Fetch full conversation to check recipients
+            const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
+            if (detailedTicket?.conversation) {
+                let isCc = false;
+                let isBcc = false;
+                for (const message of detailedTicket.conversation) {
+                    if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                        isCc = true;
+                    }
+                    if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                        isBcc = true;
+                    }
+                }
+                if (isCc) tempCcTickets.push(ticket);
+                if (isBcc) tempBccTickets.push(ticket);
+            }
+
+            // Check activity log for forwards
+            const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
+            const q = query(activityCollectionRef, where('type', '==', 'Forward'));
+            const activitySnapshot = await getDocs(q);
+            activitySnapshot.forEach(doc => {
+                const log = doc.data() as Omit<ActivityLog, 'id'>;
+                if (log.details.toLowerCase().includes(email.toLowerCase())) {
+                    tempForwardedActivities.push({
+                        id: doc.id, ...log, ticketId: ticket.id, ticketSubject: ticket.subject
+                    });
+                    tempInvolvedTickets.set(ticket.id, ticket);
+                }
+            });
+        }
+        
+        setSubmittedTickets(tempSubmittedTickets);
+        setCcTickets(tempCcTickets);
+        setBccTickets(tempBccTickets);
+        setForwardedActivities(tempForwardedActivities);
+        setInvolvedTickets(tempInvolvedTickets);
+
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+        setError(errorMessage);
+        toast({
+            variant: "destructive",
+            title: "Failed to load profile.",
+            description: errorMessage,
+        });
+    } finally {
+        setIsLoading(false);
     }
   }, [user, userProfile, email, toast, loading]);
+
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
+   const handleUpdate = async () => {
+    if (!profileData || !profileData.companyId || !userProfile?.organizationId) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Cannot update contact without a company association.' });
+        return;
+    }
+    setIsUpdating(true);
+    try {
+        await updateCompanyEmployee(userProfile.organizationId, profileData.companyId, profileData.email, {
+            name: updatedName,
+            email: updatedEmail,
+            address: updatedAddress,
+            mobile: updatedMobile,
+            landline: updatedLandline,
+        });
+        toast({ title: "Contact Updated", description: "The contact's details have been updated." });
+        await fetchData(); // Re-fetch data
+        setIsEditDialogOpen(false);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({ variant: 'destructive', title: "Update Failed", description: errorMessage });
+    } finally {
+        setIsUpdating(false);
+    }
+  };
 
     const handleLogout = async () => {
         try {
@@ -163,6 +226,8 @@ export function ContactProfile({ email }: { email: string }) {
     if (loading || !user) {
         return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
     }
+    
+    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 
 
   return (
@@ -247,9 +312,9 @@ export function ContactProfile({ email }: { email: string }) {
                         <h1 className="text-xl font-bold">Contact Profile</h1>
                     </div>
                 </Header>
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
                     {isLoading ? (
-                        <div className="space-y-4">
+                        <div className="lg:col-span-2 xl:col-span-3 space-y-4">
                             <div className="flex items-center gap-4">
                                 <Skeleton className="h-20 w-20 rounded-full" />
                                 <div className="space-y-2">
@@ -261,13 +326,14 @@ export function ContactProfile({ email }: { email: string }) {
                             <Skeleton className="h-96 w-full" />
                         </div>
                     ) : error ? (
-                            <Alert variant="destructive" className="max-w-2xl mx-auto">
+                            <Alert variant="destructive" className="max-w-2xl mx-auto lg:col-span-full">
                             <Terminal className="h-4 w-4" />
                             <AlertTitle>Error</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     ) : profileData ? (
-                        <div className="space-y-6">
+                        <>
+                        <div className="lg:col-span-2 xl:col-span-3 space-y-6">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                                 <Avatar className="h-20 w-20 text-3xl">
                                     <AvatarFallback>{profileData.name.charAt(0).toUpperCase()}</AvatarFallback>
@@ -280,34 +346,32 @@ export function ContactProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                            <Tabs defaultValue="cc" className="w-full">
+                            <Tabs defaultValue="submitted" className="w-full">
                                 <TabsList className="mb-4">
-                                    {isInternalMember && <TabsTrigger value="submitted">Submitted</TabsTrigger>}
+                                    <TabsTrigger value="submitted">Submitted</TabsTrigger>
                                     <TabsTrigger value="cc">Cc'd On</TabsTrigger>
                                     <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
                                     <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
                                 </TabsList>
-                                {isInternalMember && (
-                                    <TabsContent value="submitted">
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Submitted Tickets</CardTitle>
-                                                <CardDescription>Tickets created by {profileData.name}.</CardDescription>
-                                            </CardHeader>
-                                            <CardContent>
-                                                {submittedTickets.length > 0 ? (
-                                                    <ul className="space-y-0 border-t">
-                                                        {submittedTickets.map((ticket) => (
-                                                            <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </TabsContent>
-                                )}
+                                <TabsContent value="submitted">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Submitted Tickets</CardTitle>
+                                            <CardDescription>Tickets created by {profileData.name}.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {submittedTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {submittedTickets.map((ticket) => (
+                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
                                 <TabsContent value="cc">
                                     <Card>
                                         <CardHeader>
@@ -372,6 +436,75 @@ export function ContactProfile({ email }: { email: string }) {
                                 </TabsContent>
                             </Tabs>
                         </div>
+                         <aside className="lg:col-span-1 xl:col-span-1 space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <CardTitle>Properties</CardTitle>
+                                    {isOwner && profileData.companyId && (
+                                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="secondary" size="sm">
+                                                    <Pencil className="mr-2 h-3 w-3" />
+                                                    Edit
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-2xl">
+                                                <DialogHeader>
+                                                    <DialogTitle>Edit Contact Properties</DialogTitle>
+                                                    <DialogDescription>Update the details for {profileData.name}.</DialogDescription>
+                                                </DialogHeader>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="update-name">Name</Label>
+                                                        <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="update-email">Email</Label>
+                                                        <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="update-mobile">Mobile Number</Label>
+                                                        <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="update-landline">Telephone Number</Label>
+                                                        <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                                    </div>
+                                                    <div className="space-y-2 sm:col-span-2">
+                                                        <Label htmlFor="update-address">Address</Label>
+                                                        <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                                    </div>
+                                                </div>
+                                                <DialogFooter>
+                                                    <DialogClose asChild>
+                                                        <Button variant="outline">Cancel</Button>
+                                                    </DialogClose>
+                                                    <Button onClick={handleUpdate} disabled={isUpdating}>
+                                                        {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                        Save Changes
+                                                    </Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
+                                    )}
+                                </CardHeader>
+                                <CardContent>
+                                    <dl className="grid grid-cols-1 gap-y-4">
+                                        {profileData.companyId && profileData.companyName && (
+                                            <PropertyItem icon={BuildingIcon} label="Company">
+                                                <Link href={`/clients/${profileData.companyId}`} className="font-semibold hover:underline">
+                                                    {profileData.companyName}
+                                                </Link>
+                                            </PropertyItem>
+                                        )}
+                                        <PropertyItem icon={Home} label="Address" value={profileData.address} />
+                                        <PropertyItem icon={Phone} label="Mobile" value={profileData.mobile} />
+                                        <PropertyItem icon={Phone} label="Telephone" value={profileData.landline} />
+                                    </dl>
+                                </CardContent>
+                            </Card>
+                        </aside>
+                        </>
                     ) : null}
                 </div>
             </main>
@@ -379,3 +512,4 @@ export function ContactProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
