@@ -33,6 +33,7 @@ export function ContactProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout } = useAuth();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   
+  const [submittedTickets, setSubmittedTickets] = useState<Email[]>([]);
   const [ccTickets, setCcTickets] = useState<Email[]>([]);
   const [bccTickets, setBccTickets] = useState<Email[]>([]);
   const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
@@ -74,6 +75,7 @@ export function ContactProfile({ email }: { email: string }) {
             // Then, fetch all tickets to find where this contact was involved.
             const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
             
+            const tempSubmittedTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
             const tempCcTickets: Email[] = [];
             const tempBccTickets: Email[] = [];
             const tempForwardedActivities: ActivityLog[] = [];
@@ -111,7 +113,8 @@ export function ContactProfile({ email }: { email: string }) {
                     }
                 });
             }
-
+            
+            setSubmittedTickets(tempSubmittedTickets);
             setCcTickets(tempCcTickets);
             setBccTickets(tempBccTickets);
             setForwardedActivities(tempForwardedActivities);
@@ -274,12 +277,32 @@ export function ContactProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                            <Tabs defaultValue="cc" className="w-full">
+                            <Tabs defaultValue="submitted" className="w-full">
                                 <TabsList className="mb-4">
+                                    <TabsTrigger value="submitted">Submitted</TabsTrigger>
                                     <TabsTrigger value="cc">Cc'd On</TabsTrigger>
                                     <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
                                     <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
                                 </TabsList>
+                                <TabsContent value="submitted">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Submitted Tickets</CardTitle>
+                                            <CardDescription>Tickets created by {profileData.name}.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {submittedTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {submittedTickets.map((ticket) => (
+                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
                                 <TabsContent value="cc">
                                     <Card>
                                         <CardHeader>
@@ -351,3 +374,5 @@ export function ContactProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
