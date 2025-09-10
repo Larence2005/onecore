@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
@@ -18,6 +18,12 @@ import { TicketItem } from './ticket-item';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Terminal } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { isPast, isFuture, parseISO } from 'date-fns';
+
+type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
+
 
 export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const { user, userProfile, loading, logout } = useAuth();
@@ -26,6 +32,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [company, setCompany] = useState<Company | null>(null);
     const [tickets, setTickets] = useState<Email[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [sortOption, setSortOption] = useState<SortOption>('newest');
+
 
     useEffect(() => {
         if (!loading && !user) {
@@ -65,6 +73,33 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
         fetchData();
     }, [userProfile, companyId, toast, router, loading]);
+    
+    const sortedTickets = useMemo(() => {
+        let sorted = [...tickets];
+        switch (sortOption) {
+            case 'newest':
+                sorted.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+                break;
+            case 'oldest':
+                sorted.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
+                break;
+            case 'upcoming':
+                sorted = sorted
+                    .filter(t => t.deadline && isFuture(parseISO(t.deadline)))
+                    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+                break;
+            case 'overdue':
+                 sorted = sorted
+                    .filter(t => t.deadline && isPast(parseISO(t.deadline)) && !['Resolved', 'Closed'].includes(t.status))
+                    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+                break;
+            case 'status':
+                const statusOrder = { 'Open': 1, 'Pending': 2, 'Resolved': 3, 'Closed': 4, 'Archived': 5 };
+                sorted.sort((a, b) => (statusOrder[a.status as keyof typeof statusOrder] || 99) - (statusOrder[b.status as keyof typeof statusOrder] || 99));
+                break;
+        }
+        return sorted;
+    }, [tickets, sortOption]);
 
     const handleLogout = async () => {
         try {
@@ -183,7 +218,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                         </div>
                     </Header>
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-                        {isLoading ? (
+                         {isLoading ? (
                             <div className="space-y-4">
                                 {[...Array(5)].map((_, i) => (
                                     <div key={i} className="p-4 border rounded-lg space-y-3">
@@ -195,33 +230,76 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                     </div>
                                 ))}
                             </div>
-                        ) : tickets.length > 0 ? (
-                           <Card>
-                                <CardHeader>
-                                    <CardTitle>Tickets for {company?.name}</CardTitle>
-                                    <CardDescription>A list of all tickets associated with this company.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ul className="space-y-0 border-t">
-                                        {tickets.map((ticket) => (
-                                            <TicketItem 
-                                                key={ticket.id} 
-                                                email={ticket} 
-                                                isSelected={false}
-                                                onSelect={() => {}}
-                                            />
-                                        ))}
-                                    </ul>
-                                </CardContent>
-                           </Card>
                         ) : (
-                            <Alert>
-                                <Ticket className="h-4 w-4" />
-                                <AlertTitle>No Tickets Found</AlertTitle>
-                                <AlertDescription>
-                                    There are no tickets associated with {company?.name}.
-                                </AlertDescription>
-                            </Alert>
+                             <Tabs defaultValue="tickets" className="w-full">
+                                <TabsList className="mb-4">
+                                    <TabsTrigger value="tickets">All Tickets</TabsTrigger>
+                                    <TabsTrigger value="employees">Employees</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="tickets">
+                                    <Card>
+                                        <CardHeader className="flex flex-row items-center justify-between">
+                                            <div>
+                                                <CardTitle>Tickets for {company?.name}</CardTitle>
+                                                <CardDescription>A list of all tickets associated with this company.</CardDescription>
+                                            </div>
+                                            <div className="w-[180px]">
+                                                <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Sort by" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="newest">Newest</SelectItem>
+                                                        <SelectItem value="oldest">Oldest</SelectItem>
+                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                        <SelectItem value="overdue">Overdue</SelectItem>
+                                                        <SelectItem value="status">Status</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {sortedTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {sortedTickets.map((ticket) => (
+                                                        <TicketItem 
+                                                            key={ticket.id} 
+                                                            email={ticket} 
+                                                            isSelected={false}
+                                                            onSelect={() => {}}
+                                                        />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <Alert>
+                                                    <Ticket className="h-4 w-4" />
+                                                    <AlertTitle>No Tickets Found</AlertTitle>
+                                                    <AlertDescription>
+                                                        There are no tickets matching the current criteria for {company?.name}.
+                                                    </AlertDescription>
+                                                </Alert>
+                                            )}
+                                        </CardContent>
+                                   </Card>
+                                </TabsContent>
+                                <TabsContent value="employees">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Employees at {company?.name}</CardTitle>
+                                            <CardDescription>A list of employees associated with this company.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                             <Alert>
+                                                <User className="h-4 w-4" />
+                                                <AlertTitle>Coming Soon</AlertTitle>
+                                                <AlertDescription>
+                                                    Management of company-specific employees is not yet implemented.
+                                                </AlertDescription>
+                                            </Alert>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                            </Tabs>
                         )}
                     </div>
                 </main>
@@ -229,4 +307,3 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
-
