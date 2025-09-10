@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { getTicketsFromDB, getOrganizationMembers, getEmail, getActivityLog } from "@/app/actions";
 import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TicketItem } from "@/components/ticket-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ArrowLeft, Mail, Ticket } from "lucide-react";
+import { Terminal, ArrowLeft, Mail, Ticket, Home, Phone, Activity, Link as LinkIcon, Building } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
@@ -22,19 +22,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { PropertyItem } from "./property-item";
 
-interface ProfileData {
-    name: string;
-    email: string;
-}
 
 export function AgentProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout } = useAuth();
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [profileData, setProfileData] = useState<OrganizationMember | null>(null);
   
   const [ccTickets, setCcTickets] = useState<Email[]>([]);
   const [bccTickets, setBccTickets] = useState<Email[]>([]);
   const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
+  const [responseCount, setResponseCount] = useState(0);
+  const [latestActivity, setLatestActivity] = useState<ActivityLog | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,13 +66,16 @@ export function AgentProfile({ email }: { email: string }) {
                 throw new Error("Agent not found in your organization.");
             }
             
-            setProfileData({ name: member.name, email: member.email });
+            setProfileData(member);
 
             const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
             
             const tempCcTickets: Email[] = [];
             const tempBccTickets: Email[] = [];
             const tempForwardedActivities: ActivityLog[] = [];
+            let tempResponseCount = 0;
+            let allActivities: ActivityLog[] = [];
+
 
             for (const ticket of allTickets) {
                 const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
@@ -81,6 +83,9 @@ export function AgentProfile({ email }: { email: string }) {
                     let isCc = false;
                     let isBcc = false;
                     for (const message of detailedTicket.conversation) {
+                        if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
+                            tempResponseCount++;
+                        }
                         if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
                             isCc = true;
                         }
@@ -92,15 +97,12 @@ export function AgentProfile({ email }: { email: string }) {
                     if (isBcc) tempBccTickets.push(ticket);
                 }
 
-                const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
-                const q = query(activityCollectionRef, where('type', '==', 'Forward'));
-                const activitySnapshot = await getDocs(q);
-                activitySnapshot.forEach(doc => {
-                    const log = doc.data() as Omit<ActivityLog, 'id'>;
-                    if (log.details.toLowerCase().includes(email.toLowerCase())) {
-                        tempForwardedActivities.push({
-                            id: doc.id, ...log, ticketId: ticket.id, ticketSubject: ticket.subject
-                        });
+                const activityLogs = await getActivityLog(userProfile.organizationId, ticket.id);
+                activityLogs.forEach(log => {
+                    const activityWithTicketInfo = { ...log, ticketId: ticket.id, ticketSubject: ticket.subject };
+                    allActivities.push(activityWithTicketInfo);
+                    if (log.type === 'Forward' && log.details.toLowerCase().includes(email.toLowerCase())) {
+                        tempForwardedActivities.push(activityWithTicketInfo);
                     }
                 });
             }
@@ -108,6 +110,13 @@ export function AgentProfile({ email }: { email: string }) {
             setCcTickets(tempCcTickets);
             setBccTickets(tempBccTickets);
             setForwardedActivities(tempForwardedActivities);
+            setResponseCount(tempResponseCount);
+            
+            const userActivities = allActivities.filter(log => log.user.toLowerCase() === email.toLowerCase());
+            if (userActivities.length > 0) {
+                 userActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                 setLatestActivity(userActivities[0]);
+            }
 
 
         } catch (err) {
@@ -234,9 +243,9 @@ export function AgentProfile({ email }: { email: string }) {
                         <h1 className="text-xl font-bold">Agent Profile</h1>
                     </div>
                 </Header>
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
                     {isLoading ? (
-                        <div className="space-y-4">
+                        <div className="space-y-4 lg:col-span-2 xl:col-span-3">
                             <div className="flex items-center gap-4">
                                 <Skeleton className="h-20 w-20 rounded-full" />
                                 <div className="space-y-2">
@@ -248,13 +257,14 @@ export function AgentProfile({ email }: { email: string }) {
                             <Skeleton className="h-96 w-full" />
                         </div>
                     ) : error ? (
-                            <Alert variant="destructive" className="max-w-2xl mx-auto">
+                            <Alert variant="destructive" className="max-w-2xl mx-auto lg:col-span-full">
                             <Terminal className="h-4 w-4" />
                             <AlertTitle>Error</AlertTitle>
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     ) : profileData ? (
-                        <div className="space-y-6">
+                        <>
+                        <div className="space-y-6 lg:col-span-2 xl:col-span-3">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                                 <Avatar className="h-20 w-20 text-3xl">
                                     <AvatarFallback>{profileData.name.charAt(0).toUpperCase()}</AvatarFallback>
@@ -337,6 +347,35 @@ export function AgentProfile({ email }: { email: string }) {
                                 </TabsContent>
                             </Tabs>
                         </div>
+                        <aside className="space-y-6 lg:col-span-1 xl:col-span-1">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Properties</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <dl className="grid grid-cols-1 gap-y-4">
+                                            <PropertyItem icon={Home} label="Address" value={profileData.address} />
+                                            <PropertyItem icon={Phone} label="Mobile" value={profileData.mobile} />
+                                            <PropertyItem icon={Phone} label="Telephone" value={profileData.landline} />
+                                            <PropertyItem icon={Ticket} label="Total Responses" value={responseCount} />
+                                            <dt className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                                <Activity className="h-4 w-4" />
+                                                Latest Activity
+                                            </dt>
+                                            {latestActivity ? (
+                                                 <dd className="mt-1 text-sm text-foreground break-all">
+                                                    <TimelineItem type={latestActivity.type} date={latestActivity.date} user={latestActivity.user}>
+                                                        {latestActivity.details} on <Link href={`/tickets/${latestActivity.ticketId}`} className="font-semibold hover:underline">{latestActivity.ticketSubject}</Link>
+                                                    </TimelineItem>
+                                                 </dd>
+                                            ) : (
+                                                <dd className="mt-1 text-sm text-foreground">N/A</dd>
+                                            )}
+                                        </dl>
+                                    </CardContent>
+                                </Card>
+                            </aside>
+                        </>
                     ) : null}
                 </div>
             </main>
@@ -344,5 +383,3 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
-
-    

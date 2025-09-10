@@ -87,6 +87,9 @@ export interface OrganizationMember {
     uid?: string;
     name: string;
     email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
 }
 
 export interface Company {
@@ -906,7 +909,7 @@ export async function createOrganization(name: string, uid: string, userName: st
     await setDoc(organizationRef, {
         name: name,
         owner: uid,
-        members: [{ name: userName, email: email, uid: uid }],
+        members: [{ name: userName, email: email, uid: uid, address: '', mobile: '', landline: '' }],
         address: '',
         mobile: '',
         landline: '',
@@ -917,7 +920,7 @@ export async function createOrganization(name: string, uid: string, userName: st
 }
 
 
-export async function addMemberToOrganization(organizationId: string, name: string, email: string) {
+export async function addMemberToOrganization(organizationId: string, name: string, email: string, address: string, mobile: string, landline: string) {
     if (!organizationId || !email || !name) {
         throw new Error("Organization ID, member name, and email are required.");
     }
@@ -932,7 +935,7 @@ export async function addMemberToOrganization(organizationId: string, name: stri
     }
     
     await updateDoc(organizationRef, {
-        members: arrayUnion({ name, email })
+        members: arrayUnion({ name, email, address, mobile, landline })
     });
 
     return { success: true };
@@ -953,7 +956,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
 
 
 
-export async function updateMemberInOrganization(organizationId: string, originalEmail: string, newName: string, newEmail: string) {
+export async function updateMemberInOrganization(organizationId: string, originalEmail: string, newName: string, newEmail: string, newAddress: string, newMobile: string, newLandline: string) {
     if (!organizationId || !originalEmail || !newName || !newEmail) {
         throw new Error("All parameters are required for updating a member.");
     }
@@ -979,7 +982,7 @@ export async function updateMemberInOrganization(organizationId: string, origina
         }
         
         const updatedMembers = members.map(m => 
-            m.email === originalEmail ? { ...m, name: newName, email: newEmail } : m
+            m.email === originalEmail ? { ...m, name: newName, email: newEmail, address: newAddress, mobile: newMobile, landline: newLandline } : m
         );
         
         transaction.update(organizationRef, { members: updatedMembers });
@@ -1167,3 +1170,4 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
     
 
     
+

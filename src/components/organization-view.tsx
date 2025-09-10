@@ -58,12 +58,18 @@ export function OrganizationView() {
     const [isAddingMember, setIsAddingMember] = useState(false);
     const [newMemberName, setNewMemberName] = useState('');
     const [newMemberEmail, setNewMemberEmail] = useState('');
+    const [newMemberAddress, setNewMemberAddress] = useState('');
+    const [newMemberMobile, setNewMemberMobile] = useState('');
+    const [newMemberLandline, setNewMemberLandline] = useState('');
 
     const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
     const [updatedName, setUpdatedName] = useState('');
     const [updatedEmail, setUpdatedEmail] = useState('');
-    const [isUpdating, setIsUpdating] = useState(false);
+    const [updatedAddress, setUpdatedAddress] = useState('');
+    const [updatedMobile, setUpdatedMobile] = useState('');
+    const [updatedLandline, setUpdatedLandline] = useState('');
 
+    const [isUpdating, setIsUpdating] = useState(false);
     const [deletingMember, setDeletingMember] = useState<OrganizationMember | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     
@@ -72,10 +78,10 @@ export function OrganizationView() {
     const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
     
     const [updatedOrganizationName, setUpdatedOrganizationName] = useState('');
-    const [updatedAddress, setUpdatedAddress] = useState('');
-    const [updatedMobile, setUpdatedMobile] = useState('');
-    const [updatedLandline, setUpdatedLandline] = useState('');
-    const [updatedWebsite, setUpdatedWebsite] = useState('');
+    const [updatedOrgAddress, setUpdatedOrgAddress] = useState('');
+    const [updatedOrgMobile, setUpdatedOrgMobile] = useState('');
+    const [updatedOrgLandline, setUpdatedOrgLandline] = useState('');
+    const [updatedOrgWebsite, setUpdatedOrgWebsite] = useState('');
     const [isUpdatingOrg, setIsUpdatingOrg] = useState(false);
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -93,10 +99,10 @@ export function OrganizationView() {
         if (userProfile?.organizationId) {
             fetchMembers();
             setUpdatedOrganizationName(userProfile.organizationName || '');
-            setUpdatedAddress(userProfile.address || '');
-            setUpdatedMobile(userProfile.mobile || '');
-            setUpdatedLandline(userProfile.landline || '');
-            setUpdatedWebsite(userProfile.website || '');
+            setUpdatedOrgAddress(userProfile.address || '');
+            setUpdatedOrgMobile(userProfile.mobile || '');
+            setUpdatedOrgLandline(userProfile.landline || '');
+            setUpdatedOrgWebsite(userProfile.website || '');
         }
     }, [userProfile]);
     
@@ -111,6 +117,9 @@ export function OrganizationView() {
     const resetAddMemberForm = () => {
         setNewMemberName('');
         setNewMemberEmail('');
+        setNewMemberAddress('');
+        setNewMemberMobile('');
+        setNewMemberLandline('');
         setIsAddMemberDialogOpen(false);
     };
 
@@ -120,13 +129,13 @@ export function OrganizationView() {
             return;
         }
         if (!newMemberName.trim() || !newMemberEmail.trim()) {
-            toast({ variant: 'destructive', title: 'All fields are required.' });
+            toast({ variant: 'destructive', title: 'Name and email are required.' });
             return;
         }
 
         setIsAddingMember(true);
         try {
-            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail);
+            await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail, newMemberAddress, newMemberMobile, newMemberLandline);
             toast({ title: 'Member Added', description: `${newMemberName} has been invited to the organization.` });
             await fetchMembers();
             resetAddMemberForm();
@@ -142,6 +151,9 @@ export function OrganizationView() {
         setEditingMember(member);
         setUpdatedName(member.name);
         setUpdatedEmail(member.email);
+        setUpdatedAddress(member.address || '');
+        setUpdatedMobile(member.mobile || '');
+        setUpdatedLandline(member.landline || '');
         setIsEditDialogOpen(true);
     };
 
@@ -149,7 +161,7 @@ export function OrganizationView() {
         if (!editingMember || !userProfile?.organizationId) return;
         setIsUpdating(true);
         try {
-            await updateMemberInOrganization(userProfile.organizationId, editingMember.email, updatedName, updatedEmail);
+            await updateMemberInOrganization(userProfile.organizationId, editingMember.email, updatedName, updatedEmail, updatedAddress, updatedMobile, updatedLandline);
             toast({ title: "Member Updated", description: "The member's details have been updated." });
             await fetchMembers();
             setIsEditDialogOpen(false);
@@ -214,10 +226,10 @@ export function OrganizationView() {
         try {
             const dataToUpdate = {
                 name: updatedOrganizationName,
-                address: updatedAddress,
-                mobile: updatedMobile,
-                landline: updatedLandline,
-                website: updatedWebsite,
+                address: updatedOrgAddress,
+                mobile: updatedOrgMobile,
+                landline: updatedOrgLandline,
+                website: updatedOrgWebsite,
             };
             await updateOrganization(userProfile.organizationId, dataToUpdate);
             await fetchUserProfile(user!);
@@ -286,14 +298,14 @@ export function OrganizationView() {
                                         Add Member
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="sm:max-w-md">
                                     <DialogHeader>
                                         <DialogTitle>Add New Member</DialogTitle>
                                         <DialogDescription>
                                             Invite a new person to your organization. They will be able to sign up with their email.
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <div className="space-y-4 py-4">
+                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="new-member-name">Name</Label>
                                             <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
@@ -301,6 +313,18 @@ export function OrganizationView() {
                                         <div className="space-y-2">
                                             <Label htmlFor="new-member-email">Email</Label>
                                             <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-address">Address</Label>
+                                            <Textarea id="new-member-address" value={newMemberAddress} onChange={(e) => setNewMemberAddress(e.target.value)} placeholder="123 Main St..." />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-mobile">Mobile Number</Label>
+                                            <Input id="new-member-mobile" value={newMemberMobile} onChange={(e) => setNewMemberMobile(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-landline">Telephone Number</Label>
+                                            <Input id="new-member-landline" value={newMemberLandline} onChange={(e) => setNewMemberLandline(e.target.value)} />
                                         </div>
                                     </div>
                                     <DialogFooter>
@@ -393,11 +417,11 @@ export function OrganizationView() {
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
-                                                    <DialogContent>
+                                                    <DialogContent className="sm:max-w-md">
                                                         <DialogHeader>
                                                             <DialogTitle>Edit Member</DialogTitle>
                                                         </DialogHeader>
-                                                        <div className="space-y-4 py-4">
+                                                        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                                             <div className="space-y-2">
                                                                 <Label htmlFor="update-name">Name</Label>
                                                                 <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
@@ -405,6 +429,18 @@ export function OrganizationView() {
                                                             <div className="space-y-2">
                                                                 <Label htmlFor="update-email">Email</Label>
                                                                 <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="update-address">Address</Label>
+                                                                <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="update-mobile">Mobile Number</Label>
+                                                                <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="update-landline">Telephone Number</Label>
+                                                                <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
                                                             </div>
                                                         </div>
                                                         <DialogFooter>
@@ -491,19 +527,19 @@ export function OrganizationView() {
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="org-update-address">Address</Label>
-                                            <Textarea id="org-update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                            <Textarea id="org-update-address" value={updatedOrgAddress} onChange={(e) => setUpdatedOrgAddress(e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="org-update-mobile">Mobile Number</Label>
-                                            <Input id="org-update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                            <Input id="org-update-mobile" value={updatedOrgMobile} onChange={(e) => setUpdatedOrgMobile(e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="org-update-landline">Landline</Label>
-                                            <Input id="org-update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                            <Input id="org-update-landline" value={updatedOrgLandline} onChange={(e) => setUpdatedOrgLandline(e.target.value)} />
                                         </div>
                                          <div className="space-y-2">
                                             <Label htmlFor="org-update-website">Website</Label>
-                                            <Input id="org-update-website" value={updatedWebsite} onChange={(e) => setUpdatedWebsite(e.target.value)} />
+                                            <Input id="org-update-website" value={updatedOrgWebsite} onChange={(e) => setUpdatedOrgWebsite(e.target.value)} />
                                         </div>
                                     </div>
                                     <DialogFooter>
