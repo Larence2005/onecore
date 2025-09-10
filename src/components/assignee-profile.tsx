@@ -260,5 +260,3 @@ export function AssigneeProfile({ email }: { email: string }) {
         </SidebarProvider>
   );
 }
-
-    
