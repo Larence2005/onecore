@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { addCompany, getCompanyWithTicketCount } from "@/app/actions";
 import type { Company } from "@/app/actions";
@@ -11,20 +11,26 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { PlusCircle, RefreshCw, Building, Ticket } from "lucide-react";
+import { PlusCircle, RefreshCw, Building, ChevronLeft, ChevronRight, Ticket } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import Link from "next/link";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useRouter } from "next/navigation";
 
 
 export function ClientsView() {
     const { userProfile } = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const [companies, setCompanies] = useState<Company[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [newCompanyName, setNewCompanyName] = useState("");
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [companiesPerPage, setCompaniesPerPage] = useState(10);
 
     const fetchCompanies = async () => {
         if (!userProfile?.organizationId) return;
@@ -40,7 +46,9 @@ export function ClientsView() {
     };
 
     useEffect(() => {
-        fetchCompanies();
+        if (userProfile?.organizationId) {
+            fetchCompanies();
+        }
     }, [userProfile]);
 
     const handleAddCompany = async () => {
@@ -67,27 +75,38 @@ export function ClientsView() {
         }
     };
     
+    const paginatedCompanies = useMemo(() => {
+        const startIndex = (currentPage - 1) * companiesPerPage;
+        const endIndex = startIndex + companiesPerPage;
+        return companies.slice(startIndex, endIndex);
+    }, [companies, currentPage, companiesPerPage]);
+
+    const totalPages = Math.ceil(companies.length / companiesPerPage);
+    
     const isOwner = userProfile?.uid === userProfile?.organizationOwnerUid;
 
-    if (isLoading) {
-        return (
-            <div className="w-full max-w-4xl mx-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {[...Array(3)].map((_, i) => (
-                        <Card key={i}>
-                            <CardHeader>
-                                <Skeleton className="h-6 w-3/4" />
-                            </CardHeader>
-                            <CardContent>
-                                <Skeleton className="h-4 w-1/2" />
-                            </CardContent>
-                        </Card>
+    const renderSkeleton = () => (
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-72" />
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-4 p-2">
+                            <Skeleton className="h-6 flex-1" />
+                            <Skeleton className="h-6 w-24" />
+                        </div>
                     ))}
                 </div>
-            </div>
-        );
+            </CardContent>
+        </Card>
+    );
+
+    if (isLoading) {
+        return <div className="w-full max-w-4xl mx-auto">{renderSkeleton()}</div>
     }
-    
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -131,40 +150,77 @@ export function ClientsView() {
                 )}
             </div>
 
-            {companies.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {companies.map((company) => (
-                        <Link key={company.id} href={`/clients/${company.id}`} passHref>
-                           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Building className="h-5 w-5 text-muted-foreground" />
-                                        <span className="truncate">{company.name}</span>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-grow">
-                                    {/* Additional company details can go here */}
-                                </CardContent>
-                                <CardFooter>
-                                     <div className="flex items-center text-sm text-muted-foreground">
-                                        <Ticket className="h-4 w-4 mr-2" />
-                                        <span>{company.ticketCount} ticket(s)</span>
-                                    </div>
-                                </CardFooter>
-                           </Card>
-                        </Link>
-                    ))}
-                </div>
-            ) : (
-                <Alert>
-                    <Building className="h-4 w-4" />
-                    <AlertTitle>No Companies Found</AlertTitle>
-                    <AlertDescription>
-                        {isOwner ? "Get started by adding your first company." : "Your organization administrator has not added any companies yet."}
-                    </AlertDescription>
-                </Alert>
-            )}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Client List</CardTitle>
+                    <CardDescription>A list of all companies in your organization.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {companies.length > 0 ? (
+                        <div className="border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Company Name</TableHead>
+                                        <TableHead className="text-right">Tickets</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedCompanies.map((company) => (
+                                         <TableRow key={company.id} className="cursor-pointer" onClick={() => router.push(`/clients/${company.id}`)}>
+                                            <TableCell className="font-medium">{company.name}</TableCell>
+                                            <TableCell className="text-right">{company.ticketCount}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <Alert>
+                            <Building className="h-4 w-4" />
+                            <AlertTitle>No Companies Found</AlertTitle>
+                            <AlertDescription>
+                                {isOwner ? "Get started by adding your first company." : "Your organization administrator has not added any companies yet."}
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                </CardContent>
+                 {totalPages > 1 && (
+                    <CardFooter className="flex items-center justify-between">
+                        <div className="text-sm text-muted-foreground">
+                            Showing {Math.min(companiesPerPage * currentPage, companies.length)} of {companies.length} companies.
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Rows per page</span>
+                                <Select value={String(companiesPerPage)} onValueChange={(value) => { setCompaniesPerPage(Number(value)); setCurrentPage(1); }}>
+                                    <SelectTrigger className="h-8 w-[70px]">
+                                        <SelectValue placeholder={String(companiesPerPage)} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="25">25</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Page {currentPage} of {totalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </CardFooter>
+                )}
+            </Card>
         </div>
     );
 }
 
+    
