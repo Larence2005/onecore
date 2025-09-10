@@ -1,10 +1,9 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +17,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
-import { sendEmailAction } from "@/app/actions";
+import { sendEmailAction, getOrganizationMembers } from "@/app/actions";
+import type { OrganizationMember } from "@/app/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal, Send, RefreshCw } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
+import { AutocompleteInput } from "./autocomplete-input";
+import { useAuth } from "@/providers/auth-provider";
 
 const emailListRegex = /^$|^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(, *[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})*$/;
 
@@ -36,8 +38,20 @@ const formSchema = z.object({
 
 export function SendEmailForm() {
   const { settings, isConfigured } = useSettings();
+  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+
+  useEffect(() => {
+    async function fetchMembers() {
+        if (userProfile?.organizationId) {
+            const orgMembers = await getOrganizationMembers(userProfile.organizationId);
+            setMembers(orgMembers);
+        }
+    }
+    fetchMembers();
+  }, [userProfile]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -121,7 +135,12 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>CC</FormLabel>
                   <FormControl>
-                    <Input placeholder="cc@example.com, another@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                    <AutocompleteInput 
+                      {...field}
+                      suggestions={members}
+                      placeholder="cc@example.com, another@example.com" 
+                      className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,7 +153,12 @@ export function SendEmailForm() {
                 <FormItem>
                   <FormLabel>BCC</FormLabel>
                   <FormControl>
-                    <Input placeholder="bcc@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                    <AutocompleteInput 
+                      {...field}
+                      suggestions={members}
+                      placeholder="bcc@example.com" 
+                      className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -194,5 +218,3 @@ export function SendEmailForm() {
     </Card>
   );
 }
-
-    

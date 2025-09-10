@@ -34,6 +34,7 @@ import { db } from '@/lib/firebase';
 import { TimelineItem } from './timeline-item';
 import { Label } from './ui/label';
 import { TableIcon } from './ui/table-icon';
+import { AutocompleteInput } from './autocomplete-input';
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
@@ -194,7 +195,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
 
 
-    const [assignees, setAssignees] = useState<OrganizationMember[]>([]);
+    const [members, setMembers] = useState<OrganizationMember[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
 
 
@@ -228,11 +229,11 @@ export function TicketDetailContent({ id }: { id: string }) {
     useEffect(() => {
         const fetchDropdownData = async () => {
             if (userProfile?.organizationId) {
-                const [members, fetchedCompanies] = await Promise.all([
+                const [orgMembers, fetchedCompanies] = await Promise.all([
                     getOrganizationMembers(userProfile.organizationId),
                     getCompanies(userProfile.organizationId),
                 ]);
-                setAssignees(members);
+                setMembers(orgMembers);
                 setCompanies(fetchedCompanies);
             }
         };
@@ -325,7 +326,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, assignees, companies, user?.email]);
+    }, [email?.id, userProfile?.organizationId, members, companies, user?.email]);
 
      useEffect(() => {
         if (!email?.id || !userProfile?.organizationId) return;
@@ -803,11 +804,25 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="reply-cc">Cc</Label>
-                                                            <Input id="reply-cc" placeholder="cc@example.com" value={replyCc} onChange={(e) => setReplyCc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                                                            <AutocompleteInput 
+                                                              id="reply-cc"
+                                                              suggestions={members}
+                                                              value={replyCc}
+                                                              onChange={setReplyCc}
+                                                              placeholder="cc@example.com" 
+                                                              className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                                            />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="reply-bcc">Bcc</Label>
-                                                            <Input id="reply-bcc" placeholder="bcc@example.com" value={replyBcc} onChange={(e) => setReplyBcc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                                                            <AutocompleteInput
+                                                                id="reply-bcc"
+                                                                suggestions={members}
+                                                                value={replyBcc}
+                                                                onChange={setReplyBcc}
+                                                                placeholder="bcc@example.com"
+                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                                            />
                                                         </div>
                                                         <RichTextEditor
                                                             value={replyContent}
@@ -881,15 +896,36 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                     <>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-to">To</Label>
-                                                            <Input id="forward-to" placeholder="recipient@example.com" value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                                                            <AutocompleteInput 
+                                                                id="forward-to"
+                                                                suggestions={members}
+                                                                value={forwardTo}
+                                                                onChange={setForwardTo}
+                                                                placeholder="recipient@example.com"
+                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                                             />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-cc">Cc</Label>
-                                                            <Input id="forward-cc" placeholder="cc@example.com" value={forwardCc} onChange={(e) => setForwardCc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                                                            <AutocompleteInput
+                                                                id="forward-cc"
+                                                                suggestions={members}
+                                                                value={forwardCc}
+                                                                onChange={setForwardCc}
+                                                                placeholder="cc@example.com"
+                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                                            />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-bcc">Bcc</Label>
-                                                            <Input id="forward-bcc" placeholder="bcc@example.com" value={forwardBcc} onChange={(e) => setForwardBcc(e.target.value)} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                                                            <AutocompleteInput
+                                                                id="forward-bcc"
+                                                                suggestions={members}
+                                                                value={forwardBcc}
+                                                                onChange={setForwardBcc}
+                                                                placeholder="bcc@example.com"
+                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                                            />
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="forward-comment">Comment (optional)</Label>
@@ -1130,5 +1166,3 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
