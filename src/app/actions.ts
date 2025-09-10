@@ -236,10 +236,6 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     date: firstMessage.receivedDateTime,
                     user: firstMessage.senderEmail || 'System',
                 });
-
-            } else {
-                 // Existing conversation, just update the cache
-                 await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
             }
         }
     } catch (error) {
@@ -1386,5 +1382,6 @@ export async function updateCompany(
     
 
     
+
 
 
