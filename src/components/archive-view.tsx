@@ -13,6 +13,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardFooter } from "./ui/card";
+import { Checkbox } from "./ui/checkbox";
 
 export function ArchiveView() {
     const { user, userProfile } = useAuth();
@@ -32,7 +33,8 @@ export function ArchiveView() {
             const tickets = await getTicketsFromDB(userProfile.organizationId, { 
                 includeArchived: true, 
             });
-            setArchivedTickets(tickets);
+            // Filter only for archived tickets client-side, as the function can return all if needed elsewhere.
+            setArchivedTickets(tickets.filter(t => t.status === 'Archived'));
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             setError(errorMessage);
@@ -68,6 +70,14 @@ export function ArchiveView() {
         }
     };
     
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedTickets(archivedTickets.map(email => email.id));
+        } else {
+            setSelectedTickets([]);
+        }
+    };
+    
     const handleUnarchive = async () => {
         if(selectedTickets.length === 0 || !userProfile?.organizationId) return;
         const result = await unarchiveTickets(userProfile.organizationId, selectedTickets);
@@ -87,12 +97,20 @@ export function ArchiveView() {
         }
     };
 
+    const isAllSelected = archivedTickets.length > 0 && selectedTickets.length === archivedTickets.length;
+
 
     return (
         <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
             {selectedTickets.length > 0 && (
                 <div className="flex-shrink-0 flex items-center justify-between p-2 mb-4 bg-muted border rounded-lg">
-                     <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-4">
+                        <Checkbox
+                            id="select-all-top"
+                            checked={isAllSelected}
+                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                            aria-label="Select all"
+                         />
                          <span className="text-sm font-medium">{selectedTickets.length} selected</span>
                      </div>
                      <Button variant="outline" size="sm" onClick={handleUnarchive}>
@@ -180,6 +198,3 @@ export function ArchiveView() {
         </div>
     );
 }
-
-    
-    
