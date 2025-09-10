@@ -38,6 +38,7 @@ export function ContactProfile({ email }: { email: string }) {
   const [bccTickets, setBccTickets] = useState<Email[]>([]);
   const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
   const [involvedTickets, setInvolvedTickets] = useState<Map<string, Email>>(new Map());
+  const [isInternalMember, setIsInternalMember] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +67,8 @@ export function ContactProfile({ email }: { email: string }) {
             // First, try to find the person in the organization members to get their name
             const orgMembers = await getOrganizationMembers(userProfile.organizationId);
             const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+            
+            setIsInternalMember(!!member);
             
             // If not found, they are an external contact. Use their email as their name.
             const name = member ? member.name : email;
@@ -277,32 +280,34 @@ export function ContactProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                            <Tabs defaultValue="submitted" className="w-full">
+                            <Tabs defaultValue="cc" className="w-full">
                                 <TabsList className="mb-4">
-                                    <TabsTrigger value="submitted">Submitted</TabsTrigger>
+                                    {isInternalMember && <TabsTrigger value="submitted">Submitted</TabsTrigger>}
                                     <TabsTrigger value="cc">Cc'd On</TabsTrigger>
                                     <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
                                     <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
                                 </TabsList>
-                                <TabsContent value="submitted">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Submitted Tickets</CardTitle>
-                                            <CardDescription>Tickets created by {profileData.name}.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {submittedTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
-                                                    {submittedTickets.map((ticket) => (
-                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
+                                {isInternalMember && (
+                                    <TabsContent value="submitted">
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Submitted Tickets</CardTitle>
+                                                <CardDescription>Tickets created by {profileData.name}.</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {submittedTickets.length > 0 ? (
+                                                    <ul className="space-y-0 border-t">
+                                                        {submittedTickets.map((ticket) => (
+                                                            <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </TabsContent>
+                                )}
                                 <TabsContent value="cc">
                                     <Card>
                                         <CardHeader>
@@ -374,5 +379,3 @@ export function ContactProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
-
-    
