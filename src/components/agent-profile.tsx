@@ -394,7 +394,7 @@ export function AgentProfile({ email }: { email: string }) {
                         <aside className="space-y-6 lg:col-span-1 xl:col-span-1">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle>Properties</CardTitle>
+                                        <CardTitle>About</CardTitle>
                                         {isOwner && (
                                             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                                                 <DialogTrigger asChild>

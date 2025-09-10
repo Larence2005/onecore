@@ -298,14 +298,14 @@ export function OrganizationView() {
                                         Add Member
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
+                                <DialogContent className="sm:max-w-2xl">
                                     <DialogHeader>
                                         <DialogTitle>Add New Member</DialogTitle>
                                         <DialogDescription>
                                             Invite a new person to your organization. They will be able to sign up with their email.
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="new-member-name">Name</Label>
                                             <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
@@ -315,16 +315,16 @@ export function OrganizationView() {
                                             <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="new-member-address">Address</Label>
-                                            <Textarea id="new-member-address" value={newMemberAddress} onChange={(e) => setNewMemberAddress(e.target.value)} placeholder="123 Main St..." />
-                                        </div>
-                                        <div className="space-y-2">
                                             <Label htmlFor="new-member-mobile">Mobile Number</Label>
                                             <Input id="new-member-mobile" value={newMemberMobile} onChange={(e) => setNewMemberMobile(e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="new-member-landline">Telephone Number</Label>
                                             <Input id="new-member-landline" value={newMemberLandline} onChange={(e) => setNewMemberLandline(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2 sm:col-span-2">
+                                            <Label htmlFor="new-member-address">Address</Label>
+                                            <Textarea id="new-member-address" value={newMemberAddress} onChange={(e) => setNewMemberAddress(e.target.value)} placeholder="123 Main St..." />
                                         </div>
                                     </div>
                                     <DialogFooter>
