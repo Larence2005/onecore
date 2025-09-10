@@ -16,6 +16,10 @@ export interface UserProfile {
   organizationId?: string;
   organizationName?: string;
   organizationOwnerUid?: string;
+  address?: string;
+  mobile?: string;
+  landline?: string;
+  website?: string;
 }
 
 
@@ -49,14 +53,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!ownerOrgSnapshot.empty) {
         const orgDoc = ownerOrgSnapshot.docs[0];
-        const ownerMemberInfo = (orgDoc.data().members as {name: string, email: string, uid: string}[])?.find(m => m.email === user.email);
+        const orgData = orgDoc.data();
+        const ownerMemberInfo = (orgData.members as {name: string, email: string, uid: string}[])?.find(m => m.email === user.email);
         setUserProfile({
             uid: user.uid,
             email: user.email,
             name: ownerMemberInfo?.name || user.email,
             organizationId: orgDoc.id,
-            organizationName: orgDoc.data().name,
-            organizationOwnerUid: orgDoc.data().owner,
+            organizationName: orgData.name,
+            organizationOwnerUid: orgData.owner,
+            address: orgData.address,
+            mobile: orgData.mobile,
+            landline: orgData.landline,
+            website: orgData.website,
         });
     } else {
         // This case handles users who might be invited members but not owners, which is disabled in single-admin mode

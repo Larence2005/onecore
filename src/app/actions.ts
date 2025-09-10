@@ -866,7 +866,11 @@ export async function createOrganization(name: string, uid: string, userName: st
     await setDoc(organizationRef, {
         name: name,
         owner: uid,
-        members: [{ name: userName, email: email, uid: uid }]
+        members: [{ name: userName, email: email, uid: uid }],
+        address: '',
+        mobile: '',
+        landline: '',
+        website: ''
     });
     
     return { success: true, organizationId: organizationRef.id };
@@ -971,12 +975,15 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     return { success: true };
 }
     
-export async function updateOrganization(organizationId: string, name: string) {
-    if (!organizationId || !name.trim()) {
-        throw new Error("Organization ID and name are required.");
+export async function updateOrganization(
+    organizationId: string, 
+    data: { name?: string; address?: string; mobile?: string; landline?: string; website?: string }
+) {
+    if (!organizationId) {
+        throw new Error("Organization ID is required.");
     }
     const orgDocRef = doc(db, 'organizations', organizationId);
-    await updateDoc(orgDocRef, { name });
+    await updateDoc(orgDocRef, data);
     return { success: true };
 }
 
@@ -1108,3 +1115,4 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
     
 
     
+

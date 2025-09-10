@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, MapPin, Phone, Building, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -39,10 +39,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
+import { Textarea } from './ui/textarea';
 
 
 export function OrganizationView() {
@@ -68,7 +69,11 @@ export function OrganizationView() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
     
-    const [updatedOrganizationName, setUpdatedOrganizationName] = useState(userProfile?.organizationName || '');
+    const [updatedOrganizationName, setUpdatedOrganizationName] = useState('');
+    const [updatedAddress, setUpdatedAddress] = useState('');
+    const [updatedMobile, setUpdatedMobile] = useState('');
+    const [updatedLandline, setUpdatedLandline] = useState('');
+    const [updatedWebsite, setUpdatedWebsite] = useState('');
     const [isUpdatingOrg, setIsUpdatingOrg] = useState(false);
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -86,6 +91,10 @@ export function OrganizationView() {
         if (userProfile?.organizationId) {
             fetchMembers();
             setUpdatedOrganizationName(userProfile.organizationName || '');
+            setUpdatedAddress(userProfile.address || '');
+            setUpdatedMobile(userProfile.mobile || '');
+            setUpdatedLandline(userProfile.landline || '');
+            setUpdatedWebsite(userProfile.website || '');
         }
     }, [userProfile]);
     
@@ -201,9 +210,16 @@ export function OrganizationView() {
         }
         setIsUpdatingOrg(true);
         try {
-            await updateOrganization(userProfile.organizationId, updatedOrganizationName);
+            const dataToUpdate = {
+                name: updatedOrganizationName,
+                address: updatedAddress,
+                mobile: updatedMobile,
+                landline: updatedLandline,
+                website: updatedWebsite,
+            };
+            await updateOrganization(userProfile.organizationId, dataToUpdate);
             await fetchUserProfile(user!);
-            toast({ title: 'Organization Updated', description: `Organization name changed to "${updatedOrganizationName}".` });
+            toast({ title: 'Organization Updated', description: `Organization details have been updated.` });
             setIsSettingsDialogOpen(false);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
@@ -249,243 +265,283 @@ export function OrganizationView() {
     
     const isOwner = user?.uid === userProfile.organizationOwnerUid;
 
+    const PropertyItem = ({ icon: Icon, label, value, isLink }: { icon: React.ElementType, label: string, value: string | undefined, isLink?: boolean }) => (
+        <div>
+            <dt className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Icon className="h-4 w-4" />
+                {label}
+            </dt>
+            {isLink && value ? 
+                <dd className="mt-1 text-sm text-foreground break-all"><a href={value} target="_blank" rel="noopener noreferrer" className="underline">{value}</a></dd> :
+                <dd className="mt-1 text-sm text-foreground break-all">{value || 'N/A'}</dd>
+            }
+        </div>
+    );
+
     return (
-        <div className="space-y-6 max-w-4xl w-full">
-            <div className="flex justify-between items-start">
-                <div>
-                    <h1 className="text-2xl font-bold">{userProfile.organizationName || 'Your Organization'}</h1>
-                    <p className="text-muted-foreground">
-                        Invite and manage your organization's members.
-                    </p>
-                </div>
-                 {isOwner && (
-                    <div className="flex items-center gap-2">
-                        <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="default" size="sm">
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    Add Member
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Add New Member</DialogTitle>
-                                    <DialogDescription>
-                                        Invite a new person to your organization. They will be able to sign up with their email.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="new-member-name">Name</Label>
-                                        <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="new-member-email">Email</Label>
-                                        <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button type="button" variant="secondary" onClick={resetAddMemberForm}>Cancel</Button>
-                                    </DialogClose>
-                                    <Button onClick={handleAddMember} disabled={isAddingMember}>
-                                        {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
+            <div className="lg:col-span-2 space-y-6">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h1 className="text-2xl font-bold">{userProfile.organizationName || 'Your Organization'}</h1>
+                        <p className="text-muted-foreground">
+                            Invite and manage your organization's members.
+                        </p>
+                    </div>
+                    {isOwner && (
+                        <div className="flex items-center gap-2">
+                            <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="default" size="sm">
+                                        <UserPlus className="mr-2 h-4 w-4" />
                                         Add Member
                                     </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-
-                         <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-                             <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" size="icon">
-                                                <Settings className="h-4 w-4" />
-                                            </Button>
-                                        </DialogTrigger>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Organization Settings</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                             </TooltipProvider>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Organization Settings</DialogTitle>
-                                    <DialogDescription>Manage your organization's name.</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-2 py-4">
-                                    <Label htmlFor="org-update-name">Organization Name</Label>
-                                    <Input
-                                        id="org-update-name"
-                                        value={updatedOrganizationName}
-                                        onChange={(e) => setUpdatedOrganizationName(e.target.value)}
-                                    />
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button type="button" variant="secondary">Cancel</Button>
-                                    </DialogClose>
-                                    <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg || updatedOrganizationName === userProfile.organizationName}>
-                                        {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                        Save Changes
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                 )}
-            </div>
-            
-            <div className="border rounded-md">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Type</TableHead>
-                            {isOwner && <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
-                            const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
-                            return (
-                                <TableRow key={member.email}>
-                                    <TableCell className="font-medium">
-                                        <Link href={`/contacts/${encodeURIComponent(member.email)}`} className="hover:underline">
-                                            {member.name}
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                                    <TableCell>
-                                        {memberIsOwner ? (
-                                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
-                                                <Crown className="mr-1 h-3 w-3" />
-                                                Admin
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline">
-                                                <UserIcon className="mr-1 h-3 w-3" />
-                                                Agent
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    {isOwner && (
-                                        <TableCell>
-                                            <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
-                                                <AlertDialog open={deletingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingMember(null); }}>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                                                                <Pencil className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            {!memberIsOwner && (
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onClick={() => handleDeleteClick(member)} onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                Delete
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Edit Member</DialogTitle>
-                                                    </DialogHeader>
-                                                    <div className="space-y-4 py-4">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="update-name">Name</Label>
-                                                            <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="update-email">Email</Label>
-                                                            <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
-                                                        </div>
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <DialogClose asChild>
-                                                            <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
-                                                        </DialogClose>
-                                                        <Button onClick={handleUpdateMember} disabled={isUpdating}>
-                                                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                            Save Changes
-                                                        </Button>
-                                                    </DialogFooter>
-                                                </DialogContent>
-                                            </Dialog>
-                                        </TableCell>
-                                    )}
-                                </TableRow>
-                            );
-                        }) : (
-                            <TableRow>
-                                <TableCell colSpan={isOwner ? 4 : 3} className="h-24 text-center">
-                                    No members found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4">
-                    <div className="text-sm text-muted-foreground">
-                        Showing {Math.min(membersPerPage * currentPage, members.length)} of {members.length} members.
-                    </div>
-                    <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Rows per page</span>
-                            <Select value={String(membersPerPage)} onValueChange={(value) => { setMembersPerPage(Number(value)); setCurrentPage(1); }}>
-                                <SelectTrigger className="h-8 w-[70px]">
-                                    <SelectValue placeholder={String(membersPerPage)} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="10">10</SelectItem>
-                                    <SelectItem value="25">25</SelectItem>
-                                    <SelectItem value="50">50</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Member</DialogTitle>
+                                        <DialogDescription>
+                                            Invite a new person to your organization. They will be able to sign up with their email.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-name">Name</Label>
+                                            <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="new-member-email">Email</Label>
+                                            <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button type="button" variant="secondary" onClick={resetAddMemberForm}>Cancel</Button>
+                                        </DialogClose>
+                                        <Button onClick={handleAddMember} disabled={isAddingMember}>
+                                            {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                            Add Member
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                            Page {currentPage} of {totalPages}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+                    )}
                 </div>
-            )}
+                
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Type</TableHead>
+                                {isOwner && <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
+                                const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
+                                return (
+                                    <TableRow key={member.email}>
+                                        <TableCell className="font-medium">
+                                            <Link href={`/contacts/${encodeURIComponent(member.email)}`} className="hover:underline">
+                                                {member.name}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                                        <TableCell>
+                                            {memberIsOwner ? (
+                                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
+                                                    <Crown className="mr-1 h-3 w-3" />
+                                                    Admin
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline">
+                                                    <UserIcon className="mr-1 h-3 w-3" />
+                                                    Agent
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        {isOwner && (
+                                            <TableCell>
+                                                <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
+                                                    <AlertDialog open={deletingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingMember(null); }}>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    Edit
+                                                                </DropdownMenuItem>
+                                                                {!memberIsOwner && (
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem onClick={() => handleDeleteClick(member)} onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                            Delete
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                    {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                    Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Edit Member</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="space-y-4 py-4">
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="update-name">Name</Label>
+                                                                <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="update-email">Email</Label>
+                                                                <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                            </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <DialogClose asChild>
+                                                                <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
+                                                            </DialogClose>
+                                                            <Button onClick={handleUpdateMember} disabled={isUpdating}>
+                                                                {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Save Changes
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                );
+                            }) : (
+                                <TableRow>
+                                    <TableCell colSpan={isOwner ? 4 : 3} className="h-24 text-center">
+                                        No members found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-4">
+                        <div className="text-sm text-muted-foreground">
+                            Showing {Math.min(membersPerPage * currentPage, members.length)} of {members.length} members.
+                        </div>
+                        <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Rows per page</span>
+                                <Select value={String(membersPerPage)} onValueChange={(value) => { setMembersPerPage(Number(value)); setCurrentPage(1); }}>
+                                    <SelectTrigger className="h-8 w-[70px]">
+                                        <SelectValue placeholder={String(membersPerPage)} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10</SelectItem>
+                                        <SelectItem value="25">25</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Page {currentPage} of {totalPages}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="lg:col-span-1 space-y-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Properties</CardTitle>
+                        {isOwner && (
+                            <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="secondary" size="sm">
+                                        <Pencil className="mr-2 h-3 w-3" />
+                                        Edit
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>Organization Settings</DialogTitle>
+                                        <DialogDescription>Manage your organization's details.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="org-update-name">Organization Name</Label>
+                                            <Input id="org-update-name" value={updatedOrganizationName} onChange={(e) => setUpdatedOrganizationName(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="org-update-address">Address</Label>
+                                            <Textarea id="org-update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="org-update-mobile">Mobile Number</Label>
+                                            <Input id="org-update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="org-update-landline">Landline</Label>
+                                            <Input id="org-update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                        </div>
+                                         <div className="space-y-2">
+                                            <Label htmlFor="org-update-website">Website</Label>
+                                            <Input id="org-update-website" value={updatedWebsite} onChange={(e) => setUpdatedWebsite(e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button type="button" variant="secondary">Cancel</Button>
+                                        </DialogClose>
+                                        <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg}>
+                                            {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                            Save Changes
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
+                    </CardHeader>
+                    <CardContent>
+                        <dl className="grid grid-cols-1 gap-y-4">
+                            <PropertyItem icon={Building} label="Organization Name" value={userProfile.organizationName} />
+                            <PropertyItem icon={Users} label="Total Members" value={members.length.toString()} />
+                            <PropertyItem icon={MapPin} label="Address" value={userProfile.address} />
+                            <PropertyItem icon={Phone} label="Mobile" value={userProfile.mobile} />
+                            <PropertyItem icon={Phone} label="Landline" value={userProfile.landline} />
+                            <PropertyItem icon={LinkIcon} label="Website" value={userProfile.website} isLink />
+                        </dl>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }
