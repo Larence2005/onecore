@@ -19,10 +19,16 @@ import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive } from 'lucide-react';
 
+interface ProfileData {
+    name: string;
+    email: string;
+    isMember: boolean;
+}
+
 export function AssigneeProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout } = useAuth();
-  const [assignedTickets, setAssignedTickets] = useState<Email[]>([]);
-  const [member, setMember] = useState<OrganizationMember | null>(null);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [relatedTickets, setRelatedTickets] = useState<Email[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -38,10 +44,8 @@ export function AssigneeProfile({ email }: { email: string }) {
   useEffect(() => {
     const fetchData = async () => {
       if (!user || !userProfile?.organizationId) {
-        // Wait for auth to be loaded
         if(loading) return;
-
-        setError("You must be part of an organization to view assignee profiles.");
+        setError("You must be part of an organization to view profiles.");
         setIsLoading(false);
         return;
       }
@@ -54,21 +58,30 @@ export function AssigneeProfile({ email }: { email: string }) {
           getOrganizationMembers(userProfile.organizationId)
         ]);
 
-        const currentMember = allMembers.find(m => m.email === email);
-        if (!currentMember) {
-          throw new Error("Assignee not found in your organization.");
-        }
-        setMember(currentMember);
+        const member = allMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
 
-        const memberTickets = allTickets.filter(ticket => ticket.assignee === email);
-        setAssignedTickets(memberTickets);
+        if (member) {
+            // It's an internal organization member (assignee)
+            setProfileData({ name: member.name, email: member.email, isMember: true });
+            const memberTickets = allTickets.filter(ticket => ticket.assignee.toLowerCase() === email.toLowerCase());
+            setRelatedTickets(memberTickets);
+        } else {
+            // It's an external client (sender)
+            const clientTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
+            if (clientTickets.length === 0) {
+                 throw new Error("No tickets found for this email address.");
+            }
+            const clientName = clientTickets[0].sender; // Get name from the first ticket
+            setProfileData({ name: clientName, email: email, isMember: false });
+            setRelatedTickets(clientTickets);
+        }
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
         setError(errorMessage);
         toast({
           variant: "destructive",
-          title: "Failed to load assignee profile.",
+          title: "Failed to load profile.",
           description: errorMessage,
         });
       } finally {
@@ -186,7 +199,7 @@ export function AssigneeProfile({ email }: { email: string }) {
                                     <ArrowLeft className="h-4 w-4" />
                                 </Link>
                             </Button>
-                            <h1 className="text-xl font-bold">Assignee Profile</h1>
+                            <h1 className="text-xl font-bold">Profile</h1>
                         </div>
                     </Header>
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -208,17 +221,17 @@ export function AssigneeProfile({ email }: { email: string }) {
                                 <AlertTitle>Error</AlertTitle>
                                 <AlertDescription>{error}</AlertDescription>
                             </Alert>
-                        ) : member ? (
+                        ) : profileData ? (
                             <div className="space-y-6">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                                     <Avatar className="h-20 w-20 text-3xl">
-                                        <AvatarFallback>{member.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback>{profileData.name.charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <h2 className="text-3xl font-bold">{member.name}</h2>
+                                        <h2 className="text-3xl font-bold">{profileData.name}</h2>
                                         <div className="flex items-center gap-2 text-muted-foreground mt-1">
                                             <Mail className="h-4 w-4" />
-                                            <span>{member.email}</span>
+                                            <span>{profileData.email}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -227,16 +240,19 @@ export function AssigneeProfile({ email }: { email: string }) {
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <Ticket className="h-5 w-5" />
-                                            Assigned Tickets ({assignedTickets.length})
+                                            {profileData.isMember ? 'Assigned Tickets' : 'Submitted Tickets'} ({relatedTickets.length})
                                         </CardTitle>
                                         <CardDescription>
-                                            All tickets currently assigned to {member.name}.
+                                            {profileData.isMember 
+                                                ? `All tickets currently assigned to ${profileData.name}.`
+                                                : `All tickets submitted by ${profileData.name}.`
+                                            }
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        {assignedTickets.length > 0 ? (
+                                        {relatedTickets.length > 0 ? (
                                             <ul className="space-y-0 border-t">
-                                                 {assignedTickets.map((ticket) => (
+                                                 {relatedTickets.map((ticket) => (
                                                     <TicketItem 
                                                         key={ticket.id} 
                                                         email={ticket} 
@@ -247,7 +263,7 @@ export function AssigneeProfile({ email }: { email: string }) {
                                             </ul>
                                         ) : (
                                             <div className="text-center py-10">
-                                                <p className="text-muted-foreground">No tickets assigned to this member.</p>
+                                                <p className="text-muted-foreground">No tickets found for this user.</p>
                                             </div>
                                         )}
                                     </CardContent>
