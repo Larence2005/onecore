@@ -5,13 +5,13 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees } from '@/app/actions';
-import type { Email, Company, Employee } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs } from '@/app/actions';
+import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TicketItem } from './ticket-item';
@@ -22,8 +22,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { isPast, isFuture, parseISO } from 'date-fns';
+import { TimelineItem } from './timeline-item';
+import { PropertyItem } from './property-item';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
+type ActiveTab = 'tickets' | 'employees';
 
 
 export function CompanyTicketsView({ companyId }: { companyId: string }) {
@@ -33,10 +36,12 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [company, setCompany] = useState<Company | null>(null);
     const [tickets, setTickets] = useState<Email[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [activity, setActivity] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortOption, setSortOption] = useState<SortOption>('newest');
     const [currentPage, setCurrentPage] = useState(1);
     const [ticketsPerPage, setTicketsPerPage] = useState(10);
+    const [activeTab, setActiveTab] = useState<ActiveTab>('tickets');
 
 
     useEffect(() => {
@@ -54,10 +59,11 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [companyDetails, companyTickets, companyEmployees] = await Promise.all([
+                const [companyDetails, companyTickets, companyEmployees, companyActivity] = await Promise.all([
                     getCompanyDetails(userProfile.organizationId!, companyId),
                     getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true }),
                     getCompanyEmployees(userProfile.organizationId!, companyId),
+                    getCompanyActivityLogs(userProfile.organizationId!, companyId),
                 ]);
                 
                 if (!companyDetails) {
@@ -69,6 +75,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 setCompany(companyDetails);
                 setTickets(companyTickets);
                 setEmployees(companyEmployees);
+                setActivity(companyActivity);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
                 toast({ variant: 'destructive', title: 'Failed to load company tickets', description: errorMessage });
@@ -142,6 +149,61 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             </div>
         );
     }
+    
+    const renderSidebarContent = () => {
+        if (activeTab === 'tickets') {
+            return (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Activity /> Activity
+                        </CardTitle>
+                        <CardDescription>Recent activity across all of {company?.name}'s tickets.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto">
+                        {activity.length > 0 ? (
+                            activity.map((log) => (
+                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                    <div className="flex flex-wrap items-center gap-x-2">
+                                       <span>{log.details} on ticket</span> 
+                                       <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
+                                            {log.ticketSubject}
+                                       </Link>
+                                    </div>
+                                </TimelineItem>
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">No activity found.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        if (activeTab === 'employees') {
+            return (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Company Properties</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <dl className="grid grid-cols-1 gap-y-4">
+                            <PropertyItem icon={Building} label="Company Name" value={company?.name} />
+                            <PropertyItem icon={Users} label="Total Employees" value={employees.length.toString()} />
+                            <PropertyItem icon={Ticket} label="Total Tickets" value={tickets.length.toString()} />
+                            <PropertyItem icon={MapPin} label="Address" value={company?.address} />
+                            <PropertyItem icon={Phone} label="Mobile" value={company?.mobile} />
+                            <PropertyItem icon={Phone} label="Landline" value={company?.landline} />
+                            <PropertyItem icon={LinkIcon} label="Website" value={company?.website} isLink />
+                        </dl>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        return null;
+    };
+
 
     return (
         <SidebarProvider>
@@ -231,146 +293,164 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                             )}
                         </div>
                     </Header>
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-                         {isLoading ? (
-                            <div className="space-y-4">
-                                {[...Array(5)].map((_, i) => (
-                                    <div key={i} className="p-4 border rounded-lg space-y-3">
-                                        <Skeleton className="h-5 w-3/4 rounded-md" />
-                                        <div className="flex items-center gap-2">
-                                            <Skeleton className="h-4 w-24 rounded-md" />
-                                            <Skeleton className="h-4 w-48 rounded-md" />
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                         <div className="lg:col-span-2 xl:col-span-3">
+                            {isLoading ? (
+                                <div className="space-y-4">
+                                    {[...Array(5)].map((_, i) => (
+                                        <div key={i} className="p-4 border rounded-lg space-y-3">
+                                            <Skeleton className="h-5 w-3/4 rounded-md" />
+                                            <div className="flex items-center gap-2">
+                                                <Skeleton className="h-4 w-24 rounded-md" />
+                                                <Skeleton className="h-4 w-48 rounded-md" />
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                             <Tabs defaultValue="tickets" className="w-full">
-                                <TabsList className="mb-4">
-                                    <TabsTrigger value="tickets">All Tickets</TabsTrigger>
-                                    <TabsTrigger value="employees">Employees</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="tickets">
-                                    <Card>
-                                        <CardHeader className="flex flex-row items-center justify-between">
-                                            <div>
-                                                <CardTitle>Tickets for {company?.name}</CardTitle>
-                                                <CardDescription>A list of all tickets associated with this company.</CardDescription>
-                                            </div>
-                                            <div className="w-[180px]">
-                                                <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Sort by" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="newest">Newest</SelectItem>
-                                                        <SelectItem value="oldest">Oldest</SelectItem>
-                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                        <SelectItem value="overdue">Overdue</SelectItem>
-                                                        <SelectItem value="status">Status</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {paginatedTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
-                                                    {paginatedTickets.map((ticket) => (
-                                                        <TicketItem 
-                                                            key={ticket.id} 
-                                                            email={ticket} 
-                                                            isSelected={false}
-                                                            onSelect={() => {}}
-                                                        />
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <Alert>
-                                                    <Ticket className="h-4 w-4" />
-                                                    <AlertTitle>No Tickets Found</AlertTitle>
-                                                    <AlertDescription>
-                                                        There are no tickets matching the current criteria for {company?.name}.
-                                                    </AlertDescription>
-                                                </Alert>
-                                            )}
-                                        </CardContent>
-                                        {totalPages > 1 && (
-                                            <CardFooter className="flex items-center justify-between pt-6">
-                                                <div className="text-sm text-muted-foreground">
-                                                    Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
+                                    ))}
+                                </div>
+                            ) : (
+                                <Tabs defaultValue="tickets" className="w-full" onValueChange={(value) => setActiveTab(value as ActiveTab)}>
+                                    <TabsList className="mb-4">
+                                        <TabsTrigger value="tickets">All Tickets</TabsTrigger>
+                                        <TabsTrigger value="employees">Employees</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="tickets">
+                                        <Card>
+                                            <CardHeader className="flex flex-row items-center justify-between">
+                                                <div>
+                                                    <CardTitle>Tickets for {company?.name}</CardTitle>
+                                                    <CardDescription>A list of all tickets associated with this company.</CardDescription>
                                                 </div>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm text-muted-foreground">Rows per page</span>
-                                                        <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
-                                                            <SelectTrigger className="h-8 w-[70px]">
-                                                                <SelectValue placeholder={String(ticketsPerPage)} />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="10">10</SelectItem>
-                                                                <SelectItem value="25">25</SelectItem>
-                                                                <SelectItem value="50">50</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Page {currentPage} of {totalPages}
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                                                            <ChevronLeft className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                                                            <ChevronRight className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
+                                                <div className="w-[180px]">
+                                                    <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Sort by" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="newest">Newest</SelectItem>
+                                                            <SelectItem value="oldest">Oldest</SelectItem>
+                                                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                            <SelectItem value="overdue">Overdue</SelectItem>
+                                                            <SelectItem value="status">Status</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
-                                            </CardFooter>
-                                        )}
-                                   </Card>
-                                </TabsContent>
-                                <TabsContent value="employees">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Employees at {company?.name}</CardTitle>
-                                            <CardDescription>A list of employees associated with this company.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {employees.length > 0 ? (
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>Name</TableHead>
-                                                            <TableHead>Email</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {employees.map((employee) => (
-                                                            <TableRow key={employee.email}>
-                                                                <TableCell className="font-medium">
-                                                                    <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
-                                                                        {employee.name}
-                                                                    </Link>
-                                                                </TableCell>
-                                                                <TableCell>{employee.email}</TableCell>
-                                                            </TableRow>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {paginatedTickets.length > 0 ? (
+                                                    <ul className="space-y-0 border-t">
+                                                        {paginatedTickets.map((ticket) => (
+                                                            <TicketItem 
+                                                                key={ticket.id} 
+                                                                email={ticket} 
+                                                                isSelected={false}
+                                                                onSelect={() => {}}
+                                                            />
                                                         ))}
-                                                    </TableBody>
-                                                </Table>
-                                            ) : (
-                                                <Alert>
-                                                    <User className="h-4 w-4" />
-                                                    <AlertTitle>No Employees Found</AlertTitle>
-                                                    <AlertDescription>
-                                                        No employees have been associated with this company yet. Assigning a ticket from a new contact will add them automatically.
-                                                    </AlertDescription>
-                                                </Alert>
+                                                    </ul>
+                                                ) : (
+                                                    <Alert>
+                                                        <Ticket className="h-4 w-4" />
+                                                        <AlertTitle>No Tickets Found</AlertTitle>
+                                                        <AlertDescription>
+                                                            There are no tickets matching the current criteria for {company?.name}.
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                )}
+                                            </CardContent>
+                                            {totalPages > 1 && (
+                                                <CardFooter className="flex items-center justify-between pt-6">
+                                                    <div className="text-sm text-muted-foreground">
+                                                        Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm text-muted-foreground">Rows per page</span>
+                                                            <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
+                                                                <SelectTrigger className="h-8 w-[70px]">
+                                                                    <SelectValue placeholder={String(ticketsPerPage)} />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="10">10</SelectItem>
+                                                                    <SelectItem value="25">25</SelectItem>
+                                                                    <SelectItem value="50">50</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            Page {currentPage} of {totalPages}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                                                <ChevronLeft className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                                                <ChevronRight className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </CardFooter>
                                             )}
-                                        </CardContent>
                                     </Card>
-                                </TabsContent>
-                            </Tabs>
-                        )}
+                                    </TabsContent>
+                                    <TabsContent value="employees">
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Employees at {company?.name}</CardTitle>
+                                                <CardDescription>A list of employees associated with this company.</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {employees.length > 0 ? (
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Name</TableHead>
+                                                                <TableHead>Email</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {employees.map((employee) => (
+                                                                <TableRow key={employee.email}>
+                                                                    <TableCell className="font-medium">
+                                                                        <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
+                                                                            {employee.name}
+                                                                        </Link>
+                                                                    </TableCell>
+                                                                    <TableCell>{employee.email}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                ) : (
+                                                    <Alert>
+                                                        <User className="h-4 w-4" />
+                                                        <AlertTitle>No Employees Found</AlertTitle>
+                                                        <AlertDescription>
+                                                            No employees have been associated with this company yet. Assigning a ticket from a new contact will add them automatically.
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </TabsContent>
+                                </Tabs>
+                            )}
+                        </div>
+                        <aside className="lg:col-span-1 xl:col-span-1 space-y-6">
+                            {isLoading ? (
+                                 <Card>
+                                    <CardHeader>
+                                        <Skeleton className="h-6 w-1/2" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                renderSidebarContent()
+                            )}
+                        </aside>
                     </div>
                 </main>
             </div>

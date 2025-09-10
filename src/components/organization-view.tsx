@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, MapPin, Phone, Building, Link as LinkIcon } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -44,6 +44,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { PropertyItem } from './property-item';
+import { Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
 
 
 export function OrganizationView() {
@@ -264,19 +266,6 @@ export function OrganizationView() {
     }
     
     const isOwner = user?.uid === userProfile.organizationOwnerUid;
-
-    const PropertyItem = ({ icon: Icon, label, value, isLink }: { icon: React.ElementType, label: string, value: string | undefined, isLink?: boolean }) => (
-        <div>
-            <dt className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                {label}
-            </dt>
-            {isLink && value ? 
-                <dd className="mt-1 text-sm text-foreground break-all"><a href={value} target="_blank" rel="noopener noreferrer" className="underline">{value}</a></dd> :
-                <dd className="mt-1 text-sm text-foreground break-all">{value || 'N/A'}</dd>
-            }
-        </div>
-    );
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">

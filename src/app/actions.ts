@@ -93,6 +93,10 @@ export interface Company {
     id: string;
     name: string;
     ticketCount?: number;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    website?: string;
 }
 
 export interface Employee {
@@ -858,6 +862,42 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
     }
 }
 
+export async function getCompanyActivityLogs(organizationId: string, companyId: string): Promise<ActivityLog[]> {
+    if (!organizationId || !companyId) {
+        return [];
+    }
+    try {
+        const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
+        const ticketsQuery = query(ticketsCollectionRef, where('companyId', '==', companyId));
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+        
+        let allLogs: ActivityLog[] = [];
+
+        for (const ticketDoc of ticketsSnapshot.docs) {
+            const ticketData = ticketDoc.data();
+            const activityCollectionRef = collection(ticketDoc.ref, 'activity');
+            const activitySnapshot = await getDocs(activityCollectionRef);
+            
+            const logs = activitySnapshot.docs.map(logDoc => ({
+                id: logDoc.id,
+                ...(logDoc.data() as Omit<ActivityLog, 'id'>),
+                ticketId: ticketDoc.id,
+                ticketSubject: ticketData.title || 'No Subject'
+            }));
+            
+            allLogs = allLogs.concat(logs);
+        }
+
+        // Sort all logs by date descending and take the most recent ones
+        allLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        return allLogs.slice(0, 20); // Limit to the 20 most recent activities
+    } catch (error) {
+        console.error("Failed to get company activity logs:", error);
+        return [];
+    }
+}
+
 
 // --- Organization Actions ---
 
@@ -1041,7 +1081,11 @@ export async function addCompany(organizationId: string, companyName: string): P
 
         const newCompanyRef = await addDoc(companiesCollectionRef, {
             name: companyName.trim(),
-            name_lowercase: companyName.trim().toLowerCase()
+            name_lowercase: companyName.trim().toLowerCase(),
+            address: '',
+            mobile: '',
+            landline: '',
+            website: ''
         });
         return { success: true, id: newCompanyRef.id };
     } catch (error) {
@@ -1059,6 +1103,10 @@ export async function getCompanies(organizationId: string): Promise<Company[]> {
     const companies = companiesSnapshot.docs.map(doc => ({
         id: doc.id,
         name: doc.data().name,
+        address: doc.data().address,
+        mobile: doc.data().mobile,
+        landline: doc.data().landline,
+        website: doc.data().website,
     }));
     
     return companies;
@@ -1096,10 +1144,14 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
     if (!companyDoc.exists()) {
         return null;
     }
-
+    const data = companyDoc.data();
     return {
         id: companyDoc.id,
-        name: companyDoc.data().name,
+        name: data.name,
+        address: data.address,
+        mobile: data.mobile,
+        landline: data.landline,
+        website: data.website,
     };
 }
     
@@ -1115,4 +1167,3 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
     
 
     
-
