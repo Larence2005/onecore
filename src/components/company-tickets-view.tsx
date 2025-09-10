@@ -538,7 +538,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                             <TableRow>
                                                                 <TableHead>Name</TableHead>
                                                                 <TableHead>Email</TableHead>
-                                                                {isOwner && <TableHead className="text-right">Actions</TableHead>}
+                                                                <TableHead className="text-right">Tickets Created</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -550,13 +550,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                         </Link>
                                                                     </TableCell>
                                                                     <TableCell>{employee.email}</TableCell>
-                                                                    {isOwner && (
-                                                                        <TableCell className="text-right">
-                                                                            <Button variant="ghost" size="sm" onClick={() => handleEditEmployeeClick(employee)}>
-                                                                                <Pencil className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </TableCell>
-                                                                    )}
+                                                                    <TableCell className="text-right">
+                                                                        {tickets.filter(t => t.senderEmail?.toLowerCase() === employee.email.toLowerCase()).length}
+                                                                    </TableCell>
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
