@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
@@ -15,7 +15,7 @@ import type { Email, Company, Employee } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TicketItem } from './ticket-item';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Terminal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -35,6 +35,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortOption, setSortOption] = useState<SortOption>('newest');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [ticketsPerPage, setTicketsPerPage] = useState(10);
 
 
     useEffect(() => {
@@ -104,6 +106,14 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         }
         return sorted;
     }, [tickets, sortOption]);
+
+    const paginatedTickets = useMemo(() => {
+        const startIndex = (currentPage - 1) * ticketsPerPage;
+        const endIndex = startIndex + ticketsPerPage;
+        return sortedTickets.slice(startIndex, endIndex);
+    }, [sortedTickets, currentPage, ticketsPerPage]);
+
+    const totalPages = Math.ceil(sortedTickets.length / ticketsPerPage);
 
     const handleLogout = async () => {
         try {
@@ -263,9 +273,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                             </div>
                                         </CardHeader>
                                         <CardContent>
-                                            {sortedTickets.length > 0 ? (
+                                            {paginatedTickets.length > 0 ? (
                                                 <ul className="space-y-0 border-t">
-                                                    {sortedTickets.map((ticket) => (
+                                                    {paginatedTickets.map((ticket) => (
                                                         <TicketItem 
                                                             key={ticket.id} 
                                                             email={ticket} 
@@ -284,6 +294,39 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                 </Alert>
                                             )}
                                         </CardContent>
+                                        {totalPages > 1 && (
+                                            <CardFooter className="flex items-center justify-between pt-6">
+                                                <div className="text-sm text-muted-foreground">
+                                                    Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-muted-foreground">Rows per page</span>
+                                                        <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
+                                                            <SelectTrigger className="h-8 w-[70px]">
+                                                                <SelectValue placeholder={String(ticketsPerPage)} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="10">10</SelectItem>
+                                                                <SelectItem value="25">25</SelectItem>
+                                                                <SelectItem value="50">50</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        Page {currentPage} of {totalPages}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                                            <ChevronLeft className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardFooter>
+                                        )}
                                    </Card>
                                 </TabsContent>
                                 <TabsContent value="employees">
