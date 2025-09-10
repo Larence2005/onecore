@@ -171,6 +171,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     
     const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState('');
+    const [replyTo, setReplyTo] = useState('');
     const [replyCc, setReplyCc] = useState('');
     const [replyBcc, setReplyBcc] = useState('');
 
@@ -453,6 +454,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             setReplyContent('');
             setAttachments([]);
             setReplyingToMessageId(null);
+            setReplyTo('');
             setReplyCc('');
             setReplyBcc('');
             
@@ -519,17 +521,22 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
 
     const handleReplyClick = (messageId: string) => {
-        setForwardingMessageId(null);
-        setReplyContent('');
-        setReplyCc('');
-        setReplyBcc('');
-        setReplyingToMessageId(messageId);
+        const message = email?.conversation?.find(m => m.id === messageId);
+        if (message) {
+            setReplyingToMessageId(messageId);
+            setReplyTo(message.senderEmail || '');
+            setForwardingMessageId(null);
+            setReplyContent('');
+            setReplyCc('');
+            setReplyBcc('');
+        }
     };
 
     const handleCancelReply = () => {
         setReplyingToMessageId(null);
         setReplyContent('');
         setAttachments([]);
+        setReplyTo('');
         setReplyCc('');
         setReplyBcc('');
     };
@@ -649,6 +656,15 @@ export function TicketDetailContent({ id }: { id: string }) {
                                 </Alert>
                             ) : (
                                 <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reply-to">To</Label>
+                                        <Input 
+                                            id="reply-to"
+                                            value={replyTo}
+                                            readOnly
+                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                        />
+                                    </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="reply-cc">Cc</Label>
                                         <AutocompleteInput 
