@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails } from '@/app/actions';
-import type { Email, Company } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees } from '@/app/actions';
+import type { Email, Company, Employee } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TicketItem } from './ticket-item';
@@ -20,6 +20,7 @@ import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Terminal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { isPast, isFuture, parseISO } from 'date-fns';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
@@ -31,6 +32,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const { toast } = useToast();
     const [company, setCompany] = useState<Company | null>(null);
     const [tickets, setTickets] = useState<Email[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortOption, setSortOption] = useState<SortOption>('newest');
 
@@ -50,9 +52,10 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const [companyDetails, companyTickets] = await Promise.all([
+                const [companyDetails, companyTickets, companyEmployees] = await Promise.all([
                     getCompanyDetails(userProfile.organizationId!, companyId),
-                    getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true })
+                    getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true }),
+                    getCompanyEmployees(userProfile.organizationId!, companyId),
                 ]);
                 
                 if (!companyDetails) {
@@ -63,6 +66,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
                 setCompany(companyDetails);
                 setTickets(companyTickets);
+                setEmployees(companyEmployees);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
                 toast({ variant: 'destructive', title: 'Failed to load company tickets', description: errorMessage });
@@ -289,13 +293,32 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                             <CardDescription>A list of employees associated with this company.</CardDescription>
                                         </CardHeader>
                                         <CardContent>
-                                             <Alert>
-                                                <User className="h-4 w-4" />
-                                                <AlertTitle>Coming Soon</AlertTitle>
-                                                <AlertDescription>
-                                                    Management of company-specific employees is not yet implemented.
-                                                </AlertDescription>
-                                            </Alert>
+                                            {employees.length > 0 ? (
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Name</TableHead>
+                                                            <TableHead>Email</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {employees.map((employee) => (
+                                                            <TableRow key={employee.email}>
+                                                                <TableCell className="font-medium">{employee.name}</TableCell>
+                                                                <TableCell>{employee.email}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            ) : (
+                                                <Alert>
+                                                    <User className="h-4 w-4" />
+                                                    <AlertTitle>No Employees Found</AlertTitle>
+                                                    <AlertDescription>
+                                                        No employees have been associated with this company yet. Assigning a ticket from a new contact will add them automatically.
+                                                    </AlertDescription>
+                                                </Alert>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
@@ -307,3 +330,5 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
+
+    

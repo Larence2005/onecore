@@ -94,6 +94,11 @@ export interface Company {
     ticketCount?: number;
 }
 
+export interface Employee {
+    name: string;
+    email: string;
+}
+
 
 const getMsalConfig = (settings: Settings): Configuration => ({
     auth: {
@@ -639,6 +644,23 @@ export async function forwardEmailAction(
 }
 
 
+export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Employee) {
+    if (!organizationId || !companyId || !employee.email) {
+        return; // Or throw an error
+    }
+    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', employee.email);
+    // Use set with merge to create or update, preventing duplicates based on email doc ID
+    await setDoc(employeeDocRef, { name: employee.name, email: employee.email }, { merge: true });
+}
+
+export async function getCompanyEmployees(organizationId: string, companyId: string): Promise<Employee[]> {
+    if (!organizationId || !companyId) return [];
+    const employeesCollectionRef = collection(db, 'organizations', organizationId, 'companies', companyId, 'employees');
+    const snapshot = await getDocs(query(employeesCollectionRef, orderBy('name')));
+    return snapshot.docs.map(doc => doc.data() as Employee);
+}
+
+
 export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null, companyId?: string | null }, settings: Settings | null) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
@@ -688,6 +710,13 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                     assignee: data.assignee
                 }));
                 transaction.update(conversationDocRef, { messages });
+            }
+            
+            if (data.companyId && ticketData.senderEmail) {
+                await addEmployeeToCompany(organizationId, data.companyId, {
+                    name: ticketData.sender,
+                    email: ticketData.senderEmail,
+                });
             }
 
             // If assignee changed, send a notification
@@ -1113,3 +1142,5 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
         name: companyDoc.data().name,
     };
 }
+
+    
