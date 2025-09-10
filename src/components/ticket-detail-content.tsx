@@ -356,7 +356,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                     const newConversation = conversationData.messages as DetailedEmail[];
                     setEmail(prevEmail => {
                         if (prevEmail) {
-                            return { ...prevEmail, conversation: newConversation };
+                            return { ...prevEmail, ...newConversation };
                         }
                         return null;
                     });
@@ -482,13 +482,10 @@ export function TicketDetailContent({ id }: { id: string }) {
             setReplyCc('');
             setReplyBcc('');
             
-            // After sending, refresh the conversation from the source
-            // Let the background sync handle updates
-            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds for Graph API to process
+            // After sending, immediately refresh the conversation from the source
             if (email?.conversationId) {
                 await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
             }
-            await fetchEmailData();
 
 
         } catch (err)
@@ -543,7 +540,6 @@ export function TicketDetailContent({ id }: { id: string }) {
             if (email?.conversationId) {
                 await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
             }
-            await fetchEmailData();
     
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -1232,3 +1228,6 @@ export function TicketDetailContent({ id }: { id: string }) {
     
 
 
+
+
+    
