@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
-import type { Email, DetailedEmail } from '@/app/actions';
-import { getLatestEmails, getTicketsFromDB, fetchAndStoreFullConversation } from '@/app/actions';
+import type { Email, DetailedEmail, Company } from '@/app/actions';
+import { getLatestEmails, getCompanies, fetchAndStoreFullConversation } from '@/app/actions';
 import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
@@ -70,69 +70,85 @@ function HomePageContent() {
     const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
     const q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
     
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        setError(null);
-        const ticketsFromDb: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
-            const data = ticketDoc.data();
-            let lastReplier: 'agent' | 'client' | undefined = undefined;
+    let companyMap = new Map<string, string>();
 
-            if (data.conversationId && user.email && userProfile.organizationId) {
-                try {
-                    const conversationDocRef = doc(db, 'organizations', userProfile.organizationId, 'conversations', data.conversationId);
-                    const conversationDoc = await getDoc(conversationDocRef);
-                    if (conversationDoc.exists()) {
-                        const conversationData = conversationDoc.data();
-                        const messages = conversationData.messages as DetailedEmail[];
-                        if (messages && messages.length > 0) {
-                            const lastMessage = messages[messages.length - 1];
-                            if(lastMessage.senderEmail?.toLowerCase() === user.email.toLowerCase()) {
-                                lastReplier = 'agent';
-                            } else {
-                                lastReplier = 'client';
+    const setupListener = async () => {
+        try {
+            const companies = await getCompanies(userProfile.organizationId!);
+            companyMap = new Map(companies.map(c => [c.id, c.name]));
+        } catch(e) {
+            console.error("Could not fetch companies for ticket list", e);
+        }
+
+        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+            setError(null);
+            const ticketsFromDb: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
+                const data = ticketDoc.data();
+                let lastReplier: 'agent' | 'client' | undefined = undefined;
+
+                if (data.conversationId && user.email && userProfile.organizationId) {
+                    try {
+                        const conversationDocRef = doc(db, 'organizations', userProfile.organizationId, 'conversations', data.conversationId);
+                        const conversationDoc = await getDoc(conversationDocRef);
+                        if (conversationDoc.exists()) {
+                            const conversationData = conversationDoc.data();
+                            const messages = conversationData.messages as DetailedEmail[];
+                            if (messages && messages.length > 0) {
+                                const lastMessage = messages[messages.length - 1];
+                                if(lastMessage.senderEmail?.toLowerCase() === user.email.toLowerCase()) {
+                                    lastReplier = 'agent';
+                                } else {
+                                    lastReplier = 'client';
+                                }
                             }
                         }
+                    } catch (e) {
+                        console.error("Could not determine last replier for ticket", ticketDoc.id, e);
                     }
-                } catch (e) {
-                    console.error("Could not determine last replier for ticket", ticketDoc.id, e);
                 }
-            }
-            
-            return {
-                id: ticketDoc.id,
-                subject: data.title || 'No Subject',
-                sender: data.sender || 'Unknown Sender',
-                senderEmail: data.senderEmail || 'Unknown Email',
-                bodyPreview: data.bodyPreview || '',
-                receivedDateTime: data.receivedDateTime || new Date().toISOString(),
-                priority: data.priority || 'Low',
-                assignee: data.assignee || 'Unassigned',
-                status: data.status || 'Open',
-                type: data.type || 'Incident',
-                conversationId: data.conversationId,
-                tags: data.tags || [],
-                deadline: data.deadline,
-                closedAt: data.closedAt,
-                lastReplier: lastReplier,
-                ticketNumber: data.ticketNumber
-            };
-        }));
+                
+                return {
+                    id: ticketDoc.id,
+                    subject: data.title || 'No Subject',
+                    sender: data.sender || 'Unknown Sender',
+                    senderEmail: data.senderEmail || 'Unknown Email',
+                    bodyPreview: data.bodyPreview || '',
+                    receivedDateTime: data.receivedDateTime || new Date().toISOString(),
+                    priority: data.priority || 'Low',
+                    assignee: data.assignee || 'Unassigned',
+                    status: data.status || 'Open',
+                    type: data.type || 'Incident',
+                    conversationId: data.conversationId,
+                    tags: data.tags || [],
+                    deadline: data.deadline,
+                    closedAt: data.closedAt,
+                    lastReplier: lastReplier,
+                    ticketNumber: data.ticketNumber,
+                    companyId: data.companyId,
+                    companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
+                };
+            }));
 
-        ticketsFromDb.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
-        setEmails(ticketsFromDb);
-        setIsLoading(false);
-    }, (err) => {
-        const dbErrorMessage = err instanceof Error ? err.message : "An unknown database error occurred.";
-        setError(dbErrorMessage);
-        setEmails([]);
-        setIsLoading(false);
-    });
+            ticketsFromDb.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+            setEmails(ticketsFromDb);
+            setIsLoading(false);
+        }, (err) => {
+            const dbErrorMessage = err instanceof Error ? err.message : "An unknown database error occurred.";
+            setError(dbErrorMessage);
+            setEmails([]);
+            setIsLoading(false);
+        });
 
-    syncLatestEmails();
+        return unsubscribe;
+    };
     
+    const unsubscribePromise = setupListener();
+    
+    syncLatestEmails();
     const intervalId = setInterval(syncLatestEmails, 30000);
 
     return () => {
-      unsubscribe();
+      unsubscribePromise.then(unsub => unsub && unsub());
       clearInterval(intervalId);
     }
   }, [user, userProfile, syncLatestEmails]);
