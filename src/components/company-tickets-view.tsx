@@ -304,7 +304,11 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                     <TableBody>
                                                         {employees.map((employee) => (
                                                             <TableRow key={employee.email}>
-                                                                <TableCell className="font-medium">{employee.name}</TableCell>
+                                                                <TableCell className="font-medium">
+                                                                    <Link href={`/assignees/${encodeURIComponent(employee.email)}`} className="hover:underline">
+                                                                        {employee.name}
+                                                                    </Link>
+                                                                </TableCell>
                                                                 <TableCell>{employee.email}</TableCell>
                                                             </TableRow>
                                                         ))}
@@ -330,5 +334,3 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
-
-    
