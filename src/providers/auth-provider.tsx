@@ -91,13 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserProfile]);
 
   const signup = async (data: SignUpFormData) => {
-    const organizationsRef = collection(db, "organizations");
-    const allOrgsSnapshot = await getDocs(organizationsRef);
-
-    if (!allOrgsSnapshot.empty) {
-        throw new Error("An administrator account already exists for this application. No further signups are allowed.");
-    }
-    
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const user = userCredential.user;
 
