@@ -213,7 +213,7 @@ export function AgentProfile({ email }: { email: string }) {
                 <SidebarHeader className="mb-8 px-4">
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
                         </Button>
                         <span className="font-bold text-lg">Onecore</span>
                     </div>
@@ -403,7 +403,7 @@ export function AgentProfile({ email }: { email: string }) {
                                                         Edit
                                                     </Button>
                                                 </DialogTrigger>
-                                                <DialogContent className="sm:max-w-2xl top-1/4">
+                                                <DialogContent className="sm:max-w-2xl">
                                                     <DialogHeader>
                                                         <DialogTitle>Edit Agent Properties</DialogTitle>
                                                         <DialogDescription>Update the details for {profileData.name}.</DialogDescription>
