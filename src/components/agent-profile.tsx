@@ -23,7 +23,7 @@ import { TimelineItem } from './timeline-item';
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -213,7 +213,7 @@ export function AgentProfile({ email }: { email: string }) {
                 <SidebarHeader className="mb-8 px-4">
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
                         </Button>
                         <span className="font-bold text-lg">Onecore</span>
                     </div>
@@ -396,51 +396,51 @@ export function AgentProfile({ email }: { email: string }) {
                                     <CardHeader className="flex flex-row items-center justify-between">
                                         <CardTitle>Properties</CardTitle>
                                         {isOwner && (
-                                            <Popover open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                                                <PopoverTrigger asChild>
+                                            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                                                <DialogTrigger asChild>
                                                     <Button variant="secondary" size="sm">
                                                         <Pencil className="mr-2 h-3 w-3" />
                                                         Edit
                                                     </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-96" align="end">
-                                                    <div className="space-y-4 p-1">
-                                                        <div className="space-y-2 text-center">
-                                                            <h4 className="font-medium leading-none">Edit Agent Properties</h4>
-                                                            <p className="text-sm text-muted-foreground">Update the details for {profileData.name}.</p>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-2xl top-1/4">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Edit Agent Properties</DialogTitle>
+                                                        <DialogDescription>Update the details for {profileData.name}.</DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-name">Name</Label>
+                                                            <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
                                                         </div>
-                                                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-name">Name</Label>
-                                                                <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-email">Email</Label>
-                                                                <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-address">Address</Label>
-                                                                <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-mobile">Mobile Number</Label>
-                                                                <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-landline">Telephone Number</Label>
-                                                                <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
-                                                            </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-email">Email</Label>
+                                                            <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
                                                         </div>
-                                                         <div className="flex justify-end gap-2 pt-2">
-                                                            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-                                                            <Button onClick={handleUpdateMember} disabled={isUpdating}>
-                                                                {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                Save Changes
-                                                            </Button>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-address">Address</Label>
+                                                            <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-mobile">Mobile Number</Label>
+                                                            <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-landline">Telephone Number</Label>
+                                                            <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
                                                         </div>
                                                     </div>
-                                                </PopoverContent>
-                                            </Popover>
+                                                    <DialogFooter>
+                                                        <DialogClose asChild>
+                                                            <Button variant="outline">Cancel</Button>
+                                                        </DialogClose>
+                                                        <Button onClick={handleUpdateMember} disabled={isUpdating}>
+                                                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                            Save Changes
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
                                         )}
                                     </CardHeader>
                                     <CardContent>
@@ -474,3 +474,5 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
