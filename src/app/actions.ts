@@ -235,7 +235,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
     let queries = [];
 
     if (options?.includeArchived) {
-        // No status filter for archived, we get them all and filter client side
+        queries.push(where('status', '==', 'Archived'));
     } else if(!options?.fetchAll) {
         queries.push(where('status', '!=', 'Archived'));
     }
@@ -274,10 +274,6 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
         };
     }));
-
-    if (options?.includeArchived) {
-        emails = emails.filter(e => e.status === 'Archived');
-    }
     
     emails.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
     
@@ -1067,4 +1063,6 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
     };
 }
     
+    
+
     

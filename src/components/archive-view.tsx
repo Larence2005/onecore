@@ -1,16 +1,18 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { Email } from "@/app/actions";
 import { getTicketsFromDB, unarchiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Terminal, Archive, RotateCcw } from "lucide-react";
+import { Terminal, Archive, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { TicketItem } from "./ticket-item";
 import { useAuth } from "@/providers/auth-provider";
 import { Button } from "./ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Card, CardFooter } from "./ui/card";
 
 export function ArchiveView() {
     const { user, userProfile } = useAuth();
@@ -18,6 +20,8 @@ export function ArchiveView() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [ticketsPerPage, setTicketsPerPage] = useState(10);
     const { toast } = useToast();
 
     const fetchArchivedTickets = async () => {
@@ -47,6 +51,14 @@ export function ArchiveView() {
             fetchArchivedTickets();
         }
     }, [user, userProfile]);
+
+    const paginatedTickets = useMemo(() => {
+        const startIndex = (currentPage - 1) * ticketsPerPage;
+        const endIndex = startIndex + ticketsPerPage;
+        return archivedTickets.slice(startIndex, endIndex);
+    }, [archivedTickets, currentPage, ticketsPerPage]);
+
+    const totalPages = Math.ceil(archivedTickets.length / ticketsPerPage);
 
     const handleSelectTicket = (ticketId: string, checked: boolean) => {
         if (checked) {
@@ -111,7 +123,7 @@ export function ArchiveView() {
                 ) : archivedTickets.length > 0 ? (
                     <div className="border-t">
                         <ul className="space-y-0">
-                            {archivedTickets.map((email) => (
+                            {paginatedTickets.map((email) => (
                                 <TicketItem 
                                     key={email.id} 
                                     email={email} 
@@ -132,8 +144,42 @@ export function ArchiveView() {
                     </div>
                 )}
             </div>
+             {totalPages > 1 && (
+                <CardFooter className="flex items-center justify-between pt-6 mt-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                        Showing {Math.min(ticketsPerPage * currentPage, archivedTickets.length)} of {archivedTickets.length} tickets.
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Rows per page</span>
+                            <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
+                                <SelectTrigger className="h-8 w-[70px]">
+                                    <SelectValue placeholder={String(ticketsPerPage)} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="10">10</SelectItem>
+                                    <SelectItem value="25">25</SelectItem>
+                                    <SelectItem value="50">50</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            Page {currentPage} of {totalPages}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </CardFooter>
+            )}
         </div>
     );
 }
 
+    
     
