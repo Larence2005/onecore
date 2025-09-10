@@ -588,7 +588,8 @@ export async function forwardEmailAction(
     to: string,
     cc: string | undefined,
     bcc: string | undefined,
-    currentUserEmail: string
+    currentUserEmail: string,
+    fromName: string
 ): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
@@ -634,6 +635,27 @@ export async function forwardEmailAction(
         date: new Date().toISOString(),
         user: currentUserEmail,
     });
+    
+    // Send a notification email to the primary recipients
+    const notificationSubject = "Notification: A message was forwarded to you";
+    const notificationBody = `
+        <p>Hello,</p>
+        <p>${fromName} has forwarded a message to you.</p>
+        <p>This is a notification-only email. Please do not reply directly to this message.</p>
+    `;
+
+    try {
+        await sendEmailAction(settings, {
+            recipient: to,
+            subject: notificationSubject,
+            body: notificationBody,
+        });
+    } catch (notificationError) {
+        console.error("Failed to send forward notification email:", notificationError);
+        // Do not throw an error here, as the primary action (forwarding) was successful.
+        // The user can be notified of the notification failure in the UI if needed.
+    }
+
 
     return { success: true };
 }
@@ -1069,6 +1091,8 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
 
     
 
+
+    
 
     
 
