@@ -417,10 +417,6 @@ export function AgentProfile({ email }: { email: string }) {
                                                             <Label htmlFor="update-email">Email</Label>
                                                             <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
                                                         </div>
-                                                        <div className="space-y-2 sm:col-span-2">
-                                                            <Label htmlFor="update-address">Address</Label>
-                                                            <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
-                                                        </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="update-mobile">Mobile Number</Label>
                                                             <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
@@ -428,6 +424,10 @@ export function AgentProfile({ email }: { email: string }) {
                                                         <div className="space-y-2">
                                                             <Label htmlFor="update-landline">Telephone Number</Label>
                                                             <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2 sm:col-span-2">
+                                                            <Label htmlFor="update-address">Address</Label>
+                                                            <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
                                                         </div>
                                                     </div>
                                                     <DialogFooter>
