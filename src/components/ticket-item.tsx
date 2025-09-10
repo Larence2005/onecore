@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { updateTicket, getOrganizationMembers } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building } from 'lucide-react';
 import { useAuth } from "@/providers/auth-provider";
 import { useSettings } from "@/providers/settings-provider";
 
@@ -127,6 +127,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {isOverdue && <Badge variant="destructive">Overdue</Badge>}
                         {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
+                        {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
                         {email.tags?.filter(t => t !== 'Resolved Late').map(tag => (
                            <Badge key={tag} variant="outline">{tag}</Badge>
                         ))}

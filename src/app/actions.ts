@@ -32,6 +32,8 @@ export interface Email {
     closedAt?: string;
     lastReplier?: 'agent' | 'client';
     ticketNumber?: number;
+    companyId?: string;
+    companyName?: string;
 }
 
 export interface Attachment {
@@ -84,6 +86,12 @@ export interface OrganizationMember {
     uid?: string;
     name: string;
     email: string;
+}
+
+export interface Company {
+    id: string;
+    name: string;
+    ticketCount?: number;
 }
 
 
@@ -216,7 +224,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
 }
 
 
-export async function getTicketsFromDB(organizationId: string, options?: { includeArchived?: boolean, fetchAll?: boolean, agentEmail?: string }): Promise<Email[]> {
+export async function getTicketsFromDB(organizationId: string, options?: { includeArchived?: boolean, fetchAll?: boolean, agentEmail?: string, companyId?: string }): Promise<Email[]> {
     if (!organizationId) return [];
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     let queries = [];
@@ -231,9 +239,16 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
         queries.push(where('status', '!=', 'Archived'));
     }
 
+    if (options?.companyId) {
+        queries.push(where('companyId', '==', options.companyId));
+    }
+
     const q = query(ticketsCollectionRef, ...queries);
-    
     const querySnapshot = await getDocs(q);
+
+    // Fetch all companies once for efficiency
+    const companies = await getCompanies(organizationId);
+    const companyMap = new Map(companies.map(c => [c.id, c.name]));
     
     let emails: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
         const data = ticketDoc.data();
@@ -254,7 +269,9 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             deadline: data.deadline,
             closedAt: data.closedAt,
             ticketNumber: data.ticketNumber,
-            statusBeforeArchive: data.statusBeforeArchive
+            statusBeforeArchive: data.statusBeforeArchive,
+            companyId: data.companyId,
+            companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
         };
     }));
 
@@ -296,6 +313,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         assignee: 'Unassigned',
         status: 'Open',
         type: 'Incident',
+        companyId: null,
     };
 
     if (!querySnapshot.empty) {
@@ -305,6 +323,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
             assignee: ticketData.assignee || 'Unassigned',
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
+            companyId: ticketData.companyId || null,
         };
     }
 
@@ -321,6 +340,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         assignee: ticketProperties.assignee,
         status: ticketProperties.status,
         type: ticketProperties.type,
+        companyId: ticketProperties.companyId,
         hasAttachments: msg.hasAttachments,
         attachments: msg.attachments,
         toRecipients: msg.toRecipients,
@@ -393,6 +413,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             deadline: ticketData.deadline,
             closedAt: ticketData.closedAt,
             ticketNumber: ticketData.ticketNumber,
+            companyId: ticketData.companyId,
             body: { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' }
         };
         conversationMessages.push(placeholderEmail);
@@ -419,6 +440,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         closedAt: ticketData.closedAt,
         conversationId: ticketData.conversationId,
         ticketNumber: ticketData.ticketNumber,
+        companyId: ticketData.companyId,
         body: firstMessage.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
         // The conversation array is the thread of messages.
         conversation: conversationMessages.map(convMsg => ({
@@ -617,7 +639,7 @@ export async function forwardEmailAction(
 }
 
 
-export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null }, settings: Settings | null) {
+export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null, companyId?: string | null }, settings: Settings | null) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
         await runTransaction(db, async (transaction) => {
@@ -679,9 +701,7 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                     <hr>
                     <p><b>From:</b> ${ticketData.sender} (${ticketData.senderEmail})</p>
                     <p><b>Content:</b></p>
-                    <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9;">
-                        ${ticketData.bodyPreview}
-                    </div>
+                    <p>${ticketData.bodyPreview}</p>
                     <br>
                     <p>You can view the full ticket details here: <a href="https://ticketflow-klvln.web.app/tickets/${id}">View Ticket</a></p>
                     <p>Thank you,</p>
@@ -1014,7 +1034,82 @@ export async function deleteOrganization(organizationId: string) {
     
     return { success: true };
 }
+
+// --- Company Actions ---
+
+export async function addCompany(organizationId: string, companyName: string): Promise<{success: boolean, id?: string, error?: string}> {
+    if (!organizationId || !companyName.trim()) {
+        return { success: false, error: 'Organization ID and company name are required.' };
+    }
+    try {
+        const companiesCollectionRef = collection(db, 'organizations', organizationId, 'companies');
+        // Check if a company with the same name already exists (case-insensitive)
+        const q = query(companiesCollectionRef, where('name_lowercase', '==', companyName.trim().toLowerCase()));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return { success: false, error: 'A company with this name already exists.' };
+        }
+
+        const newCompanyRef = await addDoc(companiesCollectionRef, {
+            name: companyName.trim(),
+            name_lowercase: companyName.trim().toLowerCase()
+        });
+        return { success: true, id: newCompanyRef.id };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getCompanies(organizationId: string): Promise<Company[]> {
+    if (!organizationId) return [];
+
+    const companiesCollectionRef = collection(db, 'organizations', organizationId, 'companies');
+    const companiesSnapshot = await getDocs(query(companiesCollectionRef, orderBy('name')));
     
+    const companies = companiesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+    }));
+    
+    return companies;
+}
+
+export async function getCompanyWithTicketCount(organizationId: string): Promise<Company[]> {
+    if (!organizationId) return [];
+    
+    const companies = await getCompanies(organizationId);
+    
+    const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
+    const ticketsSnapshot = await getDocs(ticketsCollectionRef);
+    
+    const ticketCounts = new Map<string, number>();
+    ticketsSnapshot.docs.forEach(doc => {
+        const companyId = doc.data().companyId;
+        if (companyId) {
+            ticketCounts.set(companyId, (ticketCounts.get(companyId) || 0) + 1);
+        }
+    });
+
+    return companies.map(company => ({
+        ...company,
+        ticketCount: ticketCounts.get(company.id) || 0,
+    }));
+}
 
 
-    
+export async function getCompanyDetails(organizationId: string, companyId: string): Promise<Company | null> {
+    if (!organizationId || !companyId) return null;
+
+    const companyDocRef = doc(db, 'organizations', organizationId, 'companies', companyId);
+    const companyDoc = await getDoc(companyDocRef);
+
+    if (!companyDoc.exists()) {
+        return null;
+    }
+
+    return {
+        id: companyDoc.id,
+        name: companyDoc.data().name,
+    };
+}

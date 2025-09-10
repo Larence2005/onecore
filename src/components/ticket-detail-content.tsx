@@ -4,12 +4,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -191,8 +191,11 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentDeadline, setCurrentDeadline] = useState<Date | undefined>(undefined);
     const [currentTags, setCurrentTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
+    const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
+
 
     const [assignees, setAssignees] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
+    const [companies, setCompanies] = useState<Company[]>([]);
 
 
     const priorities = [
@@ -223,13 +226,17 @@ export function TicketDetailContent({ id }: { id: string }) {
     }, [user, loading, router]);
     
     useEffect(() => {
-        const fetchAssignees = async () => {
+        const fetchDropdownData = async () => {
             if (userProfile?.organizationId) {
-                const members = await getOrganizationMembers(userProfile.organizationId);
+                const [members, fetchedCompanies] = await Promise.all([
+                    getOrganizationMembers(userProfile.organizationId),
+                    getCompanies(userProfile.organizationId),
+                ]);
                 setAssignees([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
+                setCompanies(fetchedCompanies);
             }
         };
-        fetchAssignees();
+        fetchDropdownData();
     }, [userProfile]);
 
     const fetchEmailData = useCallback(async () => {
@@ -250,6 +257,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             setCurrentType(detailedEmail.type || 'Incident');
             setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
             setCurrentTags(detailedEmail.tags || []);
+            setCurrentCompanyId(detailedEmail.companyId || null);
             // Set the initial state for comparison
             previousEmailRef.current = detailedEmail;
 
@@ -300,6 +308,12 @@ export function TicketDetailContent({ id }: { id: string }) {
                         const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy')}` : 'removed';
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
+                    if (ticketData.companyId !== previousTicket.companyId) {
+                        const prevCompanyName = companies.find(c => c.id === previousTicket.companyId)?.name || 'None';
+                        const newCompanyName = companies.find(c => c.id === ticketData.companyId)?.name || 'None';
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: new Date().toISOString(), user: currentUserEmail });
+                    }
+
                     
                     const prevTags = new Set(previousTicket.tags || []);
                     const newTags = new Set(ticketData.tags || []);
@@ -317,7 +331,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, assignees, user?.email]);
+    }, [email?.id, userProfile?.organizationId, assignees, companies, user?.email]);
 
      useEffect(() => {
         if (!email?.id || !userProfile?.organizationId) return;
@@ -333,7 +347,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         return () => unsubscribe();
     }, [email?.id, userProfile?.organizationId]);
     
-    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags', value: any) => {
+    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId', value: any) => {
         if (!email || !userProfile?.organizationId) return;
 
         const ticketIdToUpdate = email.id;
@@ -344,6 +358,8 @@ export function TicketDetailContent({ id }: { id: string }) {
         if(field === 'status') setCurrentStatus(value);
         if(field === 'type') setCurrentType(value);
         if(field === 'deadline') setCurrentDeadline(value);
+        if(field === 'companyId') setCurrentCompanyId(value);
+
 
         const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, settings);
 
@@ -360,6 +376,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                  if(field === 'status') setCurrentStatus(email.status);
                  if(field === 'type') setCurrentType(email.type || 'Incident');
                  if(field === 'deadline') setCurrentDeadline(email.deadline ? parseISO(email.deadline) : undefined);
+                 if(field === 'companyId') setCurrentCompanyId(email.companyId || null);
             }
         } else {
             toast({
@@ -1071,6 +1088,26 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                         />
                                                     </PopoverContent>
                                                 </Popover>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
+                                                <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
+                                                            </span>
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">None</SelectItem>
+                                                        {companies.map(c => (
+                                                            <SelectItem key={c.id} value={c.id}>
+                                                                {c.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                         </div>
                                         
