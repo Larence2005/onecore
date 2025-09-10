@@ -515,19 +515,15 @@ export function OrganizationView() {
                                         Edit
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
+                                <DialogContent className="sm:max-w-2xl">
                                     <DialogHeader>
                                         <DialogTitle>Organization Settings</DialogTitle>
                                         <DialogDescription>Manage your organization's details.</DialogDescription>
                                     </DialogHeader>
-                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                        <div className="space-y-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                        <div className="space-y-2 sm:col-span-2">
                                             <Label htmlFor="org-update-name">Organization Name</Label>
                                             <Input id="org-update-name" value={updatedOrganizationName} onChange={(e) => setUpdatedOrganizationName(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="org-update-address">Address</Label>
-                                            <Textarea id="org-update-address" value={updatedOrgAddress} onChange={(e) => setUpdatedOrgAddress(e.target.value)} />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="org-update-mobile">Mobile Number</Label>
@@ -537,9 +533,13 @@ export function OrganizationView() {
                                             <Label htmlFor="org-update-landline">Landline</Label>
                                             <Input id="org-update-landline" value={updatedOrgLandline} onChange={(e) => setUpdatedOrgLandline(e.target.value)} />
                                         </div>
-                                         <div className="space-y-2">
+                                         <div className="space-y-2 sm:col-span-2">
                                             <Label htmlFor="org-update-website">Website</Label>
                                             <Input id="org-update-website" value={updatedOrgWebsite} onChange={(e) => setUpdatedOrgWebsite(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2 sm:col-span-2">
+                                            <Label htmlFor="org-update-address">Address</Label>
+                                            <Textarea id="org-update-address" value={updatedOrgAddress} onChange={(e) => setUpdatedOrgAddress(e.target.value)} />
                                         </div>
                                     </div>
                                     <DialogFooter>
