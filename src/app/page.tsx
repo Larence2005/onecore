@@ -68,17 +68,8 @@ function HomePageContent() {
     setIsLoading(true);
     
     const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
-    let q;
-
-    // If the user is the owner of the org, they see all tickets.
-    // Otherwise, they only see tickets assigned to them.
-    if(userProfile.uid === userProfile.organizationOwnerUid) {
-        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
-    } else {
-        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'), where('assignee', '==', user.email));
-    }
-
-
+    const q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
         setError(null);
         const ticketsFromDb: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
@@ -136,17 +127,13 @@ function HomePageContent() {
         setIsLoading(false);
     });
 
-    // Initial sync for org owners only
-    if(userProfile.uid === userProfile.organizationOwnerUid){
-        syncLatestEmails();
-    }
+    syncLatestEmails();
     
-    // Set up interval for subsequent syncs for org owners
-    const intervalId = userProfile.uid === userProfile.organizationOwnerUid ? setInterval(syncLatestEmails, 30000) : null;
+    const intervalId = setInterval(syncLatestEmails, 30000);
 
     return () => {
       unsubscribe();
-      if(intervalId) clearInterval(intervalId);
+      clearInterval(intervalId);
     }
   }, [user, userProfile, syncLatestEmails]);
 

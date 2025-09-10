@@ -49,22 +49,10 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const { userProfile } = useAuth();
     const { settings } = useSettings();
     const [currentPriority, setCurrentPriority] = useState(email.priority);
-    const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [currentStatus, setCurrentStatus] = useState(email.status);
     const [currentType, setCurrentType] = useState(email.type);
-    const [assignees, setAssignees] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
     
     const { toast } = useToast();
-
-    useEffect(() => {
-        const fetchAssignees = async () => {
-            if (userProfile?.organizationId) {
-                const members = await getOrganizationMembers(userProfile.organizationId);
-                setAssignees([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
-            }
-        };
-        fetchAssignees();
-    }, [userProfile]);
 
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
@@ -74,11 +62,10 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const isResolvedLate = !!(email.tags?.includes('Resolved Late'));
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
-    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type', value: string) => {
+    const handleUpdate = async (field: 'priority' | 'status' | 'type', value: string) => {
         if (!userProfile?.organizationId) return;
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
-        if (field === 'assignee') setCurrentAssignee(value);
         if (field === 'status') setCurrentStatus(value);
         if (field === 'type') setCurrentType(value);
 
@@ -91,7 +78,6 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         } else {
             // Revert UI on failure
             if (field === 'priority') setCurrentPriority(email.priority);
-            if (field === 'assignee') setCurrentAssignee(email.assignee);
             if (field === 'status') setCurrentStatus(email.status);
             if (field === 'type') setCurrentType(email.type);
 
@@ -161,26 +147,6 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                             ))}
                         </SelectContent>
                     </Select>
-                    <Select value={currentAssignee} onValueChange={(value) => handleUpdate('assignee', value)} disabled={isArchivedView}>
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                           <SelectValue>
-                                <span className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    {assignees.find(a => a.email === currentAssignee)?.name || 'Unassigned'}
-                                </span>
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                           {assignees.map(a => (
-                                 <SelectItem key={a.email} value={a.email}>
-                                    <span className="flex items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        {a.name}
-                                    </span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)} disabled={isArchivedView}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                             <SelectValue>
@@ -228,3 +194,4 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     );
 }
 
+    

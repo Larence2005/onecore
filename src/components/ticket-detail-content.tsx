@@ -37,24 +37,25 @@ import { TableIcon } from './ui/table-icon';
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
-    if (!attachments || !htmlContent) {
-        return htmlContent || '';
+    if (!htmlContent) {
+        return '';
     }
 
     let processedHtml = htmlContent;
 
-    // Find all inline attachments
-    const inlineAttachments = attachments.filter(att => att.isInline);
+    if (attachments) {
+        // Find all inline attachments
+        const inlineAttachments = attachments.filter(att => att.isInline && att.contentId);
 
-    inlineAttachments.forEach(att => {
-        if (att.contentId) {
+        inlineAttachments.forEach(att => {
             // The src in the img tag will be `cid:contentId`
-            const cid = att.contentId;
-            const regex = new RegExp(`cid:${cid}`, 'g');
-            const dataUri = `data:${att.contentType};base64,${att.contentBytes}`;
+            const cid = att.contentId!;
+            // Create a regex that is not too greedy and handles variations
+            const regex = new RegExp(`src=["']cid:${cid}["']`, 'g');
+            const dataUri = `src="data:${att.contentType};base64,${att.contentBytes}"`;
             processedHtml = processedHtml.replace(regex, dataUri);
-        }
-    });
+        });
+    }
 
     return processedHtml;
 };
@@ -185,7 +186,6 @@ export function TicketDetailContent({ id }: { id: string }) {
     const previousEmailRef = useRef<DetailedEmail | null>(null);
 
     const [currentPriority, setCurrentPriority] = useState('');
-    const [currentAssignee, setCurrentAssignee] = useState('');
     const [currentStatus, setCurrentStatus] = useState('');
     const [currentType, setCurrentType] = useState('');
     const [currentDeadline, setCurrentDeadline] = useState<Date | undefined>(undefined);
@@ -194,7 +194,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
 
 
-    const [assignees, setAssignees] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
+    const [assignees, setAssignees] = useState<OrganizationMember[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
 
 
@@ -232,7 +232,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                     getOrganizationMembers(userProfile.organizationId),
                     getCompanies(userProfile.organizationId),
                 ]);
-                setAssignees([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
+                setAssignees(members);
                 setCompanies(fetchedCompanies);
             }
         };
@@ -252,7 +252,6 @@ export function TicketDetailContent({ id }: { id: string }) {
 
             setEmail(detailedEmail);
             setCurrentPriority(detailedEmail.priority);
-            setCurrentAssignee(detailedEmail.assignee);
             setCurrentStatus(detailedEmail.status);
             setCurrentType(detailedEmail.type || 'Incident');
             setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
@@ -295,11 +294,6 @@ export function TicketDetailContent({ id }: { id: string }) {
                     }
                     if (ticketData.status !== previousTicket.status) {
                          await addActivityLog(userProfile.organizationId!, email.id, { type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-                     if (ticketData.assignee !== previousTicket.assignee) {
-                        const prevName = assignees.find(a => a.email === previousTicket.assignee)?.name || previousTicket.assignee;
-                        const newName = assignees.find(a => a.email === ticketData.assignee)?.name || ticketData.assignee;
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Assignee', details: `changed from ${prevName} to ${newName}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                      if (ticketData.type !== previousTicket.type) {
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString(), user: currentUserEmail });
@@ -347,14 +341,13 @@ export function TicketDetailContent({ id }: { id: string }) {
         return () => unsubscribe();
     }, [email?.id, userProfile?.organizationId]);
     
-    const handleUpdate = async (field: 'priority' | 'assignee' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId', value: any) => {
+    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId', value: any) => {
         if (!email || !userProfile?.organizationId) return;
 
         const ticketIdToUpdate = email.id;
 
         // Optimistic UI updates
         if(field === 'priority') setCurrentPriority(value);
-        if(field === 'assignee') setCurrentAssignee(value);
         if(field === 'status') setCurrentStatus(value);
         if(field === 'type') setCurrentType(value);
         if(field === 'deadline') setCurrentDeadline(value);
@@ -372,7 +365,6 @@ export function TicketDetailContent({ id }: { id: string }) {
             // Revert optimistic updates on failure
             if(email){
                  if(field === 'priority') setCurrentPriority(email.priority);
-                 if(field === 'assignee') setCurrentAssignee(email.assignee);
                  if(field === 'status') setCurrentStatus(email.status);
                  if(field === 'type') setCurrentType(email.type || 'Incident');
                  if(field === 'deadline') setCurrentDeadline(email.deadline ? parseISO(email.deadline) : undefined);
@@ -1019,29 +1011,6 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                                 <span className="flex items-center gap-2">
                                                                     <s.icon className={cn("h-4 w-4", s.color)} />
                                                                     {s.label}
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                <Select value={currentAssignee} onValueChange={(value) => { handleUpdate('assignee', value)}}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                <User className="h-4 w-4" />
-                                                                {assignees.find(a => a.email === currentAssignee)?.name || currentAssignee}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                    {assignees.map(a => (
-                                                            <SelectItem key={a.email} value={a.email}>
-                                                                <span className="flex items-center gap-2">
-                                                                    <User className="h-4 w-4" />
-                                                                    {a.name}
                                                                 </span>
                                                             </SelectItem>
                                                         ))}

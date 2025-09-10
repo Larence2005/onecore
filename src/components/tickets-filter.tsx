@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -37,8 +36,6 @@ const typeOptions = ['Questions', 'Incident', 'Problem', 'Feature Request'];
 export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const { userProfile } = useAuth();
   const [search, setSearch] = useState('');
-  const [agents, setAgents] = useState<string[]>([]);
-  const [agentOptions, setAgentOptions] = useState<OrganizationMember[]>([{ name: 'Unassigned', email: 'Unassigned' }]);
   const [groups, setGroups] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
@@ -46,28 +43,17 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const [tags, setTags] = useState('');
   const [created, setCreated] = useState('any');
 
-  useEffect(() => {
-    const fetchAgents = async () => {
-        if(userProfile?.organizationId) {
-            const members = await getOrganizationMembers(userProfile.organizationId);
-            setAgentOptions([{ name: 'Unassigned', email: 'Unassigned' }, ...members]);
-        }
-    };
-    fetchAgents();
-  }, [userProfile]);
-
   const handleCheckboxChange = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
     setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
   };
 
   const handleApply = useCallback(() => {
-    onApplyFilters({ search, agents, groups, statuses, priorities, types, tags, created });
-  }, [search, agents, groups, statuses, priorities, types, tags, created, onApplyFilters]);
+    onApplyFilters({ search, agents: [], groups, statuses, priorities, types, tags, created });
+  }, [search, groups, statuses, priorities, types, tags, created, onApplyFilters]);
 
 
   const clearFilters = () => {
     setSearch('');
-    setAgents([]);
     setGroups([]);
     setStatuses([]);
     setPriorities([]);
@@ -81,7 +67,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   }, [handleApply]);
 
 
-  const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null].filter(Boolean).length;
+  const appliedFiltersCount = [search, tags, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null].filter(Boolean).length;
 
   return (
     <aside className="hidden lg:block w-72 border-l">
@@ -106,7 +92,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
           </div>
         </div>
         <div className="flex-grow overflow-y-auto no-scrollbar">
-          <Accordion type="multiple" defaultValue={['status', 'priority', 'type', 'agents', 'groups', 'tags', 'created']} className="w-full">
+          <Accordion type="multiple" defaultValue={['status', 'priority', 'type', 'groups', 'tags', 'created']} className="w-full">
             <AccordionItem value="status">
               <AccordionTrigger className="px-4 text-base font-semibold">Status</AccordionTrigger>
               <AccordionContent className="px-4">
@@ -153,23 +139,6 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                         onCheckedChange={() => handleCheckboxChange(setTypes, type)}
                       />
                       <Label htmlFor={`type-${type}`} className="font-normal">{type}</Label>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="agents">
-              <AccordionTrigger className="px-4 text-base font-semibold">Agents</AccordionTrigger>
-              <AccordionContent className="px-4">
-                <div className="space-y-2">
-                  {agentOptions.map(agent => (
-                    <div key={agent.email} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`agent-${agent.email}`} 
-                        checked={agents.includes(agent.email)}
-                        onCheckedChange={() => handleCheckboxChange(setAgents, agent.email)}
-                      />
-                      <Label htmlFor={`agent-${agent.email}`} className="font-normal">{agent.name}</Label>
                     </div>
                   ))}
                 </div>

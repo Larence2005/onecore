@@ -42,6 +42,8 @@ export interface Attachment {
     contentType: string;
     size: number;
     contentBytes: string; // Base64 encoded content
+    isInline?: boolean;
+    contentId?: string;
 }
 
 export interface NewAttachment {
@@ -229,15 +231,11 @@ export async function getLatestEmails(settings: Settings, organizationId: string
 }
 
 
-export async function getTicketsFromDB(organizationId: string, options?: { includeArchived?: boolean, fetchAll?: boolean, agentEmail?: string, companyId?: string }): Promise<Email[]> {
+export async function getTicketsFromDB(organizationId: string, options?: { includeArchived?: boolean, fetchAll?: boolean, companyId?: string }): Promise<Email[]> {
     if (!organizationId) return [];
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     let queries = [];
 
-    if (options?.agentEmail) {
-        queries.push(where('assignee', '==', options.agentEmail));
-    }
-    
     if (options?.includeArchived) {
         // No status filter for archived, we get them all and filter client side
     } else if(!options?.fetchAll) {
@@ -661,7 +659,7 @@ export async function getCompanyEmployees(organizationId: string, companyId: str
 }
 
 
-export async function updateTicket(organizationId: string, id: string, data: { priority?: string, assignee?: string, status?: string, type?: string, deadline?: string | null, tags?: string[], closedAt?: string | null, companyId?: string | null }, settings: Settings | null) {
+export async function updateTicket(organizationId: string, id: string, data: { priority?: string; status?: string; type?: string; deadline?: string | null; tags?: string[]; closedAt?: string | null; companyId?: string | null; }, settings: Settings | null) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
         await runTransaction(db, async (transaction) => {
@@ -672,14 +670,7 @@ export async function updateTicket(organizationId: string, id: string, data: { p
             }
             
             const ticketData = ticketDoc.data();
-            const conversationId = ticketData.conversationId;
-            let conversationDocRef: any, conversationDoc: any;
-
-            if (data.assignee && conversationId) {
-                conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-                conversationDoc = await transaction.get(conversationDocRef);
-            }
-
+            
             // --- WRITES AFTER ---
             const updateData: any = { ...data };
 
@@ -702,48 +693,11 @@ export async function updateTicket(organizationId: string, id: string, data: { p
 
             // Update the ticket
             transaction.update(ticketDocRef, updateData);
-
-            // If assignee changed, update the conversation as well
-            if (data.assignee && conversationId && conversationDoc?.exists()) {
-                const messages = (conversationDoc.data().messages || []).map((msg: DetailedEmail) => ({
-                    ...msg,
-                    assignee: data.assignee
-                }));
-                transaction.update(conversationDocRef, { messages });
-            }
             
             if (data.companyId && ticketData.senderEmail) {
                 await addEmployeeToCompany(organizationId, data.companyId, {
                     name: ticketData.sender,
                     email: ticketData.senderEmail,
-                });
-            }
-
-            // If assignee changed, send a notification
-            if (data.assignee && data.assignee !== ticketData.assignee && data.assignee !== 'Unassigned' && settings) {
-                const newAssigneeEmail = data.assignee;
-                const emailSubject = `You have been assigned a new ticket: #${ticketData.ticketNumber}`;
-                const emailBody = `
-                    <p>Hello,</p>
-                    <p>You have been assigned a new ticket.</p>
-                    <p><b>Ticket #${ticketData.ticketNumber}: ${ticketData.title}</b></p>
-                    <hr>
-                    <p><b>From:</b> ${ticketData.sender} (${ticketData.senderEmail})</p>
-                    <p><b>Content:</b></p>
-                    <p>${ticketData.bodyPreview}</p>
-                    <br>
-                    <p>You can view the full ticket details here: <a href="https://ticketflow-klvln.web.app/tickets/${id}">View Ticket</a></p>
-                    <p>Thank you,</p>
-                    <p>Onecore Support Team</p>
-                `;
-                 // This is a fire-and-forget, but we handle the promise to avoid unhandled rejection warnings.
-                 // We don't want the main transaction to fail if the email notification fails.
-                 sendEmailAction(settings, {
-                    recipient: newAssigneeEmail,
-                    subject: emailSubject,
-                    body: emailBody
-                }).catch(error => {
-                    console.error("Failed to send assignment notification email:", error);
                 });
             }
         });
@@ -1142,5 +1096,4 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
         name: companyDoc.data().name,
     };
 }
-
     

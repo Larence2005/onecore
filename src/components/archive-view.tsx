@@ -25,10 +25,8 @@ export function ArchiveView() {
         setIsLoading(true);
         setError(null);
         try {
-            const isOwner = userProfile?.uid === userProfile?.organizationOwnerUid;
             const tickets = await getTicketsFromDB(userProfile.organizationId, { 
                 includeArchived: true, 
-                agentEmail: isOwner ? undefined : user.email || '' 
             });
             setArchivedTickets(tickets);
         } catch (err) {
@@ -137,3 +135,5 @@ export function ArchiveView() {
         </div>
     );
 }
+
+    
