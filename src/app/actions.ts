@@ -13,6 +13,15 @@ import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 import { isPast, parseISO } from 'date-fns';
+import { SimpleCache } from '@/lib/cache';
+
+
+// Initialize caches for different data types
+// Cache TTL: 5 minutes for lists, 2 minutes for individual items
+const ticketsCache = new SimpleCache<any>(300);
+const companiesCache = new SimpleCache<any>(300);
+const membersCache = new SimpleCache<any>(300);
+const activityCache = new SimpleCache<any>(120);
 
 
 export interface Email {
@@ -241,6 +250,11 @@ export async function getLatestEmails(settings: Settings, organizationId: string
 
 export async function getTicketsFromDB(organizationId: string, options?: { includeArchived?: boolean, fetchAll?: boolean, companyId?: string }): Promise<Email[]> {
     if (!organizationId) return [];
+
+    const cacheKey = `tickets:${organizationId}:${JSON.stringify(options || {})}`;
+    const cachedTickets = ticketsCache.get(cacheKey);
+    if (cachedTickets) return cachedTickets;
+    
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     let queries = [];
 
@@ -287,6 +301,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
     
     emails.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
     
+    ticketsCache.set(cacheKey, emails);
     return emails;
 }
 
@@ -356,6 +371,9 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
 
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: conversationMessages });
+    
+    // Invalidate conversation cache
+    ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
 
     // When a conversation is updated, we also need to update the main ticket's bodyPreview and received time
     if (conversationMessages.length > 0) {
@@ -368,6 +386,8 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
                 bodyPreview: lastMessage.bodyPreview,
                 receivedDateTime: lastMessage.receivedDateTime,
             });
+            // Invalidate specific ticket cache
+            ticketsCache.invalidate(`ticket:${organizationId}:${ticketDocRef.id}`);
         }
     }
 
@@ -380,6 +400,11 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     if (!organizationId || !id) {
         throw new Error("Organization ID and Ticket ID must be provided.");
     }
+    
+    const cacheKey = `ticket:${organizationId}:${id}`;
+    const cachedEmail = ticketsCache.get(cacheKey);
+    if (cachedEmail) return cachedEmail;
+
 
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     const ticketDocSnap = await getDoc(ticketDocRef);
@@ -392,10 +417,17 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
 
     let conversationMessages: DetailedEmail[] = [];
     if (conversationId) {
-        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-        const conversationDoc = await getDoc(conversationDocRef);
-        if (conversationDoc.exists() && conversationDoc.data().messages) {
-            conversationMessages = conversationDoc.data().messages as DetailedEmail[];
+        const conversationCacheKey = `conversation:${organizationId}:${conversationId}`;
+        const cachedConversation = ticketsCache.get(conversationCacheKey);
+        if (cachedConversation) {
+            conversationMessages = cachedConversation;
+        } else {
+            const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
+            const conversationDoc = await getDoc(conversationDocRef);
+            if (conversationDoc.exists() && conversationDoc.data().messages) {
+                conversationMessages = conversationDoc.data().messages as DetailedEmail[];
+                ticketsCache.set(conversationCacheKey, conversationMessages);
+            }
         }
     }
 
@@ -451,7 +483,8 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             type: ticketData.type || 'Incident',
         })),
     };
-
+    
+    ticketsCache.set(cacheKey, mainEmailDetails);
     return mainEmailDetails;
 }
 
@@ -694,16 +727,27 @@ export async function addEmployeeToCompany(organizationId: string, companyId: st
         mobile: employee.mobile || '',
         landline: employee.landline || '',
     }, { merge: true });
+    
+    // Invalidate company-specific employee cache
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
 }
 
 export async function getCompanyEmployees(organizationId: string, companyId: string): Promise<Employee[]> {
     if (!organizationId || !companyId) return [];
+
+    const cacheKey = `employees:${organizationId}:${companyId}`;
+    const cachedEmployees = companiesCache.get(cacheKey);
+    if (cachedEmployees) return cachedEmployees;
+
     const employeesCollectionRef = collection(db, 'organizations', organizationId, 'companies', companyId, 'employees');
     const snapshot = await getDocs(query(employeesCollectionRef, orderBy('name')));
-    return snapshot.docs.map(doc => ({
+    const employees = snapshot.docs.map(doc => ({
         ...doc.data(),
         email: doc.id
     }) as Employee);
+    
+    companiesCache.set(cacheKey, employees);
+    return employees;
 }
 
 export async function updateCompanyEmployee(
@@ -747,6 +791,9 @@ export async function updateCompanyEmployee(
             transaction.set(newEmployeeDocRef, employeeData);
         });
     }
+
+    // Invalidate company-specific employee cache
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
     
     return { success: true };
 }
@@ -797,6 +844,11 @@ export async function updateTicket(organizationId: string, id: string, data: { p
             }
         });
 
+        // Invalidate relevant caches
+        ticketsCache.invalidate(`ticket:${organizationId}:${id}`);
+        ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
+        activityCache.invalidatePrefix(`activity:${organizationId}`);
+
         return { success: true };
     } catch (error) {
         console.error("Failed to update ticket:", error);
@@ -824,6 +876,11 @@ export async function archiveTickets(organizationId: string, ticketIds: string[]
             }
         }
         await batch.commit();
+
+        // Invalidate caches
+        ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
+        ticketIds.forEach(id => ticketsCache.invalidate(`ticket:${organizationId}:${id}`));
+
         return { success: true };
     } catch (error) {
         console.error("Failed to archive tickets:", error);
@@ -850,6 +907,11 @@ export async function unarchiveTickets(organizationId: string, ticketIds: string
             }
         }
         await batch.commit();
+
+        // Invalidate caches
+        ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
+        ticketIds.forEach(id => ticketsCache.invalidate(`ticket:${organizationId}:${id}`));
+
         return { success: true };
     } catch (error) {
         console.error("Failed to unarchive tickets:", error);
@@ -865,6 +927,11 @@ export async function addActivityLog(organizationId: string, ticketId: string, l
     try {
         const activityCollectionRef = collection(db, 'organizations', organizationId, 'tickets', ticketId, 'activity');
         await addDoc(activityCollectionRef, logEntry);
+
+        // Invalidate activity log caches
+        activityCache.invalidate(`activity:${organizationId}:${ticketId}`);
+        activityCache.invalidate(`all_activity:${organizationId}`);
+        
         return { success: true };
     } catch (error) {
         console.error("Failed to add activity log:", error);
@@ -877,11 +944,18 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
     if (!organizationId || !ticketId) {
         return [];
     }
+    const cacheKey = `activity:${organizationId}:${ticketId}`;
+    const cachedLogs = activityCache.get(cacheKey);
+    if (cachedLogs) return cachedLogs;
+
     try {
         const activityCollectionRef = collection(db, 'organizations', organizationId, 'tickets', ticketId, 'activity');
         const q = query(activityCollectionRef, orderBy('date', 'desc'));
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+        const logs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+
+        activityCache.set(cacheKey, logs);
+        return logs;
     } catch (error) {
         console.error("Failed to get activity log:", error);
         return [];
@@ -892,6 +966,10 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
     if (!organizationId) {
         return [];
     }
+
+    const cacheKey = `all_activity:${organizationId}`;
+    const cachedLogs = activityCache.get(cacheKey);
+    if (cachedLogs) return cachedLogs;
 
     try {
         const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
@@ -916,7 +994,9 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
         // Sort all logs by date descending and take the most recent ones
         allLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
-        return allLogs.slice(0, 20); // Limit to the 20 most recent activities
+        const recentLogs = allLogs.slice(0, 20); // Limit to the 20 most recent activities
+        activityCache.set(cacheKey, recentLogs);
+        return recentLogs;
     } catch (error) {
         console.error("Failed to get all activity logs:", error);
         return [];
@@ -927,6 +1007,11 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
     if (!organizationId || !companyId) {
         return [];
     }
+
+    const cacheKey = `company_activity:${organizationId}:${companyId}`;
+    const cachedLogs = activityCache.get(cacheKey);
+    if (cachedLogs) return cachedLogs;
+
     try {
         const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
         const ticketsQuery = query(ticketsCollectionRef, where('companyId', '==', companyId));
@@ -952,7 +1037,9 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
         // Sort all logs by date descending and take the most recent ones
         allLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
-        return allLogs.slice(0, 20); // Limit to the 20 most recent activities
+        const recentLogs = allLogs.slice(0, 20); // Limit to the 20 most recent activities
+        activityCache.set(cacheKey, recentLogs);
+        return recentLogs;
     } catch (error) {
         console.error("Failed to get company activity logs:", error);
         return [];
@@ -974,6 +1061,9 @@ export async function createOrganization(name: string, uid: string, userName: st
         website: ''
     });
     
+    // Invalidate member cache for this new org
+    membersCache.invalidate(`members:${organizationRef.id}`);
+
     return { success: true, organizationId: organizationRef.id };
 }
 
@@ -995,12 +1085,19 @@ export async function addMemberToOrganization(organizationId: string, name: stri
     await updateDoc(organizationRef, {
         members: arrayUnion({ name, email, address, mobile, landline })
     });
+    
+    // Invalidate members cache
+    membersCache.invalidate(`members:${organizationId}`);
 
     return { success: true };
 }
 
 export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
     if (!organizationId) return [];
+
+    const cacheKey = `members:${organizationId}`;
+    const cachedMembers = membersCache.get(cacheKey);
+    if (cachedMembers) return cachedMembers;
 
     const organizationRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(organizationRef);
@@ -1009,7 +1106,9 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
         return [];
     }
     
-    return (orgDoc.data().members || []) as OrganizationMember[];
+    const members = (orgDoc.data().members || []) as OrganizationMember[];
+    membersCache.set(cacheKey, members);
+    return members;
 }
 
 
@@ -1046,6 +1145,9 @@ export async function updateMemberInOrganization(organizationId: string, origina
         transaction.update(organizationRef, { members: updatedMembers });
     });
 
+    // Invalidate members cache
+    membersCache.invalidate(`members:${organizationId}`);
+
     return { success: true };
 }
 
@@ -1073,6 +1175,9 @@ export async function deleteMemberFromOrganization(organizationId: string, email
         transaction.update(organizationRef, { members: updatedMembers });
     });
 
+    // Invalidate members cache
+    membersCache.invalidate(`members:${organizationId}`);
+
     return { success: true };
 }
     
@@ -1085,6 +1190,10 @@ export async function updateOrganization(
     }
     const orgDocRef = doc(db, 'organizations', organizationId);
     await updateDoc(orgDocRef, data);
+    
+    // Invalidate org-level caches
+    membersCache.invalidate(`members:${organizationId}`);
+    
     return { success: true };
 }
 
@@ -1121,6 +1230,12 @@ export async function deleteOrganization(organizationId: string) {
     batch.delete(orgDocRef);
     
     await batch.commit();
+
+    // Clear all caches related to this organization
+    ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
+    companiesCache.invalidatePrefix(`companies:${organizationId}`);
+    membersCache.invalidatePrefix(`members:${organizationId}`);
+    activityCache.invalidatePrefix(`activity:${organizationId}`);
     
     return { success: true };
 }
@@ -1148,6 +1263,11 @@ export async function addCompany(organizationId: string, companyName: string): P
             landline: '',
             website: ''
         });
+
+        // Invalidate company list caches
+        companiesCache.invalidate(`companies:${organizationId}`);
+        companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+
         return { success: true, id: newCompanyRef.id };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -1157,6 +1277,10 @@ export async function addCompany(organizationId: string, companyName: string): P
 
 export async function getCompanies(organizationId: string): Promise<Company[]> {
     if (!organizationId) return [];
+
+    const cacheKey = `companies:${organizationId}`;
+    const cachedCompanies = companiesCache.get(cacheKey);
+    if (cachedCompanies) return cachedCompanies;
 
     const companiesCollectionRef = collection(db, 'organizations', organizationId, 'companies');
     const companiesSnapshot = await getDocs(query(companiesCollectionRef, orderBy('name')));
@@ -1170,11 +1294,16 @@ export async function getCompanies(organizationId: string): Promise<Company[]> {
         website: doc.data().website,
     }));
     
+    companiesCache.set(cacheKey, companies);
     return companies;
 }
 
 export async function getCompanyWithTicketCount(organizationId: string): Promise<Company[]> {
     if (!organizationId) return [];
+
+    const cacheKey = `companies_with_counts:${organizationId}`;
+    const cachedData = companiesCache.get(cacheKey);
+    if(cachedData) return cachedData;
     
     const companies = await getCompanies(organizationId);
     
@@ -1189,15 +1318,22 @@ export async function getCompanyWithTicketCount(organizationId: string): Promise
         }
     });
 
-    return companies.map(company => ({
+    const companiesWithCounts = companies.map(company => ({
         ...company,
         ticketCount: ticketCounts.get(company.id) || 0,
     }));
+
+    companiesCache.set(cacheKey, companiesWithCounts);
+    return companiesWithCounts;
 }
 
 
 export async function getCompanyDetails(organizationId: string, companyId: string): Promise<Company | null> {
     if (!organizationId || !companyId) return null;
+
+    const cacheKey = `company_details:${organizationId}:${companyId}`;
+    const cachedCompany = companiesCache.get(cacheKey);
+    if(cachedCompany) return cachedCompany;
 
     const companyDocRef = doc(db, 'organizations', organizationId, 'companies', companyId);
     const companyDoc = await getDoc(companyDocRef);
@@ -1206,7 +1342,7 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
         return null;
     }
     const data = companyDoc.data();
-    return {
+    const companyDetails = {
         id: companyDoc.id,
         name: data.name,
         address: data.address,
@@ -1214,6 +1350,9 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
         landline: data.landline,
         website: data.website,
     };
+
+    companiesCache.set(cacheKey, companyDetails);
+    return companyDetails;
 }
 
 export async function updateCompany(
@@ -1226,6 +1365,12 @@ export async function updateCompany(
     }
     const companyDocRef = doc(db, 'organizations', organizationId, 'companies', companyId);
     await updateDoc(companyDocRef, data);
+
+    // Invalidate company caches
+    companiesCache.invalidate(`company_details:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies:${organizationId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+
     return { success: true };
 }
     
@@ -1241,4 +1386,5 @@ export async function updateCompany(
     
 
     
+
 
