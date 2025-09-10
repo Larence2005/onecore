@@ -408,7 +408,7 @@ export function AgentProfile({ email }: { email: string }) {
                                                         <DialogTitle>Edit Agent Properties</DialogTitle>
                                                         <DialogDescription>Update the details for {profileData.name}.</DialogDescription>
                                                     </DialogHeader>
-                                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                                         <div className="space-y-2">
                                                             <Label htmlFor="update-name">Name</Label>
                                                             <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
@@ -417,7 +417,7 @@ export function AgentProfile({ email }: { email: string }) {
                                                             <Label htmlFor="update-email">Email</Label>
                                                             <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
                                                         </div>
-                                                        <div className="space-y-2">
+                                                        <div className="space-y-2 sm:col-span-2">
                                                             <Label htmlFor="update-address">Address</Label>
                                                             <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
                                                         </div>
@@ -474,5 +474,3 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
-
-    
