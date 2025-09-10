@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers } from "@/app/actions";
-import type { Email, OrganizationMember } from "@/app/actions";
+import { getTicketsFromDB, getOrganizationMembers, getEmail, getActivityLog } from "@/app/actions";
+import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +18,10 @@ import Link from "next/link";
 import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive } from 'lucide-react';
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TimelineItem } from './timeline-item';
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface ProfileData {
     name: string;
@@ -28,7 +31,11 @@ interface ProfileData {
 export function AgentProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout } = useAuth();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [submittedTickets, setSubmittedTickets] = useState<Email[]>([]);
+  
+  const [ccTickets, setCcTickets] = useState<Email[]>([]);
+  const [bccTickets, setBccTickets] = useState<Email[]>([]);
+  const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -64,8 +71,44 @@ export function AgentProfile({ email }: { email: string }) {
 
             const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
             
-            const tempSubmittedTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
-            setSubmittedTickets(tempSubmittedTickets);
+            const tempCcTickets: Email[] = [];
+            const tempBccTickets: Email[] = [];
+            const tempForwardedActivities: ActivityLog[] = [];
+
+            for (const ticket of allTickets) {
+                const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
+                if (detailedTicket?.conversation) {
+                    let isCc = false;
+                    let isBcc = false;
+                    for (const message of detailedTicket.conversation) {
+                        if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                            isCc = true;
+                        }
+                        if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                            isBcc = true;
+                        }
+                    }
+                    if (isCc) tempCcTickets.push(ticket);
+                    if (isBcc) tempBccTickets.push(ticket);
+                }
+
+                const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
+                const q = query(activityCollectionRef, where('type', '==', 'Forward'));
+                const activitySnapshot = await getDocs(q);
+                activitySnapshot.forEach(doc => {
+                    const log = doc.data() as Omit<ActivityLog, 'id'>;
+                    if (log.details.toLowerCase().includes(email.toLowerCase())) {
+                        tempForwardedActivities.push({
+                            id: doc.id, ...log, ticketId: ticket.id, ticketSubject: ticket.subject
+                        });
+                    }
+                });
+            }
+            
+            setCcTickets(tempCcTickets);
+            setBccTickets(tempBccTickets);
+            setForwardedActivities(tempForwardedActivities);
+
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -201,6 +244,7 @@ export function AgentProfile({ email }: { email: string }) {
                                     <Skeleton className="h-5 w-64" />
                                 </div>
                             </div>
+                             <Skeleton className="h-10 w-full" />
                             <Skeleton className="h-96 w-full" />
                         </div>
                     ) : error ? (
@@ -223,26 +267,75 @@ export function AgentProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Submitted Tickets</CardTitle>
-                                    <CardDescription>Tickets created by {profileData.name}.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {submittedTickets.length > 0 ? (
-                                        <ul className="space-y-0 border-t">
-                                            {submittedTickets.map((ticket) => (
-                                                <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <div className="text-center py-10 text-muted-foreground">
-                                            <Ticket className="mx-auto h-8 w-8 mb-2" />
-                                            No tickets found.
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                             <Tabs defaultValue="cc" className="w-full">
+                                <TabsList className="mb-4">
+                                    <TabsTrigger value="cc">Cc'd On</TabsTrigger>
+                                    <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
+                                    <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="cc">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Tickets (Cc)</CardTitle>
+                                            <CardDescription>Tickets where {profileData.name} was in the Cc field.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {ccTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {ccTickets.map((ticket) => (
+                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                                <TabsContent value="bcc">
+                                        <Card>
+                                        <CardHeader>
+                                            <CardTitle>Tickets (Bcc)</CardTitle>
+                                            <CardDescription>Tickets where {profileData.name} was in the Bcc field.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {bccTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {bccTickets.map((ticket) => (
+                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                                <TabsContent value="forwarded">
+                                        <Card>
+                                        <CardHeader>
+                                            <CardTitle>Forwarded Messages</CardTitle>
+                                            <CardDescription>Tickets that were forwarded to {profileData.name}.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            {forwardedActivities.length > 0 ? (
+                                                forwardedActivities.map((log) => (
+                                                    <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
+                                                        <div className="flex flex-wrap items-center gap-x-2">
+                                                            <span>{log.details} on ticket</span> 
+                                                            <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
+                                                                {log.ticketSubject}
+                                                            </Link>
+                                                        </div>
+                                                    </TimelineItem>
+                                                ))
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+                            </Tabs>
                         </div>
                     ) : null}
                 </div>
@@ -252,3 +345,4 @@ export function AgentProfile({ email }: { email: string }) {
   );
 }
 
+    
