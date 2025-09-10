@@ -105,6 +105,9 @@ export interface Company {
 export interface Employee {
     name: string;
     email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
 }
 
 
@@ -684,15 +687,70 @@ export async function addEmployeeToCompany(organizationId: string, companyId: st
     }
     const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', employee.email);
     // Use set with merge to create or update, preventing duplicates based on email doc ID
-    await setDoc(employeeDocRef, { name: employee.name, email: employee.email }, { merge: true });
+    await setDoc(employeeDocRef, { 
+        name: employee.name, 
+        email: employee.email,
+        address: employee.address || '',
+        mobile: employee.mobile || '',
+        landline: employee.landline || '',
+    }, { merge: true });
 }
 
 export async function getCompanyEmployees(organizationId: string, companyId: string): Promise<Employee[]> {
     if (!organizationId || !companyId) return [];
     const employeesCollectionRef = collection(db, 'organizations', organizationId, 'companies', companyId, 'employees');
     const snapshot = await getDocs(query(employeesCollectionRef, orderBy('name')));
-    return snapshot.docs.map(doc => doc.data() as Employee);
+    return snapshot.docs.map(doc => ({
+        ...doc.data(),
+        email: doc.id
+    }) as Employee);
 }
+
+export async function updateCompanyEmployee(
+    organizationId: string,
+    companyId: string,
+    originalEmail: string,
+    employeeData: Employee
+) {
+    if (!organizationId || !companyId || !originalEmail || !employeeData.email) {
+        throw new Error("Missing required parameters to update employee.");
+    }
+    
+    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', originalEmail);
+    
+    // If the email is not changing, we can just update the document.
+    if (originalEmail === employeeData.email) {
+        await updateDoc(employeeDocRef, {
+            name: employeeData.name,
+            address: employeeData.address || '',
+            mobile: employeeData.mobile || '',
+            landline: employeeData.landline || '',
+        });
+    } else {
+        // If email (the document ID) is changing, we have to delete the old doc and create a new one.
+        // This should be done in a transaction to ensure atomicity.
+        await runTransaction(db, async (transaction) => {
+            const oldDoc = await transaction.get(employeeDocRef);
+            if (!oldDoc.exists()) {
+                throw new Error("Original employee record not found.");
+            }
+            
+            const newEmployeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', employeeData.email);
+            
+            // Check if the new email already exists to prevent overwriting another employee.
+            const newDocCheck = await transaction.get(newEmployeeDocRef);
+            if (newDocCheck.exists()) {
+                throw new Error("An employee with the new email address already exists.");
+            }
+
+            transaction.delete(employeeDocRef);
+            transaction.set(newEmployeeDocRef, employeeData);
+        });
+    }
+    
+    return { success: true };
+}
+
 
 
 export async function updateTicket(organizationId: string, id: string, data: { priority?: string; status?: string; type?: string; deadline?: string | null; tags?: string[]; closedAt?: string | null; companyId?: string | null; }, settings: Settings | null) {

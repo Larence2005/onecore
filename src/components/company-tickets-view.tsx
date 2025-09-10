@@ -5,12 +5,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee } from '@/app/actions';
 import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,6 +54,16 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [updatedMobile, setUpdatedMobile] = useState('');
     const [updatedLandline, setUpdatedLandline] = useState('');
     const [updatedWebsite, setUpdatedWebsite] = useState('');
+
+    const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+    const [isEditEmployeeDialogOpen, setIsEditEmployeeDialogOpen] = useState(false);
+    const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false);
+    const [updatedEmployeeName, setUpdatedEmployeeName] = useState('');
+    const [updatedEmployeeEmail, setUpdatedEmployeeEmail] = useState('');
+    const [updatedEmployeeAddress, setUpdatedEmployeeAddress] = useState('');
+    const [updatedEmployeeMobile, setUpdatedEmployeeMobile] = useState('');
+    const [updatedEmployeeLandline, setUpdatedEmployeeLandline] = useState('');
+
 
 
     useEffect(() => {
@@ -179,6 +189,40 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             toast({ variant: 'destructive', title: "Update Failed", description: errorMessage });
         } finally {
             setIsUpdating(false);
+        }
+    };
+    
+    const handleEditEmployeeClick = (employee: Employee) => {
+        setEditingEmployee(employee);
+        setUpdatedEmployeeName(employee.name);
+        setUpdatedEmployeeEmail(employee.email);
+        setUpdatedEmployeeAddress(employee.address || '');
+        setUpdatedEmployeeMobile(employee.mobile || '');
+        setUpdatedEmployeeLandline(employee.landline || '');
+        setIsEditEmployeeDialogOpen(true);
+    };
+
+    const handleUpdateEmployee = async () => {
+        if (!editingEmployee || !company || !userProfile?.organizationId) return;
+        setIsUpdatingEmployee(true);
+        try {
+            const employeeData: Employee = {
+                name: updatedEmployeeName,
+                email: updatedEmployeeEmail,
+                address: updatedEmployeeAddress,
+                mobile: updatedEmployeeMobile,
+                landline: updatedEmployeeLandline,
+            };
+            await updateCompanyEmployee(userProfile.organizationId, company.id, editingEmployee.email, employeeData);
+            toast({ title: "Employee Updated", description: "The employee's details have been updated." });
+            await fetchCompanyData(); // Re-fetch all company data to reflect changes
+            setIsEditEmployeeDialogOpen(false);
+            setEditingEmployee(null);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: 'destructive', title: "Update Failed", description: errorMessage });
+        } finally {
+            setIsUpdatingEmployee(false);
         }
     };
 
@@ -494,6 +538,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                             <TableRow>
                                                                 <TableHead>Name</TableHead>
                                                                 <TableHead>Email</TableHead>
+                                                                {isOwner && <TableHead className="text-right">Actions</TableHead>}
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -505,6 +550,13 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                         </Link>
                                                                     </TableCell>
                                                                     <TableCell>{employee.email}</TableCell>
+                                                                    {isOwner && (
+                                                                        <TableCell className="text-right">
+                                                                            <Button variant="ghost" size="sm" onClick={() => handleEditEmployeeClick(employee)}>
+                                                                                <Pencil className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </TableCell>
+                                                                    )}
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
@@ -543,6 +595,46 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                     </div>
                 </main>
             </div>
+            
+             <Dialog open={isEditEmployeeDialogOpen} onOpenChange={setIsEditEmployeeDialogOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit Employee: {editingEmployee?.name}</DialogTitle>
+                        <DialogDescription>Update the contact details for this employee.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-name">Name</Label>
+                            <Input id="update-employee-name" value={updatedEmployeeName} onChange={(e) => setUpdatedEmployeeName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-email">Email</Label>
+                            <Input id="update-employee-email" type="email" value={updatedEmployeeEmail} onChange={(e) => setUpdatedEmployeeEmail(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-mobile">Mobile Number</Label>
+                            <Input id="update-employee-mobile" value={updatedEmployeeMobile} onChange={(e) => setUpdatedEmployeeMobile(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-landline">Landline</Label>
+                            <Input id="update-employee-landline" value={updatedEmployeeLandline} onChange={(e) => setUpdatedEmployeeLandline(e.target.value)} />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                            <Label htmlFor="update-employee-address">Address</Label>
+                            <Textarea id="update-employee-address" value={updatedEmployeeAddress} onChange={(e) => setUpdatedEmployeeAddress(e.target.value)} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setEditingEmployee(null)}>Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleUpdateEmployee} disabled={isUpdatingEmployee}>
+                            {isUpdatingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </SidebarProvider>
     );
 }
