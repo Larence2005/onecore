@@ -112,8 +112,8 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 <Link href={`/tickets/${email.id}`} className="flex-1 min-w-0 w-full cursor-pointer">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {isOverdue && <Badge variant="destructive">Overdue</Badge>}
-                        {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
                         {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
+                        {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
                         {email.tags?.filter(t => t !== 'Resolved Late').map(tag => (
                            <Badge key={tag} variant="outline">{tag}</Badge>
                         ))}
