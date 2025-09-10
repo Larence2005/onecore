@@ -102,41 +102,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (data: SignUpFormData) => {
     const organizationsRef = collection(db, "organizations");
-    const q = query(organizationsRef, where("name", "==", data.organizationName));
-    const querySnapshot = await getDocs(q);
+    const allOrgsSnapshot = await getDocs(organizationsRef);
 
-    if (!querySnapshot.empty) {
-        // Organization exists
-        const orgDoc = querySnapshot.docs[0];
-        const members = orgDoc.data().members as { name: string, email: string }[];
-        const isInvited = members.some(member => member.email === data.email);
-
-        if (isInvited) {
-            // User is invited, create user and link to org
-            const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-            const user = userCredential.user;
-            
-            // Add UID to member entry
-            const updatedMembers = members.map(member => 
-                member.email === data.email ? { ...member, uid: user.uid } : member
-            );
-            await updateDoc(orgDoc.ref, { members: updatedMembers });
-
-            return userCredential;
-        } else {
-            // User is not invited to this existing organization
-            throw new Error("An organization with this name already exists. You must be invited to join.");
-        }
-    } else {
-        // Organization does not exist, create new user and new organization
-        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-        const user = userCredential.user;
-        if (user && user.email) {
-            // Pass the user's name from the signup form to the organization creation
-            await createOrganization(data.organizationName, user.uid, data.name, user.email);
-        }
-        return userCredential;
+    // If any organization already exists, block new signups.
+    if (!allOrgsSnapshot.empty) {
+        throw new Error("An administrator account already exists for this application. No further signups are allowed.");
     }
+    
+    // If no organizations exist, proceed to create the first user and their organization.
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const user = userCredential.user;
+    if (user && user.email) {
+        // This user becomes the admin/owner of the new organization.
+        await createOrganization(data.organizationName, user.uid, data.name, user.email);
+    }
+    return userCredential;
   }
 
   const login = (data: LoginFormData) => {

@@ -857,26 +857,18 @@ export async function addMemberToOrganization(organizationId: string, name: stri
     if (!organizationId || !email || !name) {
         throw new Error("Organization ID, member name, and email are required.");
     }
-
-    // Check if the user already exists in ANY organization
-    const organizationsRef = collection(db, "organizations");
-    const allOrgsSnapshot = await getDocs(organizationsRef);
-
-    for (const orgDoc of allOrgsSnapshot.docs) {
+    
+    // Check if the member email already exists in the organization
+    const organizationRef = doc(db, "organizations", organizationId);
+    const orgDoc = await getDoc(organizationRef);
+    if(orgDoc.exists()){
         const members = orgDoc.data().members as {name: string, email: string}[] | undefined;
         if (members && members.some(member => member.email === email)) {
-            if (orgDoc.id === organizationId) {
-                throw new Error("This member is already in your organization.");
-            } else {
-                throw new Error("Not allowed to add another member from other organization");
-            }
+            throw new Error("A contact with this email already exists in your organization.");
         }
     }
     
-    // If the loop completes without throwing an error, the user is not in any organization
-    const organizationRef = doc(db, "organizations", organizationId);
-    
-    // Add the user to the organization's members list in Firestore
+    // Add the member to the organization's members list in Firestore
     await updateDoc(organizationRef, {
         members: arrayUnion({ name, email })
     });
