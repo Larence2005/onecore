@@ -1,6 +1,4 @@
 
-"use client";
-
 // A simple in-memory cache with a TTL (time-to-live)
 export class SimpleCache<T> {
     private cache = new Map<string, { data: T; expires: number }>();
