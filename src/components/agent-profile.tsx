@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { getTicketsFromDB, getOrganizationMembers, getEmail, getActivityLog, updateMemberInOrganization } from "@/app/actions";
 import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
