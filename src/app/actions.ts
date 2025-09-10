@@ -447,11 +447,16 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
 
 
 
-const parseRecipients = (recipients: string | undefined): { emailAddress: { address: string } }[] => {
+const parseRecipients = (recipients: string | undefined): { emailAddress: { address: string; name?: string } }[] => {
     if (!recipients) return [];
-    return recipients.split(/[,;]\s*/).filter(email => email.trim() !== '').map(email => ({
-        emailAddress: { address: email.trim() }
-    }));
+    return recipients.split(/[,;]\s*/).filter(email => email.trim() !== '').map(email => {
+        // Basic parsing for "Name <email@example.com>" format
+        const match = email.match(/(.*)<(.*)>/);
+        if (match) {
+            return { emailAddress: { name: match[1].trim(), address: match[2].trim() } };
+        }
+        return { emailAddress: { address: email.trim() } };
+    });
 };
 
 export async function sendEmailAction(settings: Settings, emailData: {recipient: string, subject: string, body: string, cc?: string, bcc?: string}): Promise<{ success: boolean }> {
@@ -467,13 +472,7 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
                 contentType: 'HTML', // Send as HTML
                 content: emailData.body,
             },
-            toRecipients: [
-                {
-                    emailAddress: {
-                        address: emailData.recipient,
-                    },
-                },
-            ],
+            toRecipients: parseRecipients(emailData.recipient),
             ccRecipients: parseRecipients(emailData.cc),
             bccRecipients: parseRecipients(emailData.bcc),
         },
@@ -589,7 +588,9 @@ export async function forwardEmailAction(
     cc: string | undefined,
     bcc: string | undefined,
     currentUserEmail: string,
-    fromName: string
+    fromName: string,
+    ticketNumber: number,
+    ticketSubject: string
 ): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
@@ -637,25 +638,34 @@ export async function forwardEmailAction(
     });
     
     // Send a notification email to the primary recipients
-    const notificationSubject = "Notification: A message was forwarded to you";
-    const notificationBody = `
-        <p>Hello,</p>
-        <p>${fromName} has forwarded a message to you.</p>
-        <p>This is a notification-only email. Please do not reply directly to this message.</p>
-    `;
+    const orgMembers = await getOrganizationMembers(organizationId);
+    
+    for (const recipient of toRecipients) {
+        const recipientMember = orgMembers.find(m => m.email.toLowerCase() === recipient.emailAddress.address.toLowerCase());
+        const recipientName = recipient.emailAddress.name || recipientMember?.name || 'there';
+        const ticketUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/tickets/${ticketId}`;
 
-    try {
-        await sendEmailAction(settings, {
-            recipient: to,
-            subject: notificationSubject,
-            body: notificationBody,
-        });
-    } catch (notificationError) {
-        console.error("Failed to send forward notification email:", notificationError);
-        // Do not throw an error here, as the primary action (forwarding) was successful.
-        // The user can be notified of the notification failure in the UI if needed.
+        const notificationSubject = `Notification: A message was forwarded to you regarding Ticket #${ticketNumber}`;
+        const notificationBody = `
+            <p>Hello ${recipientName},</p>
+            <p>${fromName} has forwarded a message to you:</p>
+            <p><b>Ticket #${ticketNumber}: ${ticketSubject}</b></p>
+            <p>To view the full ticket, kindly visit the website: <a href="${ticketUrl}">View Ticket</a></p>
+            <br>
+            <p>This is a notification-only. Please do not reply directly to this message.</p>
+        `;
+
+        try {
+            await sendEmailAction(settings, {
+                recipient: recipient.emailAddress.address,
+                subject: notificationSubject,
+                body: notificationBody,
+            });
+        } catch (notificationError) {
+            console.error(`Failed to send forward notification email to ${recipient.emailAddress.address}:`, notificationError);
+            // Do not throw an error here, as the primary action (forwarding) was successful.
+        }
     }
-
 
     return { success: true };
 }

@@ -481,8 +481,8 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
     
     const handleSendForward = async () => {
-        if (!isConfigured || !userProfile?.organizationId || !user?.email) {
-            toast({ variant: "destructive", title: "API Settings Required" });
+        if (!isConfigured || !userProfile?.organizationId || !user?.email || !email || !email.ticketNumber) {
+            toast({ variant: "destructive", title: "Cannot Forward", description: "Missing required information to forward this email." });
             return;
         }
         if (!forwardTo.trim()) {
@@ -491,10 +491,23 @@ export function TicketDetailContent({ id }: { id: string }) {
         }
         setIsSending(true);
         try {
-            const ticketId = email?.id;
-            if (!forwardingMessageId || !ticketId) throw new Error("Could not determine message to forward.");
-
-            await forwardEmailAction(settings, userProfile.organizationId, ticketId, forwardingMessageId, forwardComment, forwardTo, forwardCc, forwardBcc, user.email, userProfile.name || user.email);
+            const ticketId = email.id;
+            if (!forwardingMessageId) throw new Error("Could not determine message to forward.");
+    
+            await forwardEmailAction(
+                settings, 
+                userProfile.organizationId, 
+                ticketId, 
+                forwardingMessageId, 
+                forwardComment, 
+                forwardTo, 
+                forwardCc, 
+                forwardBcc, 
+                user.email, 
+                userProfile.name || user.email,
+                email.ticketNumber,
+                email.subject
+            );
             
             toast({ title: "Email Forwarded!", description: "Your email has been forwarded successfully." });
             setForwardingMessageId(null);
@@ -502,12 +515,12 @@ export function TicketDetailContent({ id }: { id: string }) {
             setForwardCc('');
             setForwardBcc('');
             setForwardComment('');
-
+    
             if (email?.conversationId) {
                 await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
             }
             await fetchEmailData();
-
+    
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             toast({
