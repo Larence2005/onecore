@@ -117,32 +117,34 @@ export default function SignupPage() {
                     </FormItem>
                 )}
                 />
-                <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="font-semibold">Password</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="font-semibold">Confirm Password</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel className="font-semibold">Password</FormLabel>
+                      <FormControl>
+                          <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                  <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel className="font-semibold">Confirm Password</FormLabel>
+                      <FormControl>
+                          <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+                </div>
                 <Button type="submit" className="w-full font-bold py-3" disabled={isSubmitting}>
                 {isSubmitting ? (
                     <>
