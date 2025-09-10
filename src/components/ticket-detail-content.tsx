@@ -9,7 +9,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ import { TimelineItem } from './timeline-item';
 import { Label } from './ui/label';
 import { TableIcon } from './ui/table-icon';
 import { AutocompleteInput } from './autocomplete-input';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
@@ -168,12 +169,12 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    const [isReplying, setIsReplying] = useState(false);
+    const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState('');
     const [replyCc, setReplyCc] = useState('');
     const [replyBcc, setReplyBcc] = useState('');
-    
-    const [isForwarding, setIsForwarding] = useState(false);
+
+    const [forwardingMessageId, setForwardingMessageId] = useState<string | null>(null);
     const [forwardTo, setForwardTo] = useState('');
     const [forwardCc, setForwardCc] = useState('');
     const [forwardBcc, setForwardBcc] = useState('');
@@ -437,8 +438,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         }
         setIsSending(true);
         try {
-            const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
-            if(!latestMessageId) throw new Error("Could not determine message to reply to.");
+            if(!replyingToMessageId) throw new Error("Could not determine message to reply to.");
             
             const attachmentPayloads: NewAttachment[] = await Promise.all(
                 attachments.map(async (file) => ({
@@ -448,11 +448,11 @@ export function TicketDetailContent({ id }: { id: string }) {
                 }))
             );
 
-            await replyToEmailAction(settings, userProfile.organizationId, latestMessageId, replyContent, email?.conversationId, attachmentPayloads, replyCc, replyBcc);
+            await replyToEmailAction(settings, userProfile.organizationId, replyingToMessageId, replyContent, email?.conversationId, attachmentPayloads, replyCc, replyBcc);
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setAttachments([]);
-            setIsReplying(false);
+            setReplyingToMessageId(null);
             setReplyCc('');
             setReplyBcc('');
             
@@ -490,13 +490,12 @@ export function TicketDetailContent({ id }: { id: string }) {
         setIsSending(true);
         try {
             const ticketId = email?.id;
-            const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
-            if (!latestMessageId || !ticketId) throw new Error("Could not determine message to forward.");
+            if (!forwardingMessageId || !ticketId) throw new Error("Could not determine message to forward.");
 
-            await forwardEmailAction(settings, userProfile.organizationId, ticketId, latestMessageId, forwardComment, forwardTo, forwardCc, forwardBcc, user.email);
+            await forwardEmailAction(settings, userProfile.organizationId, ticketId, forwardingMessageId, forwardComment, forwardTo, forwardCc, forwardBcc, user.email);
             
             toast({ title: "Email Forwarded!", description: "Your email has been forwarded successfully." });
-            setIsForwarding(false);
+            setForwardingMessageId(null);
             setForwardTo('');
             setForwardCc('');
             setForwardBcc('');
@@ -519,33 +518,33 @@ export function TicketDetailContent({ id }: { id: string }) {
         }
     };
 
-    const handleReplyClick = () => {
-        setIsForwarding(false);
+    const handleReplyClick = (messageId: string) => {
+        setForwardingMessageId(null);
         setReplyContent('');
         setReplyCc('');
         setReplyBcc('');
-        setIsReplying(true);
+        setReplyingToMessageId(messageId);
     };
 
     const handleCancelReply = () => {
-        setIsReplying(false);
+        setReplyingToMessageId(null);
         setReplyContent('');
         setAttachments([]);
         setReplyCc('');
         setReplyBcc('');
     };
 
-    const handleForwardClick = () => {
-        setIsReplying(false);
+    const handleForwardClick = (messageId: string) => {
+        setReplyingToMessageId(null);
         setForwardTo('');
         setForwardCc('');
         setForwardBcc('');
         setForwardComment('');
-        setIsForwarding(true);
+        setForwardingMessageId(messageId);
     };
 
     const handleCancelForward = () => {
-        setIsForwarding(false);
+        setForwardingMessageId(null);
         setForwardTo('');
         setForwardCc('');
         setForwardBcc('');
@@ -560,64 +559,255 @@ export function TicketDetailContent({ id }: { id: string }) {
     
     const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => {
         const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
+        const isReplyingToThis = replyingToMessageId === message.id;
+        const isForwardingThis = forwardingMessageId === message.id;
 
         return (
-            <Card key={message.id} className="overflow-hidden">
-                <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
-                    <Avatar className="h-10 w-10">
-                        <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 grid gap-1 text-sm">
-                        <div className="font-semibold">{message.sender}</div>
-                        <div className="text-xs text-muted-foreground">
-                            <p>
-                                <span className="font-semibold">From:</span> {message.senderEmail}
-                            </p>
-                            <p>
-                                <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
-                            </p>
-                            {message.ccRecipients && message.ccRecipients.length > 0 && (
+            <div key={message.id}>
+                <Card className="overflow-hidden">
+                    <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
+                        <Avatar className="h-10 w-10">
+                            <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 grid gap-1 text-sm">
+                            <div className="font-semibold">{message.sender}</div>
+                            <div className="text-xs text-muted-foreground">
                                 <p>
-                                    <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                                    <span className="font-semibold">From:</span> {message.senderEmail}
                                 </p>
-                            )}
-                            {message.bccRecipients && message.bccRecipients.length > 0 && (
                                 <p>
-                                    <span className="font-semibold">BCC:</span> {renderRecipientList(message.bccRecipients)}
+                                    <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
                                 </p>
-                            )}
-                        </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground text-right">
-                        {format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                        {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
-                        {message.body.contentType === 'html' ? (
-                            <CollapsibleEmailContent htmlContent={message.body.content} attachments={message.attachments} />
-                        ) : (
-                            <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
-                        )}
-                    </div>
-                    {regularAttachments.length > 0 && (
-                        <div className="p-4 border-t">
-                            <h3 className="text-sm font-medium mb-2">Attachments</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {regularAttachments.map(att => (
-                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
-                                        <Paperclip className="mr-2 h-4 w-4" />
-                                        {att.name}
-                                    </Button>
-                                ))}
+                                {message.ccRecipients && message.ccRecipients.length > 0 && (
+                                    <p>
+                                        <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                                    </p>
+                                )}
+                                {message.bccRecipients && message.bccRecipients.length > 0 && (
+                                    <p>
+                                        <span className="font-semibold">BCC:</span> {renderRecipientList(message.bccRecipients)}
+                                    </p>
+                                )}
                             </div>
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+                        <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
+                            <span>{format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}</span>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                     <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                     </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleReplyClick(message.id)}>
+                                        <Reply className="mr-2 h-4 w-4" />
+                                        <span>Reply</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleForwardClick(message.id)}>
+                                        <Share className="mr-2 h-4 w-4" />
+                                        <span>Forward</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                            {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
+                            {message.body.contentType === 'html' ? (
+                                <CollapsibleEmailContent htmlContent={message.body.content} attachments={message.attachments} />
+                            ) : (
+                                <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
+                            )}
+                        </div>
+                        {regularAttachments.length > 0 && (
+                            <div className="p-4 border-t">
+                                <h3 className="text-sm font-medium mb-2">Attachments</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {regularAttachments.map(att => (
+                                        <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
+                                            <Paperclip className="mr-2 h-4 w-4" />
+                                            {att.name}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                 {isReplyingToThis && (
+                    <Card className="mt-4">
+                        <CardContent className="p-4 space-y-4">
+                            {!isConfigured ? (
+                                    <Alert>
+                                    <SettingsIcon className="h-4 w-4" />
+                                    <AlertTitle>API Configuration Needed</AlertTitle>
+                                    <AlertDescription>
+                                        Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to send replies.
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reply-cc">Cc</Label>
+                                        <AutocompleteInput 
+                                            id="reply-cc"
+                                            suggestions={members}
+                                            value={replyCc}
+                                            onChange={setReplyCc}
+                                            placeholder="cc@example.com" 
+                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reply-bcc">Bcc</Label>
+                                        <AutocompleteInput
+                                            id="reply-bcc"
+                                            suggestions={members}
+                                            value={replyBcc}
+                                            onChange={setReplyBcc}
+                                            placeholder="bcc@example.com"
+                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                        />
+                                    </div>
+                                    <RichTextEditor
+                                        value={replyContent}
+                                        onChange={setReplyContent}
+                                        onAttachmentClick={() => fileInputRef.current?.click()}
+                                    />
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        multiple
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                    />
+                                    {attachments.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-medium">Attachments</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {attachments.map((file, index) => (
+                                                    <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                                                        <span>{file.name}</span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-4 w-4 rounded-full"
+                                                            onClick={() => removeAttachment(file)}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                            <span className="sr-only">Remove attachment</span>
+                                                        </Button>
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                        <div className="flex justify-end gap-2">
+                                        <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
+                                        <Button onClick={handleSendReply} disabled={isSending}>
+                                            {isSending ? (
+                                                <>
+                                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                    Sending...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                    Send Reply
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                 {isForwardingThis && (
+                    <Card className="mt-4">
+                        <CardHeader>
+                            <h3 className="text-lg font-semibold">Forward Email</h3>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                                {!isConfigured ? (
+                                    <Alert>
+                                    <SettingsIcon className="h-4 w-4" />
+                                    <AlertTitle>API Configuration Needed</AlertTitle>
+                                    <AlertDescription>
+                                        Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to forward emails.
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="forward-to">To</Label>
+                                        <AutocompleteInput 
+                                            id="forward-to"
+                                            suggestions={members}
+                                            value={forwardTo}
+                                            onChange={setForwardTo}
+                                            placeholder="recipient@example.com"
+                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                            />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="forward-cc">Cc</Label>
+                                        <AutocompleteInput
+                                            id="forward-cc"
+                                            suggestions={members}
+                                            value={forwardCc}
+                                            onChange={setForwardCc}
+                                            placeholder="cc@example.com"
+                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="forward-bcc">Bcc</Label>
+                                        <AutocompleteInput
+                                            id="forward-bcc"
+                                            suggestions={members}
+                                            value={forwardBcc}
+                                            onChange={setForwardBcc}
+                                            placeholder="bcc@example.com"
+                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="forward-comment">Comment (optional)</Label>
+                                        <RichTextEditor
+                                            value={forwardComment}
+                                            onChange={setForwardComment}
+                                            onAttachmentClick={() => toast({ title: "Attachments not supported for forwarding yet."})}
+                                        />
+                                    </div>
+                                        <div className="flex justify-end gap-2">
+                                        <Button variant="ghost" onClick={handleCancelForward}>Cancel</Button>
+                                        <Button onClick={handleSendForward} disabled={isSending}>
+                                            {isSending ? (
+                                                <>
+                                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                    Forwarding...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                    Forward
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
         );
     }
+
 
     const handleLogout = async () => {
         try {
@@ -768,193 +958,10 @@ export function TicketDetailContent({ id }: { id: string }) {
 
                             {!isLoading && !error && email && (
                                 <div className="space-y-6">
-                                    <div className="space-y-6">
-                                        {email.conversation && email.conversation.length > 0 ? (
-                                            email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
-                                        ) : (
-                                            renderMessageCard(email, true)
-                                        )}
-                                    </div>
-                                    <div className="flex justify-start items-center mt-4 gap-2">
-                                        {!isReplying && !isForwarding && (
-                                           <>
-                                                <Button onClick={handleReplyClick}>
-                                                    Reply
-                                                </Button>
-                                                <Button variant="outline" onClick={handleForwardClick}>
-                                                    <Share className="mr-2 h-4 w-4" />
-                                                    Forward
-                                                </Button>
-                                           </>
-                                        )}
-                                    </div>
-
-                                    {isReplying && (
-                                        <Card>
-                                            <CardContent className="p-4 space-y-4">
-                                                {!isConfigured ? (
-                                                     <Alert>
-                                                        <SettingsIcon className="h-4 w-4" />
-                                                        <AlertTitle>API Configuration Needed</AlertTitle>
-                                                        <AlertDescription>
-                                                            Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to send replies.
-                                                        </AlertDescription>
-                                                    </Alert>
-                                                ) : (
-                                                    <>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="reply-cc">Cc</Label>
-                                                            <AutocompleteInput 
-                                                              id="reply-cc"
-                                                              suggestions={members}
-                                                              value={replyCc}
-                                                              onChange={setReplyCc}
-                                                              placeholder="cc@example.com" 
-                                                              className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="reply-bcc">Bcc</Label>
-                                                            <AutocompleteInput
-                                                                id="reply-bcc"
-                                                                suggestions={members}
-                                                                value={replyBcc}
-                                                                onChange={setReplyBcc}
-                                                                placeholder="bcc@example.com"
-                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                                            />
-                                                        </div>
-                                                        <RichTextEditor
-                                                            value={replyContent}
-                                                            onChange={setReplyContent}
-                                                            onAttachmentClick={() => fileInputRef.current?.click()}
-                                                        />
-                                                        <input
-                                                            type="file"
-                                                            ref={fileInputRef}
-                                                            multiple
-                                                            onChange={handleFileChange}
-                                                            className="hidden"
-                                                        />
-                                                        {attachments.length > 0 && (
-                                                            <div className="space-y-2">
-                                                                <h4 className="text-sm font-medium">Attachments</h4>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {attachments.map((file, index) => (
-                                                                        <Badge key={index} variant="secondary" className="flex items-center gap-2">
-                                                                            <span>{file.name}</span>
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-4 w-4 rounded-full"
-                                                                                onClick={() => removeAttachment(file)}
-                                                                            >
-                                                                                <X className="h-3 w-3" />
-                                                                                <span className="sr-only">Remove attachment</span>
-                                                                            </Button>
-                                                                        </Badge>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                         <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
-                                                            <Button onClick={handleSendReply} disabled={isSending}>
-                                                                {isSending ? (
-                                                                    <>
-                                                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                                                        Sending...
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Send className="mr-2 h-4 w-4" />
-                                                                        Send Reply
-                                                                    </>
-                                                                )}
-                                                            </Button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                     {isForwarding && (
-                                        <Card>
-                                            <CardHeader>
-                                                <h3 className="text-lg font-semibold">Forward Email</h3>
-                                            </CardHeader>
-                                            <CardContent className="p-4 space-y-4">
-                                                 {!isConfigured ? (
-                                                     <Alert>
-                                                        <SettingsIcon className="h-4 w-4" />
-                                                        <AlertTitle>API Configuration Needed</AlertTitle>
-                                                        <AlertDescription>
-                                                            Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to forward emails.
-                                                        </AlertDescription>
-                                                    </Alert>
-                                                ) : (
-                                                    <>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="forward-to">To</Label>
-                                                            <AutocompleteInput 
-                                                                id="forward-to"
-                                                                suggestions={members}
-                                                                value={forwardTo}
-                                                                onChange={setForwardTo}
-                                                                placeholder="recipient@example.com"
-                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                                             />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="forward-cc">Cc</Label>
-                                                            <AutocompleteInput
-                                                                id="forward-cc"
-                                                                suggestions={members}
-                                                                value={forwardCc}
-                                                                onChange={setForwardCc}
-                                                                placeholder="cc@example.com"
-                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="forward-bcc">Bcc</Label>
-                                                            <AutocompleteInput
-                                                                id="forward-bcc"
-                                                                suggestions={members}
-                                                                value={forwardBcc}
-                                                                onChange={setForwardBcc}
-                                                                placeholder="bcc@example.com"
-                                                                className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="forward-comment">Comment (optional)</Label>
-                                                            <RichTextEditor
-                                                                value={forwardComment}
-                                                                onChange={setForwardComment}
-                                                                onAttachmentClick={() => toast({ title: "Attachments not supported for forwarding yet."})}
-                                                            />
-                                                        </div>
-                                                         <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" onClick={handleCancelForward}>Cancel</Button>
-                                                            <Button onClick={handleSendForward} disabled={isSending}>
-                                                                {isSending ? (
-                                                                    <>
-                                                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                                                        Forwarding...
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Send className="mr-2 h-4 w-4" />
-                                                                        Forward
-                                                                    </>
-                                                                )}
-                                                            </Button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </CardContent>
-                                        </Card>
+                                    {email.conversation && email.conversation.length > 0 ? (
+                                        email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
+                                    ) : (
+                                        renderMessageCard(email, true)
                                     )}
                                 </div>
                             )}
@@ -1166,3 +1173,5 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
