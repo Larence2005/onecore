@@ -1157,6 +1157,19 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
         website: data.website,
     };
 }
+
+export async function updateCompany(
+    organizationId: string, 
+    companyId: string,
+    data: { name?: string; address?: string; mobile?: string; landline?: string; website?: string }
+) {
+    if (!organizationId || !companyId) {
+        throw new Error("Organization ID and Company ID are required.");
+    }
+    const companyDocRef = doc(db, 'organizations', organizationId, 'companies', companyId);
+    await updateDoc(companyDocRef, data);
+    return { success: true };
+}
     
     
 
@@ -1170,4 +1183,3 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
     
 
     
-

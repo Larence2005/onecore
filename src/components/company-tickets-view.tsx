@@ -1,16 +1,16 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany } from '@/app/actions';
 import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,6 +24,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { isPast, isFuture, parseISO } from 'date-fns';
 import { TimelineItem } from './timeline-item';
 import { PropertyItem } from './property-item';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 type ActiveTab = 'tickets' | 'employees';
@@ -42,6 +46,14 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [ticketsPerPage, setTicketsPerPage] = useState(10);
     const [activeTab, setActiveTab] = useState<ActiveTab>('tickets');
+    
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [updatedName, setUpdatedName] = useState('');
+    const [updatedAddress, setUpdatedAddress] = useState('');
+    const [updatedMobile, setUpdatedMobile] = useState('');
+    const [updatedLandline, setUpdatedLandline] = useState('');
+    const [updatedWebsite, setUpdatedWebsite] = useState('');
 
 
     useEffect(() => {
@@ -50,42 +62,48 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         }
     }, [user, loading, router]);
     
-    useEffect(() => {
+    const fetchCompanyData = useCallback(async () => {
         if (!userProfile?.organizationId) {
             if(!loading) setIsLoading(false);
             return;
         };
 
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const [companyDetails, companyTickets, companyEmployees, companyActivity] = await Promise.all([
-                    getCompanyDetails(userProfile.organizationId!, companyId),
-                    getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true }),
-                    getCompanyEmployees(userProfile.organizationId!, companyId),
-                    getCompanyActivityLogs(userProfile.organizationId!, companyId),
-                ]);
-                
-                if (!companyDetails) {
-                    toast({ variant: 'destructive', title: 'Company not found' });
-                    router.push('/?view=clients');
-                    return;
-                }
-
-                setCompany(companyDetails);
-                setTickets(companyTickets);
-                setEmployees(companyEmployees);
-                setActivity(companyActivity);
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-                toast({ variant: 'destructive', title: 'Failed to load company tickets', description: errorMessage });
-            } finally {
-                setIsLoading(false);
+        setIsLoading(true);
+        try {
+            const [companyDetails, companyTickets, companyEmployees, companyActivity] = await Promise.all([
+                getCompanyDetails(userProfile.organizationId!, companyId),
+                getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true }),
+                getCompanyEmployees(userProfile.organizationId!, companyId),
+                getCompanyActivityLogs(userProfile.organizationId!, companyId),
+            ]);
+            
+            if (!companyDetails) {
+                toast({ variant: 'destructive', title: 'Company not found' });
+                router.push('/?view=clients');
+                return;
             }
-        };
 
-        fetchData();
+            setCompany(companyDetails);
+            setTickets(companyTickets);
+            setEmployees(companyEmployees);
+            setActivity(companyActivity);
+            
+            setUpdatedName(companyDetails.name);
+            setUpdatedAddress(companyDetails.address || '');
+            setUpdatedMobile(companyDetails.mobile || '');
+            setUpdatedLandline(companyDetails.landline || '');
+            setUpdatedWebsite(companyDetails.website || '');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: 'destructive', title: 'Failed to load company data', description: errorMessage });
+        } finally {
+            setIsLoading(false);
+        }
     }, [userProfile, companyId, toast, router, loading]);
+
+    useEffect(() => {
+        fetchCompanyData();
+    }, [fetchCompanyData]);
     
     const sortedTickets = useMemo(() => {
         let sorted = [...tickets];
@@ -140,7 +158,29 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             router.push(`/?view=${view}`); 
         }
     };
-
+    
+    const handleUpdateCompany = async () => {
+        if (!company || !userProfile?.organizationId) return;
+        setIsUpdating(true);
+        try {
+            const dataToUpdate = {
+                name: updatedName,
+                address: updatedAddress,
+                mobile: updatedMobile,
+                landline: updatedLandline,
+                website: updatedWebsite,
+            };
+            await updateCompany(userProfile.organizationId, company.id, dataToUpdate);
+            toast({ title: "Company Updated", description: "The company details have been updated." });
+            await fetchCompanyData(); // Re-fetch data to reflect changes
+            setIsEditDialogOpen(false);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: 'destructive', title: "Update Failed", description: errorMessage });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     if (loading || !user) {
         return (
@@ -150,6 +190,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         );
     }
     
+    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
     const renderSidebarContent = () => {
         if (activeTab === 'tickets') {
             return (
@@ -183,8 +225,55 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         if (activeTab === 'employees') {
             return (
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Company Properties</CardTitle>
+                        {isOwner && (
+                            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="secondary" size="sm">
+                                        <Pencil className="mr-2 h-3 w-3" />
+                                        Edit
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-2xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Edit Company Properties</DialogTitle>
+                                        <DialogDescription>Update the details for {company?.name}.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="update-name">Name</Label>
+                                            <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="update-website">Website</Label>
+                                            <Input id="update-website" value={updatedWebsite} onChange={(e) => setUpdatedWebsite(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="update-mobile">Mobile Number</Label>
+                                            <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="update-landline">Landline</Label>
+                                            <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                        </div>
+                                        <div className="space-y-2 sm:col-span-2">
+                                            <Label htmlFor="update-address">Address</Label>
+                                            <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button variant="outline">Cancel</Button>
+                                        </DialogClose>
+                                        <Button onClick={handleUpdateCompany} disabled={isUpdating}>
+                                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                            Save Changes
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
                     </CardHeader>
                     <CardContent>
                         <dl className="grid grid-cols-1 gap-y-4">
