@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers, getEmail, getActivityLog } from "@/app/actions";
+import { getTicketsFromDB, getOrganizationMembers, getEmail, getActivityLog, updateMemberInOrganization } from "@/app/actions";
 import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -12,21 +12,25 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TicketItem } from "@/components/ticket-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ArrowLeft, Mail, Ticket, Home, Phone, Activity, Link as LinkIcon, Building } from "lucide-react";
+import { Terminal, ArrowLeft, Mail, Ticket, Home, Phone, Activity, Link as LinkIcon, Building, Pencil, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Archive } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
 
 
 export function AgentProfile({ email }: { email: string }) {
-  const { user, userProfile, loading, logout } = useAuth();
+  const { user, userProfile, loading, logout, fetchUserProfile } = useAuth();
   const [profileData, setProfileData] = useState<OrganizationMember | null>(null);
   
   const [ccTickets, setCcTickets] = useState<Email[]>([]);
@@ -39,6 +43,14 @@ export function AgentProfile({ email }: { email: string }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatedName, setUpdatedName] = useState('');
+  const [updatedEmail, setUpdatedEmail] = useState('');
+  const [updatedAddress, setUpdatedAddress] = useState('');
+  const [updatedMobile, setUpdatedMobile] = useState('');
+  const [updatedLandline, setUpdatedLandline] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,95 +59,125 @@ export function AgentProfile({ email }: { email: string }) {
   }, [user, loading, router]);
 
 
-  useEffect(() => {
-    const fetchData = async () => {
-        if (!user || !userProfile?.organizationId) {
-            if(loading) return;
-            setError("You must be part of an organization to view profiles.");
-            setIsLoading(false);
-            return;
+  const fetchAgentData = useCallback(async () => {
+    if (!user || !userProfile?.organizationId) {
+        if(loading) return;
+        setError("You must be part of an organization to view profiles.");
+        setIsLoading(false);
+        return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+        const orgMembers = await getOrganizationMembers(userProfile.organizationId);
+        const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+        
+        if (!member) {
+            throw new Error("Agent not found in your organization.");
+        }
+        
+        setProfileData(member);
+        setUpdatedName(member.name);
+        setUpdatedEmail(member.email);
+        setUpdatedAddress(member.address || '');
+        setUpdatedMobile(member.mobile || '');
+        setUpdatedLandline(member.landline || '');
+
+
+        const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+        
+        const tempCcTickets: Email[] = [];
+        const tempBccTickets: Email[] = [];
+        const tempForwardedActivities: ActivityLog[] = [];
+        let tempResponseCount = 0;
+        let allActivities: ActivityLog[] = [];
+
+
+        for (const ticket of allTickets) {
+            const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
+            if (detailedTicket?.conversation) {
+                let isCc = false;
+                let isBcc = false;
+                for (const message of detailedTicket.conversation) {
+                    if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
+                        tempResponseCount++;
+                    }
+                    if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                        isCc = true;
+                    }
+                    if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                        isBcc = true;
+                    }
+                }
+                if (isCc) tempCcTickets.push(ticket);
+                if (isBcc) tempBccTickets.push(ticket);
+            }
+
+            const activityLogs = await getActivityLog(userProfile.organizationId, ticket.id);
+            activityLogs.forEach(log => {
+                const activityWithTicketInfo = { ...log, ticketId: ticket.id, ticketSubject: ticket.subject };
+                allActivities.push(activityWithTicketInfo);
+                if (log.type === 'Forward' && log.details.toLowerCase().includes(email.toLowerCase())) {
+                    tempForwardedActivities.push(activityWithTicketInfo);
+                }
+            });
+        }
+        
+        setCcTickets(tempCcTickets);
+        setBccTickets(tempBccTickets);
+        setForwardedActivities(tempForwardedActivities);
+        setResponseCount(tempResponseCount);
+        
+        const userActivities = allActivities.filter(log => log.user.toLowerCase() === email.toLowerCase());
+        if (userActivities.length > 0) {
+             userActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+             setLatestActivity(userActivities[0]);
         }
 
-        setIsLoading(true);
-        setError(null);
+
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+        setError(errorMessage);
+        toast({
+            variant: "destructive",
+            title: "Failed to load profile.",
+            description: errorMessage,
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [user, userProfile, email, toast, loading]);
+
+  useEffect(() => {
+    if(!loading && user && userProfile) {
+        fetchAgentData();
+    }
+  }, [loading, user, userProfile, fetchAgentData]);
+  
+    const handleUpdateMember = async () => {
+        if (!profileData || !userProfile?.organizationId) return;
+        setIsUpdating(true);
         try {
-            const orgMembers = await getOrganizationMembers(userProfile.organizationId);
-            const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+            await updateMemberInOrganization(userProfile.organizationId, profileData.email, updatedName, updatedEmail, updatedAddress, updatedMobile, updatedLandline);
+            toast({ title: "Member Updated", description: "The agent's details have been updated." });
             
-            if (!member) {
-                throw new Error("Agent not found in your organization.");
+            await fetchAgentData(); // Re-fetch data to reflect changes
+            
+            // If the user is editing their own profile, also refresh the global userProfile state
+            if(user && user.email === profileData.email) {
+                await fetchUserProfile(user);
             }
             
-            setProfileData(member);
-
-            const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
-            
-            const tempCcTickets: Email[] = [];
-            const tempBccTickets: Email[] = [];
-            const tempForwardedActivities: ActivityLog[] = [];
-            let tempResponseCount = 0;
-            let allActivities: ActivityLog[] = [];
-
-
-            for (const ticket of allTickets) {
-                const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
-                if (detailedTicket?.conversation) {
-                    let isCc = false;
-                    let isBcc = false;
-                    for (const message of detailedTicket.conversation) {
-                        if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
-                            tempResponseCount++;
-                        }
-                        if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
-                            isCc = true;
-                        }
-                        if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
-                            isBcc = true;
-                        }
-                    }
-                    if (isCc) tempCcTickets.push(ticket);
-                    if (isBcc) tempBccTickets.push(ticket);
-                }
-
-                const activityLogs = await getActivityLog(userProfile.organizationId, ticket.id);
-                activityLogs.forEach(log => {
-                    const activityWithTicketInfo = { ...log, ticketId: ticket.id, ticketSubject: ticket.subject };
-                    allActivities.push(activityWithTicketInfo);
-                    if (log.type === 'Forward' && log.details.toLowerCase().includes(email.toLowerCase())) {
-                        tempForwardedActivities.push(activityWithTicketInfo);
-                    }
-                });
-            }
-            
-            setCcTickets(tempCcTickets);
-            setBccTickets(tempBccTickets);
-            setForwardedActivities(tempForwardedActivities);
-            setResponseCount(tempResponseCount);
-            
-            const userActivities = allActivities.filter(log => log.user.toLowerCase() === email.toLowerCase());
-            if (userActivities.length > 0) {
-                 userActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                 setLatestActivity(userActivities[0]);
-            }
-
-
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            setError(errorMessage);
-            toast({
-                variant: "destructive",
-                title: "Failed to load profile.",
-                description: errorMessage,
-            });
+            setIsEditDialogOpen(false);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: 'destructive', title: "Update Failed", description: errorMessage });
         } finally {
-            setIsLoading(false);
+            setIsUpdating(false);
         }
     };
 
-    if(!loading && user && userProfile) {
-        fetchData();
-    }
-  }, [user, userProfile, email, toast, loading]);
 
     const handleLogout = async () => {
         try {
@@ -159,6 +201,8 @@ export function AgentProfile({ email }: { email: string }) {
     if (loading || !user) {
         return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
     }
+    
+    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 
 
   return (
@@ -349,8 +393,57 @@ export function AgentProfile({ email }: { email: string }) {
                         </div>
                         <aside className="space-y-6 lg:col-span-1 xl:col-span-1">
                                 <Card>
-                                    <CardHeader>
+                                    <CardHeader className="flex flex-row items-center justify-between">
                                         <CardTitle>Properties</CardTitle>
+                                        {isOwner && (
+                                            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="secondary" size="sm">
+                                                        <Pencil className="mr-2 h-3 w-3" />
+                                                        Edit
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-md">
+                                                     <DialogHeader>
+                                                        <DialogTitle>Edit Agent Properties</DialogTitle>
+                                                        <DialogDescription>
+                                                            Update the details for {profileData.name}.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-name">Name</Label>
+                                                            <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-email">Email</Label>
+                                                            <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-address">Address</Label>
+                                                            <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-mobile">Mobile Number</Label>
+                                                            <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="update-landline">Telephone Number</Label>
+                                                            <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                                        </div>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <DialogClose asChild>
+                                                            <Button variant="outline">Cancel</Button>
+                                                        </DialogClose>
+                                                        <Button onClick={handleUpdateMember} disabled={isUpdating}>
+                                                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                            Save Changes
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )}
                                     </CardHeader>
                                     <CardContent>
                                         <dl className="grid grid-cols-1 gap-y-4">
