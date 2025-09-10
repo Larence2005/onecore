@@ -23,7 +23,6 @@ export interface Email {
     bodyPreview: string;
     receivedDateTime: string;
     priority: string;
-    assignee: string;
     status: string;
     type: string;
     conversationId?: string;
@@ -202,7 +201,6 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     receivedDateTime: firstMessage.receivedDateTime,
                     conversationId: firstMessage.conversationId,
                     priority: 'Low',
-                    assignee: 'Unassigned',
                     status: 'Open',
                     type: 'Incident',
                     tags: [],
@@ -264,7 +262,6 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             bodyPreview: data.bodyPreview || '',
             receivedDateTime: data.receivedDateTime || new Date().toISOString(),
             priority: data.priority || 'Low',
-            assignee: data.assignee || 'Unassigned',
             status: data.status || 'Open',
             type: data.type || 'Incident',
             conversationId: data.conversationId,
@@ -313,7 +310,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
     
     let ticketProperties = {
         priority: 'Low',
-        assignee: 'Unassigned',
         status: 'Open',
         type: 'Incident',
         companyId: null,
@@ -323,7 +319,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         const ticketData = querySnapshot.docs[0].data();
         ticketProperties = {
             priority: ticketData.priority || 'Low',
-            assignee: ticketData.assignee || 'Unassigned',
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
             companyId: ticketData.companyId || null,
@@ -340,7 +335,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         bodyPreview: msg.bodyPreview,
         conversationId: msg.conversationId,
         priority: ticketProperties.priority,
-        assignee: ticketProperties.assignee,
         status: ticketProperties.status,
         type: ticketProperties.type,
         companyId: ticketProperties.companyId,
@@ -408,7 +402,6 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             bodyPreview: ticketData.bodyPreview || '',
             receivedDateTime: ticketData.receivedDateTime,
             priority: ticketData.priority || 'Low',
-            assignee: ticketData.assignee || 'Unassigned',
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
             conversationId: ticketData.conversationId,
@@ -443,13 +436,11 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationId: ticketData.conversationId,
         ticketNumber: ticketData.ticketNumber,
         companyId: ticketData.companyId,
-        assignee: 'Unassigned',
         body: firstMessage.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
         // The conversation array is the thread of messages.
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
             priority: ticketData.priority || 'Low',
-            assignee: ticketData.assignee || 'Unassigned',
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
         })),
@@ -846,7 +837,7 @@ export async function createOrganization(name: string, uid: string, userName: st
     await setDoc(organizationRef, {
         name: name,
         owner: uid,
-        members: [{ name: userName, email: email, uid: uid }] // Add owner as first member with UID
+        members: [{ name: userName, email: email, uid: uid }]
     });
     
     return { success: true, organizationId: organizationRef.id };
@@ -883,7 +874,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
     if (!orgDoc.exists()) {
         return [];
     }
-
+    
     return (orgDoc.data().members || []) as OrganizationMember[];
 }
 
