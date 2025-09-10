@@ -44,44 +44,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const organizationsRef = collection(db, "organizations");
-    const allOrgsSnapshot = await getDocs(organizationsRef);
+    const q = query(organizationsRef, where("owner", "==", user.uid));
+    const ownerOrgSnapshot = await getDocs(q);
 
-    let foundOrg = false;
-    for (const orgDoc of allOrgsSnapshot.docs) {
-        const members = orgDoc.data().members as {name: string, email: string}[];
-        const memberInfo = members?.find(member => member.email === user.email);
-        if (memberInfo) {
-            setUserProfile({
-                uid: user.uid,
-                email: user.email,
-                name: memberInfo.name,
-                organizationId: orgDoc.id,
-                organizationName: orgDoc.data().name,
-                organizationOwnerUid: orgDoc.data().owner,
-            });
-            foundOrg = true;
-            break; 
-        }
-    }
-
-    if (!foundOrg) {
-        // If user is the owner of an org, they are implicitly a member
-        const q = query(organizationsRef, where("owner", "==", user.uid));
-        const ownerOrgSnapshot = await getDocs(q);
-        if (!ownerOrgSnapshot.empty) {
-            const orgDoc = ownerOrgSnapshot.docs[0];
-            const ownerMemberInfo = (orgDoc.data().members as {name: string, email: string, uid: string}[])?.find(m => m.email === user.email);
-            setUserProfile({
-                uid: user.uid,
-                email: user.email,
-                name: ownerMemberInfo?.name || user.email,
-                organizationId: orgDoc.id,
-                organizationName: orgDoc.data().name,
-                organizationOwnerUid: orgDoc.data().owner,
-            });
-        } else {
-            setUserProfile({ uid: user.uid, email: user.email, name: user.email });
-        }
+    if (!ownerOrgSnapshot.empty) {
+        const orgDoc = ownerOrgSnapshot.docs[0];
+        const ownerMemberInfo = (orgDoc.data().members as {name: string, email: string, uid: string}[])?.find(m => m.email === user.email);
+        setUserProfile({
+            uid: user.uid,
+            email: user.email,
+            name: ownerMemberInfo?.name || user.email,
+            organizationId: orgDoc.id,
+            organizationName: orgDoc.data().name,
+            organizationOwnerUid: orgDoc.data().owner,
+        });
+    } else {
+        // This case handles users who might be invited members but not owners, which is disabled in single-admin mode
+        // For a single-admin app, we can assume the logged-in user should always have an org.
+        // If not, they are effectively in a "no-org" state.
+        setUserProfile({ uid: user.uid, email: user.email, name: user.email });
     }
   }, []);
 
@@ -104,17 +85,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const organizationsRef = collection(db, "organizations");
     const allOrgsSnapshot = await getDocs(organizationsRef);
 
-    // If any organization already exists, block new signups.
     if (!allOrgsSnapshot.empty) {
         throw new Error("An administrator account already exists for this application. No further signups are allowed.");
     }
     
-    // If no organizations exist, proceed to create the first user and their organization.
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const user = userCredential.user;
+
     if (user && user.email) {
-        // This user becomes the admin/owner of the new organization.
         await createOrganization(data.organizationName, user.uid, data.name, user.email);
+        // After creating the org, immediately fetch the profile to populate the state
+        await fetchUserProfile(user);
     }
     return userCredential;
   }
@@ -153,5 +134,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
