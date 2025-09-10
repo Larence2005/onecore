@@ -34,9 +34,9 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
                 }
                 return <ReadEmails emails={emails} isLoading={isLoading} error={error} onRefresh={onRefresh} filters={filters} />;
             case 'clients':
-                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><ClientsView /></div>;
+                 return <div className="flex-1 flex justify-center p-4 sm:p-6 lg:p-8"><ClientsView /></div>;
             case 'organization':
-                return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><OrganizationView /></div>;
+                return <div className="flex-1 flex justify-center p-4 sm:p-6 lg:p-8"><OrganizationView /></div>;
             case 'settings':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
             case 'compose':
@@ -51,6 +51,14 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
     if (activeView === 'tickets' || activeView === 'archive' || activeView === 'analytics' || activeView === 'settings') {
         return (
             <div className="flex-1 flex flex-col overflow-y-auto">
+                {renderView()}
+            </div>
+        );
+    }
+    
+    if (activeView === 'clients' || activeView === 'organization' ) {
+         return (
+            <div className="flex-1 flex flex-col overflow-y-auto pt-6">
                 {renderView()}
             </div>
         );
