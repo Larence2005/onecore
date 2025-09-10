@@ -703,21 +703,22 @@ export async function updateTicket(organizationId: string, id: string, data: { p
             // --- WRITES AFTER ---
             const updateData: any = { ...data };
 
+            // Handle status changes for closing tickets
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
                 if(ticketData.status !== 'Resolved' && ticketData.status !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
                 }
                  // Check for "Resolved Late"
                 if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
-                    const currentTags = ticketData.tags || [];
-                    if (!currentTags.includes('Resolved Late')) {
-                        updateData.tags = arrayUnion('Resolved Late');
-                    }
+                    updateData.tags = arrayUnion('Resolved Late');
                 }
             }
             
+            // Handle status changes for reopening tickets
             if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
                 updateData.closedAt = null;
+                // If reopening, remove the "Resolved Late" tag
+                updateData.tags = arrayRemove('Resolved Late');
             }
 
             // Update the ticket
