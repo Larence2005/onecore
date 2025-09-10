@@ -343,6 +343,30 @@ export function TicketDetailContent({ id }: { id: string }) {
 
         return () => unsubscribe();
     }, [email?.id, userProfile?.organizationId]);
+
+    useEffect(() => {
+        if (!email?.conversationId || !userProfile?.organizationId) return;
+
+        const conversationDocRef = doc(db, 'organizations', userProfile.organizationId, 'conversations', email.conversationId);
+        
+        const unsubscribe = onSnapshot(conversationDocRef, async (docSnap) => {
+            if (docSnap.exists()) {
+                const conversationData = docSnap.data();
+                if (conversationData && conversationData.messages) {
+                    const newConversation = conversationData.messages as DetailedEmail[];
+                    setEmail(prevEmail => {
+                        if (prevEmail) {
+                            return { ...prevEmail, conversation: newConversation };
+                        }
+                        return null;
+                    });
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [email?.conversationId, userProfile?.organizationId]);
+
     
     const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId', value: any) => {
         if (!email || !userProfile?.organizationId) return;
@@ -1206,4 +1230,5 @@ export function TicketDetailContent({ id }: { id: string }) {
     
 
     
+
 

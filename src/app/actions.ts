@@ -236,6 +236,10 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     date: firstMessage.receivedDateTime,
                     user: firstMessage.senderEmail || 'System',
                 });
+            } else {
+                // It's a reply to an existing ticket.
+                // Let's update the conversation in the background.
+                await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
             }
         }
     } catch (error) {
@@ -368,9 +372,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: conversationMessages });
     
-    // Invalidate conversation cache
-    ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
-
     // When a conversation is updated, we also need to update the main ticket's bodyPreview and received time
     if (conversationMessages.length > 0) {
         const lastMessage = conversationMessages[conversationMessages.length - 1];
@@ -382,8 +383,6 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
                 bodyPreview: lastMessage.bodyPreview,
                 receivedDateTime: lastMessage.receivedDateTime,
             });
-            // Invalidate specific ticket cache
-            ticketsCache.invalidate(`ticket:${organizationId}:${ticketDocRef.id}`);
         }
     }
 
@@ -1382,6 +1381,7 @@ export async function updateCompany(
     
 
     
+
 
 
 
