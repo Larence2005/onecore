@@ -449,7 +449,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
 
 const parseRecipients = (recipients: string | undefined): { emailAddress: { address: string } }[] => {
     if (!recipients) return [];
-    return recipients.split(/[,; ]+/).filter(email => email.trim() !== '').map(email => ({
+    return recipients.split(/[,;]\s*/).filter(email => email.trim() !== '').map(email => ({
         emailAddress: { address: email.trim() }
     }));
 };
@@ -1069,5 +1069,7 @@ export async function getCompanyDetails(organizationId: string, companyId: strin
 
     
 
+
+    
 
     
