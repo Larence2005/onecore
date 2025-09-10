@@ -86,22 +86,17 @@ export function ClientsView() {
     const isOwner = userProfile?.uid === userProfile?.organizationOwnerUid;
 
     const renderSkeleton = () => (
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-72" />
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-2">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-center gap-4 p-2">
-                            <Skeleton className="h-6 flex-1" />
-                            <Skeleton className="h-6 w-24" />
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+        <div className="border rounded-md p-6 space-y-4">
+            <Skeleton className="h-8 w-48" />
+            <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-2">
+                        <Skeleton className="h-6 flex-1" />
+                        <Skeleton className="h-6 w-24" />
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 
     if (isLoading) {
@@ -111,7 +106,10 @@ export function ClientsView() {
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Companies</h1>
+                <div>
+                    <h1 className="text-2xl font-bold">Companies</h1>
+                    <p className="text-muted-foreground">A list of all companies in your organization.</p>
+                </div>
                 {isOwner && (
                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
@@ -149,14 +147,10 @@ export function ClientsView() {
                     </Dialog>
                 )}
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Client List</CardTitle>
-                    <CardDescription>A list of all companies in your organization.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {companies.length > 0 ? (
+            
+            <div className="space-y-4">
+                {companies.length > 0 ? (
+                    <>
                         <div className="border rounded-md">
                             <Table>
                                 <TableHeader>
@@ -175,52 +169,50 @@ export function ClientsView() {
                                 </TableBody>
                             </Table>
                         </div>
-                    ) : (
-                        <Alert>
-                            <Building className="h-4 w-4" />
-                            <AlertTitle>No Companies Found</AlertTitle>
-                            <AlertDescription>
-                                {isOwner ? "Get started by adding your first company." : "Your organization administrator has not added any companies yet."}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
-                 {totalPages > 1 && (
-                    <CardFooter className="flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
-                            Showing {Math.min(companiesPerPage * currentPage, companies.length)} of {companies.length} companies.
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Rows per page</span>
-                                <Select value={String(companiesPerPage)} onValueChange={(value) => { setCompaniesPerPage(Number(value)); setCurrentPage(1); }}>
-                                    <SelectTrigger className="h-8 w-[70px]">
-                                        <SelectValue placeholder={String(companiesPerPage)} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="10">10</SelectItem>
-                                        <SelectItem value="25">25</SelectItem>
-                                        <SelectItem value="50">50</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between pt-4">
+                                <div className="text-sm text-muted-foreground">
+                                    Showing {Math.min(companiesPerPage * currentPage, companies.length)} of {companies.length} companies.
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">Rows per page</span>
+                                        <Select value={String(companiesPerPage)} onValueChange={(value) => { setCompaniesPerPage(Number(value)); setCurrentPage(1); }}>
+                                            <SelectTrigger className="h-8 w-[70px]">
+                                                <SelectValue placeholder={String(companiesPerPage)} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="10">10</SelectItem>
+                                                <SelectItem value="25">25</SelectItem>
+                                                <SelectItem value="50">50</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                        Page {currentPage} of {totalPages}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                                Page {currentPage} of {totalPages}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    </CardFooter>
+                        )}
+                    </>
+                ) : (
+                    <Alert>
+                        <Building className="h-4 w-4" />
+                        <AlertTitle>No Companies Found</AlertTitle>
+                        <AlertDescription>
+                            {isOwner ? "Get started by adding your first company." : "Your organization administrator has not added any companies yet."}
+                        </AlertDescription>
+                    </Alert>
                 )}
-            </Card>
+            </div>
         </div>
     );
 }
-
-    
