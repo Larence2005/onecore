@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers } from "@/app/actions";
-import type { Email, OrganizationMember } from "@/app/actions";
+import { getTicketsFromDB, getOrganizationMembers, getEmail } from "@/app/actions";
+import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,12 +12,17 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TicketItem } from "@/components/ticket-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ArrowLeft, Mail, Ticket } from "lucide-react";
+import { Terminal, ArrowLeft, Mail, Ticket, Forward, Users as UsersIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TimelineItem } from './timeline-item';
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 interface ProfileData {
     name: string;
@@ -28,7 +33,12 @@ interface ProfileData {
 export function AssigneeProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout } = useAuth();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [relatedTickets, setRelatedTickets] = useState<Email[]>([]);
+  
+  const [ccTickets, setCcTickets] = useState<Email[]>([]);
+  const [bccTickets, setBccTickets] = useState<Email[]>([]);
+  const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
+  const [involvedTickets, setInvolvedTickets] = useState<Map<string, Email>>(new Map());
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -43,50 +53,81 @@ export function AssigneeProfile({ email }: { email: string }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || !userProfile?.organizationId) {
-        if(loading) return;
-        setError("You must be part of an organization to view profiles.");
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [allTickets, allMembers] = await Promise.all([
-          getTicketsFromDB(userProfile.organizationId, { fetchAll: true }),
-          getOrganizationMembers(userProfile.organizationId)
-        ]);
-
-        const member = allMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
-
-        if (member) {
-            // It's an internal organization member (assignee)
-            setProfileData({ name: member.name, email: member.email, isMember: true });
-            const memberTickets = allTickets.filter(ticket => ticket.assignee.toLowerCase() === email.toLowerCase());
-            setRelatedTickets(memberTickets);
-        } else {
-            // It's an external client (sender)
-            const clientTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
-            if (clientTickets.length === 0) {
-                 throw new Error("No tickets found for this email address.");
-            }
-            const clientName = clientTickets[0].sender; // Get name from the first ticket
-            setProfileData({ name: clientName, email: email, isMember: false });
-            setRelatedTickets(clientTickets);
+        if (!user || !userProfile?.organizationId) {
+            if(loading) return;
+            setError("You must be part of an organization to view profiles.");
+            setIsLoading(false);
+            return;
         }
 
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-        setError(errorMessage);
-        toast({
-          variant: "destructive",
-          title: "Failed to load profile.",
-          description: errorMessage,
-        });
-      } finally {
-        setIsLoading(false);
-      }
+        setIsLoading(true);
+        setError(null);
+        try {
+            const orgMembers = await getOrganizationMembers(userProfile.organizationId);
+            const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+            
+            if (!member) {
+                throw new Error("Assignee not found in your organization.");
+            }
+
+            setProfileData({ name: member.name, email: member.email, isMember: true });
+
+            const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+            
+            const tempCcTickets: Email[] = [];
+            const tempBccTickets: Email[] = [];
+            const tempForwardedActivities: ActivityLog[] = [];
+            const tempInvolvedTickets = new Map<string, Email>();
+
+            for (const ticket of allTickets) {
+                // Fetch full conversation to check recipients
+                const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
+                if (detailedTicket?.conversation) {
+                    let isCc = false;
+                    let isBcc = false;
+                    for (const message of detailedTicket.conversation) {
+                        if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                            isCc = true;
+                        }
+                        if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                            isBcc = true;
+                        }
+                    }
+                    if (isCc) tempCcTickets.push(ticket);
+                    if (isBcc) tempBccTickets.push(ticket);
+                }
+
+                // Check activity log for forwards
+                const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
+                const q = query(activityCollectionRef, where('type', '==', 'Forward'));
+                const activitySnapshot = await getDocs(q);
+                activitySnapshot.forEach(doc => {
+                    const log = doc.data() as Omit<ActivityLog, 'id'>;
+                    if (log.details.toLowerCase().includes(email.toLowerCase())) {
+                        tempForwardedActivities.push({
+                            id: doc.id, ...log, ticketId: ticket.id, ticketSubject: ticket.subject
+                        });
+                        tempInvolvedTickets.set(ticket.id, ticket);
+                    }
+                });
+            }
+
+            setCcTickets(tempCcTickets);
+            setBccTickets(tempBccTickets);
+            setForwardedActivities(tempForwardedActivities);
+            setInvolvedTickets(tempInvolvedTickets);
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            setError(errorMessage);
+            toast({
+            variant: "destructive",
+            title: "Failed to load profile.",
+            description: errorMessage,
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if(!loading) {
@@ -212,7 +253,7 @@ export function AssigneeProfile({ email }: { email: string }) {
                                         <Skeleton className="h-5 w-64" />
                                     </div>
                                </div>
-                               <Skeleton className="h-10 w-40" />
+                               <Skeleton className="h-10 w-full" />
                                <Skeleton className="h-96 w-full" />
                             </div>
                         ) : error ? (
@@ -235,39 +276,75 @@ export function AssigneeProfile({ email }: { email: string }) {
                                         </div>
                                     </div>
                                 </div>
-
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <Ticket className="h-5 w-5" />
-                                            {profileData.isMember ? 'Assigned Tickets' : 'Submitted Tickets'} ({relatedTickets.length})
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {profileData.isMember 
-                                                ? `All tickets currently assigned to ${profileData.name}.`
-                                                : `All tickets submitted by ${profileData.name}.`
-                                            }
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {relatedTickets.length > 0 ? (
-                                            <ul className="space-y-0 border-t">
-                                                 {relatedTickets.map((ticket) => (
-                                                    <TicketItem 
-                                                        key={ticket.id} 
-                                                        email={ticket} 
-                                                        isSelected={false}
-                                                        onSelect={() => {}}
-                                                    />
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="text-center py-10">
-                                                <p className="text-muted-foreground">No tickets found for this user.</p>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                <Tabs defaultValue="cc" className="w-full">
+                                    <TabsList className="mb-4">
+                                        <TabsTrigger value="cc">Cc'd On</TabsTrigger>
+                                        <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
+                                        <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="cc">
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Tickets (Cc)</CardTitle>
+                                                <CardDescription>Tickets where {profileData.name} was in the Cc field.</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {ccTickets.length > 0 ? (
+                                                    <ul className="space-y-0 border-t">
+                                                        {ccTickets.map((ticket) => (
+                                                            <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </TabsContent>
+                                    <TabsContent value="bcc">
+                                         <Card>
+                                            <CardHeader>
+                                                <CardTitle>Tickets (Bcc)</CardTitle>
+                                                <CardDescription>Tickets where {profileData.name} was in the Bcc field.</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {bccTickets.length > 0 ? (
+                                                    <ul className="space-y-0 border-t">
+                                                        {bccTickets.map((ticket) => (
+                                                            <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </TabsContent>
+                                    <TabsContent value="forwarded">
+                                         <Card>
+                                            <CardHeader>
+                                                <CardTitle>Forwarded Messages</CardTitle>
+                                                <CardDescription>Tickets that were forwarded to {profileData.name}.</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                {forwardedActivities.length > 0 ? (
+                                                    forwardedActivities.map((log) => (
+                                                        <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
+                                                            <div className="flex flex-wrap items-center gap-x-2">
+                                                               <span>{log.details} on ticket</span> 
+                                                               <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
+                                                                    {log.ticketSubject}
+                                                               </Link>
+                                                            </div>
+                                                        </TimelineItem>
+                                                    ))
+                                                ) : (
+                                                    <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </TabsContent>
+                                </Tabs>
                             </div>
                         ) : null}
                     </div>

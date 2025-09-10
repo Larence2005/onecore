@@ -435,7 +435,6 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         bodyPreview: ticketData.bodyPreview,
         receivedDateTime: ticketData.receivedDateTime,
         priority: ticketData.priority,
-        assignee: ticketData.assignee,
         status: ticketData.status,
         type: ticketData.type,
         tags: ticketData.tags,
@@ -444,6 +443,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationId: ticketData.conversationId,
         ticketNumber: ticketData.ticketNumber,
         companyId: ticketData.companyId,
+        assignee: 'Unassigned',
         body: firstMessage.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
         // The conversation array is the thread of messages.
         conversation: conversationMessages.map(convMsg => ({
@@ -595,11 +595,13 @@ export async function replyToEmailAction(
 export async function forwardEmailAction(
     settings: Settings,
     organizationId: string,
+    ticketId: string,
     messageId: string,
     comment: string,
     to: string,
     cc: string | undefined,
-    bcc: string | undefined
+    bcc: string | undefined,
+    currentUserEmail: string
 ): Promise<{ success: boolean }> {
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
@@ -637,6 +639,14 @@ export async function forwardEmailAction(
             throw new Error(`Failed to forward email: ${response.statusText} - ${errorText}`);
         }
     }
+
+    // Add activity log after successful forward
+    await addActivityLog(organizationId, ticketId, {
+        type: 'Forward',
+        details: `Forwarded to: ${to}`,
+        date: new Date().toISOString(),
+        user: currentUserEmail,
+    });
 
     return { success: true };
 }

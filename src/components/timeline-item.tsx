@@ -3,11 +3,11 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { parseISO } from 'date-fns';
-import { Tag, CalendarClock, UserCheck, Shield, CheckCircle, FileType, Pencil, Building } from 'lucide-react';
+import { Tag, CalendarClock, UserCheck, Shield, CheckCircle, FileType, Pencil, Building, Forward } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TimelineItemProps {
-    type: 'Tags' | 'Deadline' | 'Assignee' | 'Priority' | 'Status' | 'Type' | 'Create' | 'Company' | string;
+    type: 'Tags' | 'Deadline' | 'Assignee' | 'Priority' | 'Status' | 'Type' | 'Create' | 'Company' | 'Forward' | string;
     date: string;
     user: string;
     children: React.ReactNode;
@@ -31,6 +31,8 @@ const getIcon = (type: TimelineItemProps['type']) => {
             return <Building className="h-4 w-4" />;
         case 'Create':
             return <Pencil className="h-4 w-4" />;
+        case 'Forward':
+            return <Forward className="h-4 w-4" />;
         default:
             return <Pencil className="h-4 w-4" />;
     }

@@ -478,7 +478,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     };
     
     const handleSendForward = async () => {
-        if (!isConfigured || !userProfile?.organizationId) {
+        if (!isConfigured || !userProfile?.organizationId || !user?.email) {
             toast({ variant: "destructive", title: "API Settings Required" });
             return;
         }
@@ -488,10 +488,11 @@ export function TicketDetailContent({ id }: { id: string }) {
         }
         setIsSending(true);
         try {
+            const ticketId = email?.id;
             const latestMessageId = email?.conversation?.length ? email.conversation[email.conversation.length - 1].id : email?.id;
-            if (!latestMessageId) throw new Error("Could not determine message to forward.");
+            if (!latestMessageId || !ticketId) throw new Error("Could not determine message to forward.");
 
-            await forwardEmailAction(settings, userProfile.organizationId, latestMessageId, forwardComment, forwardTo, forwardCc, forwardBcc);
+            await forwardEmailAction(settings, userProfile.organizationId, ticketId, latestMessageId, forwardComment, forwardTo, forwardCc, forwardBcc, user.email);
             
             toast({ title: "Email Forwarded!", description: "Your email has been forwarded successfully." });
             setIsForwarding(false);
