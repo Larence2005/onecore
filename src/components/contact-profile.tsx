@@ -20,7 +20,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem,
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Archive } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
-import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
@@ -513,3 +513,4 @@ export function ContactProfile({ email }: { email: string }) {
   );
 }
 
+    
