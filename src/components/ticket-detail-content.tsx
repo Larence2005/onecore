@@ -36,6 +36,7 @@ import { Label } from './ui/label';
 import { TableIcon } from './ui/table-icon';
 import { AutocompleteInput } from './autocomplete-input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
+import Image from 'next/image';
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
@@ -356,7 +357,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                     const newConversation = conversationData.messages as DetailedEmail[];
                     setEmail(prevEmail => {
                         if (prevEmail) {
-                            return { ...prevEmail, ...newConversation };
+                            return { ...prevEmail, conversation: newConversation };
                         }
                         return null;
                     });
@@ -897,9 +898,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="mb-8 px-4">
                             <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
-                                </Button>
+                                <Image src="/logo.png" alt="Onecore Logo" width={32} height={32} />
                                 <span className="font-bold text-lg">Onecore</span>
                             </div>
                         </SidebarHeader>

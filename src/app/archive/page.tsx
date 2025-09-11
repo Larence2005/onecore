@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ArchivePage() {
     const { user, userProfile, loading, logout } = useAuth();
@@ -57,9 +58,7 @@ export default function ArchivePage() {
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="mb-8 px-4">
                             <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-command"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3z"/></svg>
-                                </Button>
+                                <Image src="/logo.png" alt="Onecore Logo" width={32} height={32} />
                                 <span className="font-bold text-lg">Onecore</span>
                             </div>
                         </SidebarHeader>
