@@ -57,8 +57,8 @@ export default function ArchivePage() {
                 <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="mb-8 px-4">
-                            <div className="flex items-center justify-center bg-black rounded-md">
-                                <Image src="/logo.png" alt="Onecore Logo" width={40} height={40} />
+                            <div className="flex items-center justify-center bg-black rounded-md p-2">
+                                <Image src="/logo.png" alt="Onecore Logo" width={60} height={60} />
                             </div>
                         </SidebarHeader>
                         <SidebarFooter className="p-4">
