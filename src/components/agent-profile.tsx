@@ -212,8 +212,8 @@ export function AgentProfile({ email }: { email: string }) {
             <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                 <div className="flex-grow flex flex-col">
                 <SidebarHeader className="mb-8 px-4">
-                    <div className="flex items-center gap-2 bg-black p-2 rounded-md">
-                        <Image src="/logo.png" alt="Onecore Logo" width={32} height={32} />
+                    <div className="flex items-center justify-center bg-black p-2 rounded-md">
+                        <Image src="/logo.png" alt="Onecore Logo" width={40} height={40} />
                     </div>
                 </SidebarHeader>
                 <SidebarFooter className="p-4">
