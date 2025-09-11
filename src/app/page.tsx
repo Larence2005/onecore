@@ -53,15 +53,9 @@ function HomePageContent() {
         } catch (syncError) {
             const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
             console.error("Failed to sync emails:", syncErrorMessage);
-            // Optionally, show a non-intrusive toast
-            toast({
-                variant: "destructive",
-                title: "Email Sync Failed",
-                description: "Could not fetch the latest emails from the server.",
-            });
         }
     }
-  }, [settings, isConfigured, toast, userProfile?.organizationId]);
+  }, [settings, isConfigured, userProfile?.organizationId]);
 
   useEffect(() => {
     if (!user || !userProfile || !userProfile.organizationId) return;
