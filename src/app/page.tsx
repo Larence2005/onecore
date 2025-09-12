@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
@@ -28,6 +28,7 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<View>('analytics');
+  const [isNavigating, setIsNavigating] = useState(false);
   
   const { settings, isConfigured } = useSettings();
   const { toast } = useToast();
@@ -51,8 +52,7 @@ function HomePageContent() {
         try {
             await getLatestEmails(settings, userProfile.organizationId);
         } catch (syncError) {
-            const syncErrorMessage = syncError instanceof Error ? syncError.message : "An unknown sync error occurred.";
-            console.error("Failed to sync emails:", syncErrorMessage);
+            // Silently fail, error is logged in the action
         }
     }
   }, [settings, isConfigured, userProfile?.organizationId]);
@@ -154,6 +154,7 @@ function HomePageContent() {
     if (view && ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose', 'archive'].includes(view)) {
       setActiveView(view);
     }
+    setIsNavigating(false);
   }, [searchParams]);
 
   const handleLogout = async () => {
@@ -166,6 +167,9 @@ function HomePageContent() {
   };
   
   const handleViewChange = (view: View) => {
+    if (view !== activeView) {
+        setIsNavigating(true);
+    }
     setActiveView(view);
     if (view === 'archive') {
       router.push('/archive');
@@ -196,7 +200,7 @@ function HomePageContent() {
       )}>
         <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
             <SidebarHeader className="mb-8 px-4">
-              <div className="flex items-center justify-center bg-black rounded-md p-2">
+              <div className="flex items-center justify-center bg-black rounded-md">
                 <Image src="/logo.png" alt="Onecore Logo" width={60} height={60} />
               </div>
             </SidebarHeader>
@@ -273,14 +277,20 @@ function HomePageContent() {
             {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
             {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
           </Header>
-          <MainView 
-            activeView={activeView} 
-            emails={emails}
-            isLoading={isLoading}
-            error={error}
-            onRefresh={syncLatestEmails}
-            filters={filters}
-          />
+          {isNavigating ? (
+            <div className="flex flex-1 items-center justify-center">
+                <p>Loading...</p>
+            </div>
+          ) : (
+            <MainView 
+                activeView={activeView} 
+                emails={emails}
+                isLoading={isLoading}
+                error={error}
+                onRefresh={syncLatestEmails}
+                filters={filters}
+            />
+          )}
         </main>
         
         {activeView === 'tickets' && <TicketsFilter onApplyFilters={onApplyFilters} />}
