@@ -201,7 +201,7 @@ function HomePageContent() {
         <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
             <SidebarHeader className="mb-8 px-4">
               <div className="flex items-center justify-center">
-                <Image src="/navlogo.jpg" alt="Onecore Logo" width={120} height={135} />
+                <Image src="/navlogo.jpg" alt="Onecore Logo" width={140} height={160} />
               </div>
             </SidebarHeader>
             <SidebarFooter className="p-4">
