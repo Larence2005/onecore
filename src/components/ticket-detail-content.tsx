@@ -897,7 +897,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="mb-8 px-4">
                             <div className="flex items-center justify-center">
-                                <Image src="/navlogo.jpg" alt="Onecore Logo" width={100} height={100} />
+                                <Image src="/navlogo.jpg" alt="Onecore Logo" width={120} height={135} />
                             </div>
                         </SidebarHeader>
                         <SidebarFooter className="p-4">
