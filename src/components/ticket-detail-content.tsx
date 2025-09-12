@@ -895,11 +895,6 @@ export function TicketDetailContent({ id }: { id: string }) {
             <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
                 <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                     <div className="flex-grow flex flex-col">
-                        <SidebarHeader className="mb-8 px-4">
-                            <div className="flex items-center justify-center">
-                                <Image src="/navlogo.jpg" alt="Onecore Logo" width={140} height={160} />
-                            </div>
-                        </SidebarHeader>
                         <SidebarFooter className="p-4">
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-9 w-9">
@@ -957,6 +952,12 @@ export function TicketDetailContent({ id }: { id: string }) {
                                 </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarContent>
+                        <SidebarHeader className="mt-auto p-4">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                                <span className="text-xs text-muted-foreground">Product of</span>
+                                <Image src="/navlogo.jpg" alt="Onecore Logo" width={140} height={160} />
+                            </div>
+                        </SidebarHeader>
                     </div>
                 </Sidebar>
 
