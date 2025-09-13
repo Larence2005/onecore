@@ -42,6 +42,8 @@ export interface Email {
     ticketNumber?: number;
     companyId?: string;
     companyName?: string;
+    assignee?: string; // UID of the assigned user
+    assigneeName?: string; // Name of the assigned user
 }
 
 export interface Attachment {
@@ -226,6 +228,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     deadline: null,
                     closedAt: null,
                     ticketNumber: ticketNumber,
+                    assignee: null,
                 };
                 await setDoc(ticketDocRef, newTicketData);
 
@@ -296,6 +299,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             statusBeforeArchive: data.statusBeforeArchive,
             companyId: data.companyId,
             companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
+            assignee: data.assignee,
         };
     }));
     
@@ -334,6 +338,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         status: 'Open',
         type: 'Incident',
         companyId: null,
+        assignee: null,
     };
 
     if (!querySnapshot.empty) {
@@ -343,6 +348,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
             companyId: ticketData.companyId || null,
+            assignee: ticketData.assignee || null,
         };
     }
 
@@ -359,6 +365,7 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         status: ticketProperties.status,
         type: ticketProperties.type,
         companyId: ticketProperties.companyId,
+        assignee: ticketProperties.assignee,
         hasAttachments: msg.hasAttachments,
         attachments: msg.attachments,
         toRecipients: msg.toRecipients,
@@ -443,6 +450,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             closedAt: ticketData.closedAt,
             ticketNumber: ticketData.ticketNumber,
             companyId: ticketData.companyId,
+            assignee: ticketData.assignee,
             body: { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' }
         };
         conversationMessages.push(placeholderEmail);
@@ -469,6 +477,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationId: ticketData.conversationId,
         ticketNumber: ticketData.ticketNumber,
         companyId: ticketData.companyId,
+        assignee: ticketData.assignee,
         body: firstMessage.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
         // The conversation array is the thread of messages.
         conversation: conversationMessages.map(convMsg => ({
@@ -795,7 +804,7 @@ export async function updateCompanyEmployee(
 
 
 
-export async function updateTicket(organizationId: string, id: string, data: { priority?: string; status?: string; type?: string; deadline?: string | null; tags?: string[]; closedAt?: string | null; companyId?: string | null; }, settings: Settings | null) {
+export async function updateTicket(organizationId: string, id: string, data: { priority?: string; status?: string; type?: string; deadline?: string | null; tags?: string[]; closedAt?: string | null; companyId?: string | null; assignee?: string | null; }, settings: Settings | null) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
         await runTransaction(db, async (transaction) => {
@@ -1381,6 +1390,7 @@ export async function updateCompany(
     
 
     
+
 
 
 

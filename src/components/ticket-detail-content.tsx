@@ -195,6 +195,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const [currentTags, setCurrentTags] = useState<string[]>([]);
     const [tagInput, setTagInput] = useState('');
     const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
+    const [currentAssignee, setCurrentAssignee] = useState<string | null>(null);
 
 
     const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -260,6 +261,7 @@ export function TicketDetailContent({ id }: { id: string }) {
             setCurrentDeadline(detailedEmail.deadline ? parseISO(detailedEmail.deadline) : undefined);
             setCurrentTags(detailedEmail.tags || []);
             setCurrentCompanyId(detailedEmail.companyId || null);
+            setCurrentAssignee(detailedEmail.assignee || null);
             // Set the initial state for comparison
             previousEmailRef.current = detailedEmail;
 
@@ -309,6 +311,11 @@ export function TicketDetailContent({ id }: { id: string }) {
                         const prevCompanyName = companies.find(c => c.id === previousTicket.companyId)?.name || 'None';
                         const newCompanyName = companies.find(c => c.id === ticketData.companyId)?.name || 'None';
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: new Date().toISOString(), user: currentUserEmail });
+                    }
+                     if (ticketData.assignee !== previousTicket.assignee) {
+                        const prevAssigneeName = members.find(m => m.uid === previousTicket.assignee)?.name || 'Unassigned';
+                        const newAssigneeName = members.find(m => m.uid === ticketData.assignee)?.name || 'Unassigned';
+                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Assignee', details: `changed from ${prevAssigneeName} to ${newAssigneeName}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
 
                     
@@ -368,7 +375,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     }, [email?.conversationId, userProfile?.organizationId]);
 
     
-    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId', value: any) => {
+    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any) => {
         if (!email || !userProfile?.organizationId) return;
 
         const ticketIdToUpdate = email.id;
@@ -379,6 +386,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         if(field === 'type') setCurrentType(value);
         if(field === 'deadline') setCurrentDeadline(value);
         if(field === 'companyId') setCurrentCompanyId(value);
+        if(field === 'assignee') setCurrentAssignee(value);
 
 
         const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, settings);
@@ -396,6 +404,7 @@ export function TicketDetailContent({ id }: { id: string }) {
                  if(field === 'type') setCurrentType(email.type || 'Incident');
                  if(field === 'deadline') setCurrentDeadline(email.deadline ? parseISO(email.deadline) : undefined);
                  if(field === 'companyId') setCurrentCompanyId(email.companyId || null);
+                 if(field === 'assignee') setCurrentAssignee(email.assignee || null);
             }
         } else {
             toast({
@@ -875,6 +884,8 @@ export function TicketDetailContent({ id }: { id: string }) {
         );
     }
     
+    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
             router.push('/');
@@ -888,6 +899,7 @@ export function TicketDetailContent({ id }: { id: string }) {
     const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
+    const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unassigned';
 
 
     return (
@@ -1062,6 +1074,28 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <Separator />
                                         
                                         <div className="grid grid-cols-1 gap-y-4">
+                                            {isOwner && (
+                                                 <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                    <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
+                                                                <span className="flex items-center gap-2">
+                                                                    {assigneeName}
+                                                                </span>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                            {members.map(m => (
+                                                                <SelectItem key={m.uid} value={m.uid!}>
+                                                                    {m.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
                                                 <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>

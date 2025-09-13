@@ -70,7 +70,7 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
         }
 
         // Agent filter
-        if (filters.agents.length > 0 && !filters.agents.includes(email.assignee)) {
+        if (filters.agents.length > 0 && !filters.agents.includes(email.assignee!)) {
             return false;
         }
 

@@ -46,40 +46,54 @@ const types = [
 ];
 
 export function TicketItem({ email, isSelected, onSelect, isArchivedView = false }: TicketItemProps) {
-    const { userProfile } = useAuth();
+    const { user, userProfile } = useAuth();
     const { settings } = useSettings();
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentStatus, setCurrentStatus] = useState(email.status);
     const [currentType, setCurrentType] = useState(email.type);
+    const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
+    const [members, setMembers] = useState<OrganizationMember[]>([]);
     
     const { toast } = useToast();
 
+    useEffect(() => {
+        if (userProfile?.organizationId) {
+            getOrganizationMembers(userProfile.organizationId).then(setMembers);
+        }
+    }, [userProfile]);
+
+    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
     const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
+    const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unassigned';
 
     const isResolvedLate = !!(email.tags?.includes('Resolved Late'));
     const isOverdue = !isResolvedLate && email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
-    const handleUpdate = async (field: 'priority' | 'status' | 'type', value: string) => {
+    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'assignee', value: string) => {
         if (!userProfile?.organizationId) return;
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
         if (field === 'status') setCurrentStatus(value);
         if (field === 'type') setCurrentType(value);
+        if (field === 'assignee') setCurrentAssignee(value);
 
-        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: value }, settings);
+        const finalValue = field === 'assignee' && value === 'unassigned' ? null : value;
+
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, settings);
         if (result.success) {
             toast({
                 title: 'Ticket Updated',
-                description: `The ${field} has been changed to ${value}.`,
+                description: `The ${field} has been changed.`,
             });
         } else {
             // Revert UI on failure
             if (field === 'priority') setCurrentPriority(email.priority);
             if (field === 'status') setCurrentStatus(email.status);
             if (field === 'type') setCurrentType(email.type);
+            if (field === 'assignee') setCurrentAssignee(email.assignee);
 
             toast({
                 variant: 'destructive',
@@ -127,6 +141,29 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 </Link>
 
                 <div className="flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
+                    {isOwner ? (
+                         <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleUpdate('assignee', value)} disabled={isArchivedView}>
+                             <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                                 <SelectValue>
+                                     <span className="flex items-center gap-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        {assigneeName}
+                                     </span>
+                                 </SelectValue>
+                             </SelectTrigger>
+                             <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {members.map(m => (
+                                    <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
+                                ))}
+                             </SelectContent>
+                         </Select>
+                    ) : (
+                        <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            {assigneeName}
+                        </div>
+                    )}
                     <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)} disabled={isArchivedView}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                             <SelectValue>
@@ -167,26 +204,6 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                             ))}
                         </SelectContent>
                     </Select>
-                    <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)} disabled={isArchivedView}>
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                             <SelectValue>
-                                <span className="flex items-center gap-2">
-                                    <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />
-                                    {typeDetails.label}
-                                </span>
-                            </SelectValue>
-                        </SelectTrigger>
-                         <SelectContent>
-                            {types.map(t => (
-                                <SelectItem key={t.value} value={t.value}>
-                                    <span className="flex items-center gap-2">
-                                        <t.icon className={cn("h-4 w-4", t.color)} />
-                                        {t.label}
-                                    </span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
             </div>
             </Card>
@@ -200,3 +217,4 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
 
 
     
+

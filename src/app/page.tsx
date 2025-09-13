@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
-import type { Email, DetailedEmail, Company } from '@/app/actions';
-import { getLatestEmails, getCompanies, fetchAndStoreFullConversation } from '@/app/actions';
+import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
+import { getLatestEmails, getCompanies, fetchAndStoreFullConversation, getOrganizationMembers } from '@/app/actions';
 import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
@@ -61,19 +61,36 @@ function HomePageContent() {
     if (!user || !userProfile?.organizationId) return;
 
     setIsLoading(true);
+
+    const isOwner = user.uid === userProfile.organizationOwnerUid;
     
     // This listener reads tickets from the database for ALL members of the organization.
     const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
-    const q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    let q;
+
+    if (isOwner) {
+        // Owner sees all non-archived tickets
+        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
+    } else {
+        // Member sees only tickets assigned to them
+        q = query(ticketsCollectionRef, where('assignee', '==', user.uid), where('status', '!=', 'Archived'));
+    }
+    
     
     let companyMap = new Map<string, string>();
+    let memberMap = new Map<string, string>();
 
     const setupListener = async () => {
         try {
-            const companies = await getCompanies(userProfile.organizationId!);
+            const [companies, members] = await Promise.all([
+                getCompanies(userProfile.organizationId!),
+                getOrganizationMembers(userProfile.organizationId!)
+            ]);
             companyMap = new Map(companies.map(c => [c.id, c.name]));
+            memberMap = new Map(members.map(m => [m.uid!, m.name]));
+
         } catch(e) {
-            console.error("Could not fetch companies for ticket list", e);
+            console.error("Could not fetch companies or members for ticket list", e);
         }
 
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
@@ -91,7 +108,9 @@ function HomePageContent() {
                             const messages = conversationData.messages as DetailedEmail[];
                             if (messages && messages.length > 0) {
                                 const lastMessage = messages[messages.length - 1];
-                                if(lastMessage.senderEmail?.toLowerCase() === userProfile.email.toLowerCase()) {
+                                // Check if sender is any of the organization members
+                                const allMembers = await getOrganizationMembers(userProfile.organizationId!);
+                                if(allMembers.some(m => m.email.toLowerCase() === lastMessage.senderEmail?.toLowerCase())) {
                                     lastReplier = 'agent';
                                 } else {
                                     lastReplier = 'client';
@@ -111,7 +130,8 @@ function HomePageContent() {
                     bodyPreview: data.bodyPreview || '',
                     receivedDateTime: data.receivedDateTime || new Date().toISOString(),
                     priority: data.priority || 'Low',
-                    assignee: data.assignee || 'Unassigned',
+                    assignee: data.assignee,
+                    assigneeName: data.assignee ? memberMap.get(data.assignee) : 'Unassigned',
                     status: data.status || 'Open',
                     type: data.type || 'Incident',
                     conversationId: data.conversationId,
@@ -198,69 +218,71 @@ function HomePageContent() {
         activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_280px]" : "lg:grid-cols-[240px_1fr]"
       )}>
         <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
-            <SidebarFooter className="p-4">
-              <div className="flex items-center gap-4">
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                      <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                      <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
-                  </div>
-              </div>
-            </SidebarFooter>
-            <SidebarContent className="flex-grow">
-              <SidebarMenu className="flex flex-col gap-2 px-4">
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
-                    <LayoutDashboard className="text-purple-500" />
-                    <span>Dashboard</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
-                    <List className="text-green-500" />
-                    <span>Tickets</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
-                    <Pencil className="text-blue-500" />
-                    <span>Compose</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
-                        <Archive className="text-orange-500" />
-                        <span>Archive</span>
+            <div className="flex-grow flex flex-col">
+              <SidebarFooter className="p-4">
+                <div className="flex items-center gap-4">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                        <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                    </div>
+                </div>
+              </SidebarFooter>
+              <SidebarContent className="flex-grow">
+                <SidebarMenu className="flex flex-col gap-2 px-4">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
+                      <LayoutDashboard className="text-purple-500" />
+                      <span>Dashboard</span>
                     </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
-                    <Users className="text-pink-500" />
-                    <span>Clients</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
-                    <Building2 className="text-yellow-500" />
-                    <span>Organization</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
-                    <Settings className="text-gray-500" />
-                    <span>Settings</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-            <SidebarHeader className="mt-auto p-4">
-              <div className="flex flex-col items-center justify-center gap-2">
-                <span className="text-xs text-muted-foreground">Product of</span>
-                <Image src="/navlogo.jpg" alt="Onecore Logo" width={140} height={160} />
-              </div>
-            </SidebarHeader>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
+                      <List className="text-green-500" />
+                      <span>Tickets</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
+                      <Pencil className="text-blue-500" />
+                      <span>Compose</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
+                          <Archive className="text-orange-500" />
+                          <span>Archive</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
+                      <Users className="text-pink-500" />
+                      <span>Clients</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
+                      <Building2 className="text-yellow-500" />
+                      <span>Organization</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
+                      <Settings className="text-gray-500" />
+                      <span>Settings</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarContent>
+              <SidebarHeader className="mt-auto p-4">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <span className="text-xs text-muted-foreground">Product of</span>
+                  <Image src="/navlogo.jpg" alt="Onecore Logo" width={140} height={160} />
+                </div>
+              </SidebarHeader>
+            </div>
         </Sidebar>
 
         <main className="flex-1 flex flex-col min-w-0">
