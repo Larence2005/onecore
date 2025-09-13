@@ -219,7 +219,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                              </SelectContent>
                          </Select>
                     ) : (
-                        <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground">
+                        <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground px-2">
                             <User className="h-4 w-4" />
                             {assigneeName}
                         </div>
