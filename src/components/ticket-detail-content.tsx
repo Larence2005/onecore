@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -1074,9 +1075,9 @@ export function TicketDetailContent({ id }: { id: string }) {
                                         <Separator />
                                         
                                         <div className="grid grid-cols-1 gap-y-4">
-                                            {isOwner && (
-                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                {isOwner ? (
                                                     <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
@@ -1094,8 +1095,10 @@ export function TicketDetailContent({ id }: { id: string }) {
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-                                                </div>
-                                            )}
+                                                ) : (
+                                                    <span className="font-medium text-sm">{assigneeName}</span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
                                                 <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>
@@ -1254,5 +1257,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
 
     
