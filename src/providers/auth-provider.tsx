@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import type { SignUpFormData, LoginFormData } from '@/lib/types';
+import type { SignUpFormData, LoginFormData, MemberSignUpFormData } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 import { createOrganization } from '@/app/actions';
 
@@ -28,6 +28,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   signup: (data: SignUpFormData) => Promise<any>;
+  memberSignup: (data: MemberSignUpFormData) => Promise<any>;
   login: (data: LoginFormData) => Promise<any>;
   logout: () => Promise<void>;
   fetchUserProfile: (user: User) => Promise<void>;
@@ -46,19 +47,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserProfile({ uid: user.uid, email: '' });
       return;
     }
-    
-    const organizationsRef = collection(db, "organizations");
-    const q = query(organizationsRef, where("owner", "==", user.uid));
-    const ownerOrgSnapshot = await getDocs(q);
 
-    if (!ownerOrgSnapshot.empty) {
-        const orgDoc = ownerOrgSnapshot.docs[0];
+    const organizationsRef = collection(db, "organizations");
+    // Check if user is an owner
+    let q = query(organizationsRef, where("owner", "==", user.uid));
+    let orgSnapshot = await getDocs(q);
+
+    if (orgSnapshot.empty) {
+      // If not an owner, check if they are a member
+      q = query(organizationsRef, where("members", "array-contains", { email: user.email, uid: user.uid }));
+      orgSnapshot = await getDocs(q);
+    }
+    
+    // Check if they are an invited member without a UID yet
+    if (orgSnapshot.empty) {
+        q = query(organizationsRef, where("members", "array-contains", { name: user.displayName || user.email, email: user.email, address: '', mobile: '', landline: '' }));
+        orgSnapshot = await getDocs(q);
+    }
+
+
+    if (!orgSnapshot.empty) {
+        const orgDoc = orgSnapshot.docs[0];
         const orgData = orgDoc.data();
-        const ownerMemberInfo = (orgData.members as {name: string, email: string, uid: string}[])?.find(m => m.email === user.email);
+        const memberInfo = (orgData.members as {name: string, email: string, uid?: string}[]).find(m => m.email === user.email);
+
         setUserProfile({
             uid: user.uid,
             email: user.email,
-            name: ownerMemberInfo?.name || user.email,
+            name: memberInfo?.name || user.email,
             organizationId: orgDoc.id,
             organizationName: orgData.name,
             organizationOwnerUid: orgData.owner,
@@ -68,9 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             website: orgData.website,
         });
     } else {
-        // This case handles users who might be invited members but not owners, which is disabled in single-admin mode
-        // For a single-admin app, we can assume the logged-in user should always have an org.
-        // If not, they are effectively in a "no-org" state.
         setUserProfile({ uid: user.uid, email: user.email, name: user.email });
     }
   }, []);
@@ -96,11 +109,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (user && user.email) {
         await createOrganization(data.organizationName, user.uid, data.name, user.email);
-        // After creating the org, immediately fetch the profile to populate the state
         await fetchUserProfile(user);
     }
     return userCredential;
   }
+  
+  const memberSignup = async (data: MemberSignUpFormData) => {
+    const organizationsRef = collection(db, "organizations");
+    const q = query(organizationsRef, where("members", "array-contains", { name: data.email, email: data.email, address: '', mobile: '', landline: '' }));
+    
+    let orgDocToUpdate = null;
+    let memberToUpdate = null;
+    
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        // Find the specific organization and member object
+        for (const doc of querySnapshot.docs) {
+            const members = doc.data().members as any[];
+            const foundMember = members.find(m => m.email === data.email && !m.uid);
+            if (foundMember) {
+                orgDocToUpdate = doc.ref;
+                memberToUpdate = foundMember;
+                break;
+            }
+        }
+    }
+
+    if (!orgDocToUpdate || !memberToUpdate) {
+        throw new Error("Your email has not been invited to an organization. Please contact your administrator.");
+    }
+    
+    // Create the user
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const user = userCredential.user;
+
+    if (user) {
+        // Update the member record with the new UID
+        const updatedMember = { ...memberToUpdate, uid: user.uid };
+        const orgData = (await getDoc(orgDocToUpdate)).data();
+        const updatedMembers = (orgData?.members || []).map((m: any) => m.email === data.email ? updatedMember : m);
+
+        await updateDoc(orgDocToUpdate, { members: updatedMembers });
+
+        await fetchUserProfile(user);
+    }
+    
+    return userCredential;
+  };
+
 
   const login = (data: LoginFormData) => {
     return signInWithEmailAndPassword(auth, data.email, data.password);
@@ -120,6 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     userProfile,
     loading,
     signup,
+    memberSignup,
     login,
     logout,
     fetchUserProfile,

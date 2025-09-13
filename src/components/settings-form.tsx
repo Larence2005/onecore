@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
-import { CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, Info } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +38,7 @@ import { deleteOrganization } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, deleteDoc } from 'firebase/firestore';
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 
 const formSchema = z.object({
@@ -53,6 +54,8 @@ export function SettingsForm() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -151,6 +154,57 @@ export function SettingsForm() {
     } finally {
         setIsDeleting(false);
     }
+  }
+  
+  if (!isOwner) {
+    return (
+        <div className="w-full max-w-2xl space-y-6">
+            <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Settings</AlertTitle>
+                <AlertDescription>
+                    API and organization settings are managed by your administrator.
+                </AlertDescription>
+            </Alert>
+             <Card className="border-destructive">
+                <CardHeader className="flex flex-row items-start justify-between">
+                    <div className="space-y-1.5">
+                        <CardTitle className="flex items-center gap-2">
+                            <AlertTriangle className="text-destructive" />
+                            Delete Account
+                        </CardTitle>
+                        <CardDescription>
+                            Permanently delete your account. This action cannot be undone.
+                        </CardDescription>
+                    </div>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">Delete</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete your account. You will be removed from your organization.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleDeleteAccount}
+                                disabled={isDeleting}
+                                className={buttonVariants({ variant: "destructive" })}
+                            >
+                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                Continue
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </CardHeader>
+            </Card>
+        </div>
+    );
   }
 
   // If settings are configured and we are not in editing mode, show the success state.

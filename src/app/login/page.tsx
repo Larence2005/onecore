@@ -155,9 +155,16 @@ export default function LoginPage() {
           </Form>
 
           <div className="mt-8 text-center text-sm">
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              Create Account
-            </Link>
+            <p>
+                <Link href="/signup" className="font-medium text-primary hover:underline">
+                    Create Admin Account
+                </Link>
+            </p>
+            <p className="mt-2">
+                <Link href="/member-signup" className="font-medium text-primary hover:underline">
+                    Invited to an organization? Register here
+                </Link>
+            </p>
           </div>
         </div>
       </div>

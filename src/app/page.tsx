@@ -28,7 +28,6 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<View>('analytics');
-  const [isNavigating, setIsNavigating] = useState(false);
   
   const { settings, isConfigured } = useSettings();
   const { toast } = useToast();
@@ -48,20 +47,22 @@ function HomePageContent() {
   });
 
   const syncLatestEmails = useCallback(async () => {
-    if (isConfigured && userProfile?.organizationId) {
+    // Only the organization owner (who has the settings) should sync emails.
+    if (isConfigured && userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
         try {
             await getLatestEmails(settings, userProfile.organizationId);
         } catch (syncError) {
             // Silently fail, error is logged in the action
         }
     }
-  }, [settings, isConfigured, userProfile?.organizationId]);
+  }, [settings, isConfigured, userProfile, user]);
 
   useEffect(() => {
-    if (!user || !userProfile || !userProfile.organizationId) return;
+    if (!user || !userProfile?.organizationId) return;
 
     setIsLoading(true);
     
+    // This listener reads tickets from the database for ALL members of the organization.
     const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
     const q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
     
@@ -90,7 +91,7 @@ function HomePageContent() {
                             const messages = conversationData.messages as DetailedEmail[];
                             if (messages && messages.length > 0) {
                                 const lastMessage = messages[messages.length - 1];
-                                if(lastMessage.senderEmail?.toLowerCase() === user.email.toLowerCase()) {
+                                if(lastMessage.senderEmail?.toLowerCase() === userProfile.email.toLowerCase()) {
                                     lastReplier = 'agent';
                                 } else {
                                     lastReplier = 'client';
@@ -139,6 +140,8 @@ function HomePageContent() {
     
     const unsubscribePromise = setupListener();
     
+    // This part handles syncing new emails from the mail server.
+    // It should only run for the organization owner.
     syncLatestEmails();
     const intervalId = setInterval(syncLatestEmails, 30000);
 
@@ -154,7 +157,6 @@ function HomePageContent() {
     if (view && ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose', 'archive'].includes(view)) {
       setActiveView(view);
     }
-    setIsNavigating(false);
   }, [searchParams]);
 
   const handleLogout = async () => {
@@ -167,9 +169,6 @@ function HomePageContent() {
   };
   
   const handleViewChange = (view: View) => {
-    if (view !== activeView) {
-        setIsNavigating(true);
-    }
     setActiveView(view);
     if (view === 'archive') {
       router.push('/archive');
@@ -278,20 +277,14 @@ function HomePageContent() {
             {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
             {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
           </Header>
-          {isNavigating ? (
-            <div className="flex flex-1 items-center justify-center">
-                <p>Loading...</p>
-            </div>
-          ) : (
-            <MainView 
-                activeView={activeView} 
-                emails={emails}
-                isLoading={isLoading}
-                error={error}
-                onRefresh={syncLatestEmails}
-                filters={filters}
-            />
-          )}
+          <MainView 
+              activeView={activeView} 
+              emails={emails}
+              isLoading={isLoading}
+              error={error}
+              onRefresh={syncLatestEmails}
+              filters={filters}
+          />
         </main>
         
         {activeView === 'tickets' && <TicketsFilter onApplyFilters={onApplyFilters} />}

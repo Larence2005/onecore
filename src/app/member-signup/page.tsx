@@ -22,35 +22,32 @@ import { useAuth } from "@/providers/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw } from "lucide-react";
 import Image from "next/image";
-import { signUpSchema } from "@/lib/types";
+import { memberSignUpSchema } from "@/lib/types";
 
-
-export default function SignupPage() {
-  const { signup } = useAuth();
+export default function MemberSignupPage() {
+  const { memberSignup } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof signUpSchema>>({
-    resolver: zodResolver(signUpSchema),
+  const form = useForm<z.infer<typeof memberSignUpSchema>>({
+    resolver: zodResolver(memberSignUpSchema),
     defaultValues: {
-      organizationName: "",
-      name: "",
       email: "",
       password: "",
       confirmPassword: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof signUpSchema>) {
+  async function onSubmit(values: z.infer<typeof memberSignUpSchema>) {
     setIsSubmitting(true);
     try {
-      await signup(values);
+      await memberSignup(values);
       router.push("/");
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Sign-up Failed",
+        title: "Registration Failed",
         description: error.message || "An unknown error occurred.",
       });
     } finally {
@@ -74,48 +71,23 @@ export default function SignupPage() {
 
         <div className="w-full md:w-1/2 p-8 sm:p-12">
             <div className="mb-8 text-left">
-                <h2 className="text-2xl font-bold text-primary">Create Your Admin Account</h2>
+                <h2 className="text-2xl font-bold text-primary">Member Registration</h2>
+                <p className="text-muted-foreground">Create your account to join your organization.</p>
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                 <FormField
-                  control={form.control}
-                  name="organizationName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-semibold">Organization Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your Company, Inc." {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-semibold">Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="font-semibold">Email Address</FormLabel>
-                    <FormControl>
-                        <Input type="email" placeholder="your@email.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="font-semibold">Email Address</FormLabel>
+                        <FormControl>
+                            <Input type="email" placeholder="your-invited-email@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
@@ -149,10 +121,10 @@ export default function SignupPage() {
                 {isSubmitting ? (
                     <>
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
+                    Registering...
                     </>
                 ) : (
-                    "SUBMIT"
+                    "REGISTER"
                 )}
                 </Button>
             </form>
