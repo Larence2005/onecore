@@ -54,15 +54,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let orgSnapshot = await getDocs(q);
 
     if (orgSnapshot.empty) {
-      // If not an owner, check if they are a member
-      q = query(organizationsRef, where("members", "array-contains", { email: user.email, uid: user.uid }));
-      orgSnapshot = await getDocs(q);
+      // If not an owner, check if they are a member by uid
+      const allOrgsSnapshot = await getDocs(organizationsRef);
+      for (const orgDoc of allOrgsSnapshot.docs) {
+          const members = (orgDoc.data().members || []) as {email: string, uid: string}[];
+          if(members.some(m => m.uid === user.uid)) {
+              q = query(organizationsRef, where("__name__", "==", orgDoc.id));
+              orgSnapshot = await getDocs(q);
+              break;
+          }
+      }
     }
     
-    // Check if they are an invited member without a UID yet
+    // Fallback for invited members who just signed up
     if (orgSnapshot.empty) {
-        q = query(organizationsRef, where("members", "array-contains", { name: user.displayName || user.email, email: user.email, address: '', mobile: '', landline: '' }));
-        orgSnapshot = await getDocs(q);
+        const allOrgsSnapshot = await getDocs(organizationsRef);
+        for (const orgDoc of allOrgsSnapshot.docs) {
+            const members = (orgDoc.data().members || []) as {email: string, uid?: string}[];
+            if(members.some(m => m.email === user.email && !m.uid)) {
+                 q = query(organizationsRef, where("__name__", "==", orgDoc.id));
+                 orgSnapshot = await getDocs(q);
+                 break;
+            }
+        }
     }
 
 
@@ -116,22 +130,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const memberSignup = async (data: MemberSignUpFormData) => {
     const organizationsRef = collection(db, "organizations");
-    const q = query(organizationsRef, where("members", "array-contains", { name: data.email, email: data.email, address: '', mobile: '', landline: '' }));
     
     let orgDocToUpdate = null;
     let memberToUpdate = null;
     
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        // Find the specific organization and member object
-        for (const doc of querySnapshot.docs) {
-            const members = doc.data().members as any[];
-            const foundMember = members.find(m => m.email === data.email && !m.uid);
-            if (foundMember) {
-                orgDocToUpdate = doc.ref;
-                memberToUpdate = foundMember;
-                break;
-            }
+    // We can't query for a partial object in an array, so we fetch all orgs and check manually.
+    // This is not ideal for very large numbers of organizations, but it's the most reliable way on Firestore.
+    const allOrgsSnapshot = await getDocs(organizationsRef);
+    for (const doc of allOrgsSnapshot.docs) {
+        const members = doc.data().members as any[];
+        // Find a member that has a matching email and does NOT have a UID yet. This identifies an open invitation.
+        const foundMember = members.find(m => m.email === data.email && !m.uid);
+        if (foundMember) {
+            orgDocToUpdate = doc.ref;
+            memberToUpdate = foundMember;
+            break; // Stop searching once we find a match
         }
     }
 
