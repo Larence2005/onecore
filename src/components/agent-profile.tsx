@@ -34,6 +34,7 @@ export function AgentProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout, fetchUserProfile } = useAuth();
   const [profileData, setProfileData] = useState<OrganizationMember | null>(null);
   
+  const [assignedTickets, setAssignedTickets] = useState<Email[]>([]);
   const [ccTickets, setCcTickets] = useState<Email[]>([]);
   const [bccTickets, setBccTickets] = useState<Email[]>([]);
   const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
@@ -88,6 +89,7 @@ export function AgentProfile({ email }: { email: string }) {
 
         const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
         
+        const tempAssignedTickets = allTickets.filter(ticket => ticket.assignee === member.uid);
         const tempCcTickets: Email[] = [];
         const tempBccTickets: Email[] = [];
         const tempForwardedActivities: ActivityLog[] = [];
@@ -125,6 +127,7 @@ export function AgentProfile({ email }: { email: string }) {
             });
         }
         
+        setAssignedTickets(tempAssignedTickets);
         setCcTickets(tempCcTickets);
         setBccTickets(tempBccTickets);
         setForwardedActivities(tempForwardedActivities);
@@ -320,12 +323,32 @@ export function AgentProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                             <Tabs defaultValue="cc" className="w-full">
+                             <Tabs defaultValue="assigned" className="w-full">
                                 <TabsList className="mb-4">
+                                    <TabsTrigger value="assigned">Assigned</TabsTrigger>
                                     <TabsTrigger value="cc">Cc'd On</TabsTrigger>
                                     <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
                                     <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
                                 </TabsList>
+                                <TabsContent value="assigned">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Assigned Tickets</CardTitle>
+                                            <CardDescription>Tickets directly assigned to {profileData.name}.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {assignedTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {assignedTickets.map((ticket) => (
+                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
                                 <TabsContent value="cc">
                                     <Card>
                                         <CardHeader>
@@ -473,3 +496,5 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
