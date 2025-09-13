@@ -161,7 +161,7 @@ const downloadAttachment = (attachment: Attachment) => {
 }
 
 
-export function TicketDetailContent({ id }: { id: string }) {
+export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: string }) {
     const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
     const { user, userProfile, loading, logout } = useAuth();
@@ -1257,9 +1257,3 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
-
-    
-
-    
-
-    

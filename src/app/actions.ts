@@ -14,6 +14,7 @@ import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 import { isPast, parseISO } from 'date-fns';
 import { SimpleCache } from '@/lib/cache';
+import { headers } from 'next/headers';
 
 
 // Initialize caches for different data types
@@ -690,7 +691,11 @@ export async function forwardEmailAction(
     for (const recipient of toRecipients) {
         const recipientMember = orgMembers.find(m => m.email.toLowerCase() === recipient.emailAddress.address.toLowerCase());
         const recipientName = recipient.emailAddress.name || recipientMember?.name || 'there';
-        const ticketUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/tickets/${ticketId}`;
+        
+        const headersList = headers();
+        const host = headersList.get('host') || '';
+        const protocol = headersList.get('x-forwarded-proto') || 'http';
+        const ticketUrl = `${protocol}://${host}/tickets/${ticketId}`;
 
         const notificationSubject = `Notification: A message was forwarded to you regarding Ticket #${ticketNumber}`;
         const notificationBody = `
@@ -911,7 +916,12 @@ export async function updateTicket(
                 const members = await getOrganizationMembers(organizationId);
                 const newAssignee = members.find(m => m.uid === data.assignee);
                 if (newAssignee && newAssignee.email) {
-                    const ticketUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/tickets/${id}`;
+                    
+                    const headersList = headers();
+                    const host = headersList.get('host') || '';
+                    const protocol = headersList.get('x-forwarded-proto') || 'http';
+                    const ticketUrl = `${protocol}://${host}/tickets/${id}`;
+                    
                     const subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                     const body = `
                         <p>Hello ${newAssignee.name},</p>
