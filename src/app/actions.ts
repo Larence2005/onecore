@@ -824,6 +824,7 @@ export async function updateTicket(
     try {
         let ticketData: any;
         let originalStatus: string;
+        let originalAssignee: string | null;
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -833,6 +834,7 @@ export async function updateTicket(
             
             ticketData = ticketDoc.data();
             originalStatus = ticketData.status;
+            originalAssignee = ticketData.assignee || null;
 
             const updateData: any = { ...data };
 
@@ -902,6 +904,32 @@ export async function updateTicket(
                     }
                 }
             }
+        }
+        
+        if (data.assignee && data.assignee !== originalAssignee) {
+             if (settings && ticketData.ticketNumber) {
+                const members = await getOrganizationMembers(organizationId);
+                const newAssignee = members.find(m => m.uid === data.assignee);
+                if (newAssignee && newAssignee.email) {
+                    const ticketUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/tickets/${id}`;
+                    const subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                    const body = `
+                        <p>Hello ${newAssignee.name},</p>
+                        <p>You have been assigned a new ticket by ${currentUser.name}.</p>
+                        <p><b>Ticket #${ticketData.ticketNumber}: ${ticketData.title}</b></p>
+                        <p>You can view and respond to the ticket here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                    `;
+                    try {
+                        await sendEmailAction(settings, {
+                            recipient: newAssignee.email,
+                            subject: subject,
+                            body: body,
+                        });
+                    } catch(e) {
+                         console.error(`Failed to send assignment notification to ${newAssignee.email}:`, e);
+                    }
+                }
+             }
         }
 
 
