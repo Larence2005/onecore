@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Email, OrganizationMember } from "@/app/actions";
@@ -73,7 +74,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
     const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'assignee', value: string) => {
-        if (!userProfile?.organizationId) return;
+        if (!userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
         if (field === 'status') setCurrentStatus(value);
@@ -82,7 +83,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
 
         const finalValue = field === 'assignee' && value === 'unassigned' ? null : value;
 
-        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, settings);
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, settings, {name: userProfile.name, email: user.email});
         if (result.success) {
             toast({
                 title: 'Ticket Updated',
@@ -230,5 +231,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         </li>
     );
 }
+
+    
 
     

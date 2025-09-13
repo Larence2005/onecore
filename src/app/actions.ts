@@ -804,40 +804,52 @@ export async function updateCompanyEmployee(
 
 
 
-export async function updateTicket(organizationId: string, id: string, data: { priority?: string; status?: string; type?: string; deadline?: string | null; tags?: string[]; closedAt?: string | null; companyId?: string | null; assignee?: string | null; }, settings: Settings | null) {
+export async function updateTicket(
+    organizationId: string,
+    id: string,
+    data: {
+        priority?: string;
+        status?: string;
+        type?: string;
+        deadline?: string | null;
+        tags?: string[];
+        closedAt?: string | null;
+        companyId?: string | null;
+        assignee?: string | null;
+    },
+    settings: Settings | null,
+    currentUser: { name: string; email: string }
+) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
+        let ticketData: any;
+        let originalStatus: string;
+        
         await runTransaction(db, async (transaction) => {
-            // --- READS FIRST ---
             const ticketDoc = await transaction.get(ticketDocRef);
             if (!ticketDoc.exists()) {
                 throw new Error("Ticket not found!");
             }
             
-            const ticketData = ticketDoc.data();
-            
-            // --- WRITES AFTER ---
+            ticketData = ticketDoc.data();
+            originalStatus = ticketData.status;
+
             const updateData: any = { ...data };
 
-            // Handle status changes for closing tickets
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
-                if(ticketData.status !== 'Resolved' && ticketData.status !== 'Closed') {
+                if(originalStatus !== 'Resolved' && originalStatus !== 'Closed') {
                     updateData.closedAt = new Date().toISOString();
                 }
-                 // Check for "Resolved Late"
                 if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
                     updateData.tags = arrayUnion('Resolved Late');
                 }
             }
             
-            // Handle status changes for reopening tickets
             if (data.status && (data.status === 'Open' || data.status === 'Pending')) {
                 updateData.closedAt = null;
-                // If reopening, remove the "Resolved Late" tag
                 updateData.tags = arrayRemove('Resolved Late');
             }
 
-            // Update the ticket
             transaction.update(ticketDocRef, updateData);
             
             if (data.companyId && ticketData.senderEmail) {
@@ -847,6 +859,51 @@ export async function updateTicket(organizationId: string, id: string, data: { p
                 });
             }
         });
+
+        // --- Post-transaction actions (like sending emails) ---
+        if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
+            if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
+                const orgDocRef = doc(db, 'organizations', organizationId);
+                const orgDoc = await getDoc(orgDocRef);
+                const orgData = orgDoc.data();
+                const owner = orgData?.members.find((m: any) => m.uid === orgData.owner);
+
+                const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                const notificationBody = `
+                    <p>Hello,</p>
+                    <p>Your ticket #${ticketData.ticketNumber} with the subject "${ticketData.title}" has been marked as <b>${data.status}</b> by ${currentUser.name}.</p>
+                    <br>
+                    <p>If you have any further questions, please reply to this ticket by responding to any email in this thread.</p>
+                    <br>
+                    <p>This is a notification-only message.</p>
+                `;
+
+                // Notify the client
+                try {
+                    await sendEmailAction(settings, {
+                        recipient: ticketData.senderEmail,
+                        subject: notificationSubject,
+                        body: notificationBody,
+                    });
+                } catch (e) {
+                    console.error(`Failed to send resolution notification to client ${ticketData.senderEmail}:`, e);
+                }
+
+                // Notify the admin, if they are not the one making the change
+                if (owner && owner.email && owner.email !== currentUser.email) {
+                    try {
+                        await sendEmailAction(settings, {
+                            recipient: owner.email,
+                            subject: `[Admin] Ticket #${ticketData.ticketNumber} was ${data.status}`,
+                            body: `<p>Ticket #${ticketData.ticketNumber} ("${ticketData.title}") was just marked as ${data.status} by ${currentUser.name}.</p>`,
+                        });
+                    } catch (e) {
+                         console.error(`Failed to send resolution notification to admin ${owner.email}:`, e);
+                    }
+                }
+            }
+        }
+
 
         // Invalidate relevant caches
         ticketsCache.invalidate(`ticket:${organizationId}:${id}`);
@@ -1398,3 +1455,6 @@ export async function updateCompany(
 
 
 
+
+
+    

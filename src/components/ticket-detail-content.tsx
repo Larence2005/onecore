@@ -377,7 +377,7 @@ export function TicketDetailContent({ id }: { id: string }) {
 
     
     const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any) => {
-        if (!email || !userProfile?.organizationId) return;
+        if (!email || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
 
         const ticketIdToUpdate = email.id;
 
@@ -390,7 +390,7 @@ export function TicketDetailContent({ id }: { id: string }) {
         if(field === 'assignee') setCurrentAssignee(value);
 
 
-        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, settings);
+        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, settings, {name: userProfile.name, email: user.email});
 
         if (!result.success) {
              toast({
@@ -1257,6 +1257,8 @@ export function TicketDetailContent({ id }: { id: string }) {
         </SidebarProvider>
     );
 }
+
+    
 
     
 
