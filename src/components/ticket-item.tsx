@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { updateTicket, getOrganizationMembers } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building, FileType } from 'lucide-react';
 import { useAuth } from "@/providers/auth-provider";
 import { useSettings } from "@/providers/settings-provider";
 
@@ -184,6 +184,26 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                             ))}
                         </SelectContent>
                     </Select>
+                     <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)} disabled={isArchivedView}>
+                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                            <SelectValue>
+                                <span className="flex items-center gap-2">
+                                    <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />
+                                    {typeDetails.label}
+                                </span>
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {types.map(t => (
+                                <SelectItem key={t.value} value={t.value}>
+                                    <span className="flex items-center gap-2">
+                                        <t.icon className={cn("h-4 w-4", t.color)} />
+                                        {t.label}
+                                    </span>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)} disabled={isArchivedView}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                             <SelectValue>
@@ -212,9 +232,3 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
 }
 
     
-
-    
-
-
-    
-
