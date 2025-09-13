@@ -141,29 +141,6 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 </Link>
 
                 <div className="flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
-                    {isOwner ? (
-                         <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleUpdate('assignee', value)} disabled={isArchivedView}>
-                             <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                                 <SelectValue>
-                                     <span className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                        {assigneeName}
-                                     </span>
-                                 </SelectValue>
-                             </SelectTrigger>
-                             <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {members.map(m => (
-                                    <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
-                                ))}
-                             </SelectContent>
-                         </Select>
-                    ) : (
-                        <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground">
-                            <User className="h-4 w-4" />
-                            {assigneeName}
-                        </div>
-                    )}
                     <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)} disabled={isArchivedView}>
                         <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                             <SelectValue>
@@ -224,6 +201,29 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                             ))}
                         </SelectContent>
                     </Select>
+                    {isOwner ? (
+                         <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleUpdate('assignee', value)} disabled={isArchivedView}>
+                             <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                                 <SelectValue>
+                                     <span className="flex items-center gap-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        {assigneeName}
+                                     </span>
+                                 </SelectValue>
+                             </SelectTrigger>
+                             <SelectContent>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {members.map(m => (
+                                    <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
+                                ))}
+                             </SelectContent>
+                         </Select>
+                    ) : (
+                        <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            {assigneeName}
+                        </div>
+                    )}
                 </div>
             </div>
             </Card>
