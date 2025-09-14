@@ -870,11 +870,7 @@ export async function updateTicket(
         // --- Post-transaction actions (like sending emails) ---
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
-                const orgDocRef = doc(db, 'organizations', organizationId);
-                const orgDoc = await getDoc(orgDocRef);
-                const orgData = orgDoc.data();
-                const owner = orgData?.members.find((m: any) => m.uid === orgData.owner);
-
+                // Notify the client
                 const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                 const notificationBody = `
                     <p>Hello,</p>
@@ -884,8 +880,6 @@ export async function updateTicket(
                     <br>
                     <p>This is a notification-only message.</p>
                 `;
-
-                // Notify the client
                 try {
                     await sendEmailAction(settings, {
                         recipient: ticketData.senderEmail,
@@ -896,16 +890,24 @@ export async function updateTicket(
                     console.error(`Failed to send resolution notification to client ${ticketData.senderEmail}:`, e);
                 }
 
-                // Notify the admin, if they are not the one making the change
-                if (owner && owner.email && owner.email !== currentUser.email) {
-                    try {
-                        await sendEmailAction(settings, {
-                            recipient: owner.email,
-                            subject: `[Admin] Ticket #${ticketData.ticketNumber} was ${data.status}`,
-                            body: `<p>Ticket #${ticketData.ticketNumber} ("${ticketData.title}") was just marked as ${data.status} by ${currentUser.name}.</p>`,
-                        });
-                    } catch (e) {
-                         console.error(`Failed to send resolution notification to admin ${owner.email}:`, e);
+                // Notify the assigned agent (if they exist and are not the current user)
+                const finalAssigneeId = data.assignee !== undefined ? data.assignee : ticketData.assignee;
+                if (finalAssigneeId) {
+                    const members = await getOrganizationMembers(organizationId);
+                    const assignedAgent = members.find(m => m.uid === finalAssigneeId);
+
+                    if (assignedAgent && assignedAgent.email && assignedAgent.email !== currentUser.email) {
+                        const agentNotificationSubject = `[Resolved] Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                        const agentNotificationBody = `<p>The ticket assigned to you, #${ticketData.ticketNumber} ("${ticketData.title}"), was just marked as ${data.status} by ${currentUser.name}.</p>`;
+                        try {
+                            await sendEmailAction(settings, {
+                                recipient: assignedAgent.email,
+                                subject: agentNotificationSubject,
+                                body: agentNotificationBody,
+                            });
+                        } catch (e) {
+                            console.error(`Failed to send resolution notification to agent ${assignedAgent.email}:`, e);
+                        }
                     }
                 }
             }
@@ -1494,5 +1496,7 @@ export async function updateCompany(
 
 
 
+
+    
 
     
