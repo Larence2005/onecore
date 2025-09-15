@@ -575,12 +575,12 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (message) {
+        if (message && user?.email) {
             setReplyingToMessageId(messageId);
             setReplyTo(message.senderEmail || '');
             setForwardingMessageId(null);
             setReplyContent('');
-            setReplyCc('');
+            setReplyCc(user.email);
             setReplyBcc('');
         }
     };
@@ -595,11 +595,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
-            // Remove the current user's and sender's emails from the CC list
-            allRecipients.delete(user.email.toLowerCase());
+            // Remove the original sender from the CC list as they are already in 'To'
             if (message.senderEmail) {
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
+
+            // Add the current user's email to the CC list
+            allRecipients.add(user.email.toLowerCase());
 
             setReplyCc(Array.from(allRecipients).join(', '));
             setReplyBcc('');
@@ -618,12 +620,14 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     };
 
     const handleForwardClick = (messageId: string) => {
-        setReplyingToMessageId(null);
-        setForwardTo('');
-        setForwardCc('');
-        setForwardBcc('');
-        setForwardComment('');
-        setForwardingMessageId(messageId);
+        if(user?.email){
+            setReplyingToMessageId(null);
+            setForwardTo('');
+            setForwardCc(user.email);
+            setForwardBcc('');
+            setForwardComment('');
+            setForwardingMessageId(messageId);
+        }
     };
 
     const handleCancelForward = () => {
@@ -1299,3 +1303,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    
