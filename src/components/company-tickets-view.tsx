@@ -482,10 +482,59 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                 </div>
                             ) : (
                                 <Tabs defaultValue="tickets" className="w-full" onValueChange={(value) => setActiveTab(value as ActiveTab)}>
-                                    <TabsList className="mb-4">
-                                        <TabsTrigger value="tickets">All Tickets</TabsTrigger>
-                                        <TabsTrigger value="employees">Employees</TabsTrigger>
-                                    </TabsList>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <TabsList>
+                                            <TabsTrigger value="tickets">All Tickets</TabsTrigger>
+                                            <TabsTrigger value="employees">Employees</TabsTrigger>
+                                        </TabsList>
+                                        {isOwner && activeTab === 'employees' && (
+                                            <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button size="sm">
+                                                        <UserPlus className="mr-2 h-4 w-4" />
+                                                        Add Employee
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-2xl">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Add New Employee</DialogTitle>
+                                                        <DialogDescription>Enter the details for the new employee.</DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="new-employee-name">Name</Label>
+                                                            <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="new-employee-email">Email</Label>
+                                                            <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="new-employee-mobile">Mobile Number</Label>
+                                                            <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="new-employee-landline">Landline</Label>
+                                                            <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
+                                                        </div>
+                                                        <div className="space-y-2 sm:col-span-2">
+                                                            <Label htmlFor="new-employee-address">Address</Label>
+                                                            <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
+                                                        </div>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <DialogClose asChild>
+                                                            <Button variant="outline">Cancel</Button>
+                                                        </DialogClose>
+                                                        <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
+                                                            {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                            Save Employee
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )}
+                                    </div>
                                     <TabsContent value="tickets">
                                         <Card>
                                             <CardHeader className="flex flex-row items-center justify-between">
@@ -567,58 +616,11 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                     </TabsContent>
                                     <TabsContent value="employees">
                                         <Card>
-                                            <CardHeader className="flex items-center justify-between">
+                                            <CardHeader>
                                                  <div>
                                                     <CardTitle>Employees at {company?.name}</CardTitle>
                                                     <CardDescription>A list of employees associated with this company.</CardDescription>
                                                 </div>
-                                                {isOwner && (
-                                                    <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
-                                                        <DialogTrigger asChild>
-                                                            <Button size="sm">
-                                                                <UserPlus className="mr-2 h-4 w-4" />
-                                                                Add Employee
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="sm:max-w-2xl">
-                                                            <DialogHeader>
-                                                                <DialogTitle>Add New Employee</DialogTitle>
-                                                                <DialogDescription>Enter the details for the new employee.</DialogDescription>
-                                                            </DialogHeader>
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                                                <div className="space-y-2">
-                                                                    <Label htmlFor="new-employee-name">Name</Label>
-                                                                    <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label htmlFor="new-employee-email">Email</Label>
-                                                                    <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label htmlFor="new-employee-mobile">Mobile Number</Label>
-                                                                    <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label htmlFor="new-employee-landline">Landline</Label>
-                                                                    <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
-                                                                </div>
-                                                                <div className="space-y-2 sm:col-span-2">
-                                                                    <Label htmlFor="new-employee-address">Address</Label>
-                                                                    <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
-                                                                </div>
-                                                            </div>
-                                                            <DialogFooter>
-                                                                <DialogClose asChild>
-                                                                    <Button variant="outline">Cancel</Button>
-                                                                </DialogClose>
-                                                                <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
-                                                                    {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                    Save Employee
-                                                                </Button>
-                                                            </DialogFooter>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                )}
                                             </CardHeader>
                                             <CardContent>
                                                 {employees.length > 0 ? (
