@@ -463,8 +463,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     };
 
     const handleSendReply = async () => {
-        if (!isConfigured || !userProfile?.organizationId) {
-            toast({ variant: "destructive", title: "API Settings Required", description: "Please configure your Microsoft Graph API credentials in Settings to send replies." });
+        if (!isConfigured || !userProfile?.organizationId || !user || !user.email) {
+            toast({ variant: "destructive", title: "Cannot Reply", description: "Missing required information to send a reply." });
             return;
         }
         if (!replyContent.trim() && attachments.length === 0) {
@@ -483,7 +483,18 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 }))
             );
 
-            await replyToEmailAction(settings, userProfile.organizationId, replyingToMessageId, replyContent, email?.conversationId, attachmentPayloads, replyCc, replyBcc);
+            await replyToEmailAction(
+                settings, 
+                userProfile.organizationId, 
+                replyingToMessageId, 
+                replyContent, 
+                email?.conversationId, 
+                attachmentPayloads,
+                { name: userProfile.name || user.email, email: user.email },
+                replyCc, 
+                replyBcc
+            );
+
             toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
             setReplyContent('');
             setAttachments([]);
@@ -534,8 +545,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 forwardTo, 
                 forwardCc, 
                 forwardBcc, 
-                user.email, 
-                userProfile.name || user.email,
+                { name: userProfile.name || user.email, email: user.email },
                 email.ticketNumber,
                 email.subject
             );

@@ -587,6 +587,7 @@ export async function replyToEmailAction(
     comment: string,
     conversationId: string | undefined,
     attachments: NewAttachment[],
+    currentUser: { name: string; email: string },
     cc: string | undefined,
     bcc: string | undefined
 ): Promise<{ success: boolean }> {
@@ -594,11 +595,15 @@ export async function replyToEmailAction(
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
+    
+    // Add current user's email to CC if it's not already there
+    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e));
+    ccRecipients.add(currentUser.email);
 
     const finalPayload = {
-        comment: comment, // The text part of the reply
-        message: { // The message object part of the reply
-            ccRecipients: parseRecipients(cc),
+        comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
+        message: {
+            ccRecipients: Array.from(ccRecipients).map(email => ({ emailAddress: { address: email } })),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
                 '@odata.type': '#microsoft.graph.fileAttachment',
@@ -650,8 +655,7 @@ export async function forwardEmailAction(
     to: string,
     cc: string | undefined,
     bcc: string | undefined,
-    currentUserEmail: string,
-    fromName: string,
+    currentUser: { name: string; email: string },
     ticketNumber: number,
     ticketSubject: string
 ): Promise<{ success: boolean }> {
@@ -664,11 +668,16 @@ export async function forwardEmailAction(
     if (toRecipients.length === 0) {
         throw new Error("Forward recipient is required.");
     }
+    
+    // Add current user's email to CC if it's not already there
+    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e));
+    ccRecipients.add(currentUser.email);
+
 
     const forwardPayload = {
-        comment: comment,
+        comment: `Forwarded by ${currentUser.name}:<br><br>${comment}`,
         toRecipients: toRecipients,
-        ccRecipients: parseRecipients(cc),
+        ccRecipients: Array.from(ccRecipients).map(email => ({ emailAddress: { address: email } })),
         bccRecipients: parseRecipients(bcc),
     };
 
@@ -697,7 +706,7 @@ export async function forwardEmailAction(
         type: 'Forward',
         details: `Forwarded to: ${to}`,
         date: new Date().toISOString(),
-        user: currentUserEmail,
+        user: currentUser.email,
     });
     
     // Send a notification email to the primary recipients
@@ -715,7 +724,7 @@ export async function forwardEmailAction(
         const notificationSubject = `Notification: A message was forwarded to you regarding Ticket #${ticketNumber}`;
         const notificationBody = `
             <p>Hello ${recipientName},</p>
-            <p>${fromName} has forwarded a message to you:</p>
+            <p>${currentUser.name} has forwarded a message to you:</p>
             <p><b>Ticket #${ticketNumber}: ${ticketSubject}</b></p>
             <p>To view the full ticket, kindly visit the website: <a href="${ticketUrl}">View Ticket</a></p>
             <br>
