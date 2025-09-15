@@ -79,6 +79,7 @@ function HomePageContent() {
     
     let companyMap = new Map<string, string>();
     let memberMap = new Map<string, string>();
+    let memberEmails = new Set<string>();
 
     const setupListener = async () => {
         try {
@@ -88,6 +89,7 @@ function HomePageContent() {
             ]);
             companyMap = new Map(companies.map(c => [c.id, c.name]));
             memberMap = new Map(members.map(m => [m.uid!, m.name]));
+            memberEmails = new Set(members.map(m => m.email.toLowerCase()));
 
         } catch(e) {
             console.error("Could not fetch companies or members for ticket list", e);
@@ -108,17 +110,25 @@ function HomePageContent() {
                             const messages = conversationData.messages as DetailedEmail[];
                             if (messages && messages.length > 0) {
                                 const lastMessage = messages[messages.length - 1];
-                                const allMembers = await getOrganizationMembers(userProfile.organizationId!);
-                                if(allMembers.some(m => m.email.toLowerCase() === lastMessage.senderEmail?.toLowerCase())) {
+                                if(memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '')) {
                                     lastReplier = 'agent';
                                 } else {
                                     lastReplier = 'client';
                                 }
+
+                                // Handle case for new tickets
+                                if (messages.length === 1 && !memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '')) {
+                                    lastReplier = 'client';
+                                }
+
                             }
                         }
                     } catch (e) {
                         console.error("Could not determine last replier for ticket", ticketDoc.id, e);
                     }
+                } else if (data.senderEmail && !memberEmails.has(data.senderEmail.toLowerCase())) {
+                    // This is a new ticket without a full conversation object yet, and the sender is external.
+                    lastReplier = 'client';
                 }
                 
                 return {
@@ -167,8 +177,8 @@ function HomePageContent() {
                         if (!messages || messages.length === 0) return;
 
                         const lastMessage = messages[messages.length - 1];
-                        const allMembers = memberMap.size > 0 ? Array.from(memberMap.values()) : (await getOrganizationMembers(userProfile!.organizationId!)).map(m=>m.email);
-                        const isAgentReply = allMembers.some(m => m.toLowerCase() === lastMessage.senderEmail?.toLowerCase());
+                        
+                        const isAgentReply = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '');
 
                          setEmails(prevEmails => {
                             const newEmails = [...prevEmails];
@@ -353,5 +363,3 @@ export default function Home() {
       <HomePageContent />
   )
 }
-
-    
