@@ -115,20 +115,14 @@ function HomePageContent() {
                                 } else {
                                     lastReplier = 'client';
                                 }
-
-                                // Handle case for new tickets
-                                if (messages.length === 1 && !memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '')) {
-                                    lastReplier = 'client';
-                                }
-
                             }
+                        } else if (data.senderEmail && !memberEmails.has(data.senderEmail.toLowerCase())) {
+                            // Conversation doc doesn't exist yet, this is a new ticket from a client
+                            lastReplier = 'client';
                         }
                     } catch (e) {
                         console.error("Could not determine last replier for ticket", ticketDoc.id, e);
                     }
-                } else if (data.senderEmail && !memberEmails.has(data.senderEmail.toLowerCase())) {
-                    // This is a new ticket without a full conversation object yet, and the sender is external.
-                    lastReplier = 'client';
                 }
                 
                 return {
