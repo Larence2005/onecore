@@ -570,6 +570,7 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
 export async function replyToEmailAction(
     settings: Settings,
     organizationId: string,
+    ticketId: string,
     messageId: string,
     comment: string,
     conversationId: string | undefined,
@@ -618,8 +619,11 @@ export async function replyToEmailAction(
         }
     }
 
+    // Invalidate caches after a successful reply
     if (conversationId) {
-        // Use a small delay to give Graph API time to process the reply
+        ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
+        ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
+        // Use a small delay to give Graph API time to process the reply before re-fetching
         setTimeout(() => {
             fetchAndStoreFullConversation(settings, organizationId, conversationId).catch(console.error);
         }, 5000); // 5-second delay
@@ -1521,3 +1525,6 @@ export async function updateCompany(
     
 
       
+
+
+    

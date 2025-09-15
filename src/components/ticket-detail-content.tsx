@@ -463,7 +463,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     };
 
     const handleSendReply = async () => {
-        if (!isConfigured || !userProfile?.organizationId || !user || !user.email) {
+        if (!isConfigured || !userProfile?.organizationId || !user || !user.email || !email) {
             toast({ variant: "destructive", title: "Cannot Reply", description: "Missing required information to send a reply." });
             return;
         }
@@ -485,7 +485,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
             await replyToEmailAction(
                 settings, 
-                userProfile.organizationId, 
+                userProfile.organizationId,
+                email.id,
                 replyingToMessageId, 
                 replyContent, 
                 email?.conversationId, 
@@ -502,12 +503,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyTo('');
             setReplyCc('');
             setReplyBcc('');
-            
-            // After sending, immediately refresh the conversation from the source
-            if (email?.conversationId) {
-                await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
-            }
-
 
         } catch (err)
             {
@@ -661,8 +656,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const isReplyingToThis = replyingToMessageId === message.id;
         const isForwardingThis = forwardingMessageId === message.id;
         const hasCC = message.ccRecipients && message.ccRecipients.length > 0;
-        const hasBCC = message.bccRecipients && message.bccRecipients.length > 0;
-        const showReplyAll = hasCC || hasBCC;
+        const showReplyAll = hasCC || (message.toRecipients && message.toRecipients.length > 1);
 
         return (
             <div key={message.id}>
@@ -1315,5 +1309,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    
 
     
