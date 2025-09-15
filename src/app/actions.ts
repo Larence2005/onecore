@@ -870,41 +870,16 @@ export async function updateTicket(
         // --- Post-transaction actions (like sending emails) ---
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
-                
-                // Gather all emails to CC
-                const detailedTicket = await getEmail(organizationId, id);
-                const allEmailsInThread = new Set<string>();
-
-                if (detailedTicket?.conversation) {
-                    detailedTicket.conversation.forEach(message => {
-                        if (message.senderEmail) allEmailsInThread.add(message.senderEmail.toLowerCase());
-                        message.toRecipients?.forEach(r => allEmailsInThread.add(r.emailAddress.address.toLowerCase()));
-                        message.ccRecipients?.forEach(r => allEmailsInThread.add(r.emailAddress.address.toLowerCase()));
-                    });
-                }
-                
-                // Get admin and assignee emails
                 const members = await getOrganizationMembers(organizationId);
-                const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
-                const ownerId = orgDoc.data()?.owner;
-                const ownerEmail = members.find(m => m.uid === ownerId)?.email;
-                if(ownerEmail) allEmailsInThread.add(ownerEmail.toLowerCase());
-
                 const finalAssigneeId = data.assignee !== undefined ? data.assignee : ticketData.assignee;
-                const assignedAgentEmail = members.find(m => m.uid === finalAssigneeId)?.email;
-                if (assignedAgentEmail) {
-                    allEmailsInThread.add(assignedAgentEmail.toLowerCase());
+                const assignedAgent = members.find(m => m.uid === finalAssigneeId);
+
+                const ccRecipients: string[] = [];
+                if (assignedAgent && assignedAgent.email) {
+                    ccRecipients.push(assignedAgent.email);
                 }
                 
-                // The client is the primary recipient, remove them from CC list
-                const clientEmailLower = ticketData.senderEmail.toLowerCase();
-                allEmailsInThread.delete(clientEmailLower);
-                // Also remove the current user who made the change from CC if they are in the list
-                allEmailsInThread.delete(currentUser.email.toLowerCase());
-
-                const ccRecipients = Array.from(allEmailsInThread).join(',');
-                
-                // Notify the client, with others in CC
+                // Notify the client, with agent in CC
                 const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                 const notificationBody = `
                     <p>Hello,</p>
@@ -917,7 +892,7 @@ export async function updateTicket(
                 try {
                     await sendEmailAction(settings, {
                         recipient: ticketData.senderEmail,
-                        cc: ccRecipients,
+                        cc: ccRecipients.join(','),
                         subject: notificationSubject,
                         body: notificationBody,
                     });
