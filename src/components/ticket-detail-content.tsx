@@ -9,7 +9,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply, ReplyAll } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -584,6 +584,29 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyBcc('');
         }
     };
+    
+    const handleReplyAllClick = (messageId: string) => {
+        const message = email?.conversation?.find(m => m.id === messageId);
+        if (message && user?.email) {
+            setReplyingToMessageId(messageId);
+            setReplyTo(message.senderEmail || '');
+
+            const allRecipients = new Set<string>();
+            message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
+            message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
+            
+            // Remove the current user's and sender's emails from the CC list
+            allRecipients.delete(user.email.toLowerCase());
+            if (message.senderEmail) {
+                allRecipients.delete(message.senderEmail.toLowerCase());
+            }
+
+            setReplyCc(Array.from(allRecipients).join(', '));
+            setReplyBcc('');
+            setForwardingMessageId(null);
+            setReplyContent('');
+        }
+    };
 
     const handleCancelReply = () => {
         setReplyingToMessageId(null);
@@ -621,6 +644,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
         const isReplyingToThis = replyingToMessageId === message.id;
         const isForwardingThis = forwardingMessageId === message.id;
+        const hasCC = message.ccRecipients && message.ccRecipients.length > 0;
+        const hasBCC = message.bccRecipients && message.bccRecipients.length > 0;
+        const showReplyAll = hasCC || hasBCC;
 
         return (
             <div key={message.id}>
@@ -663,6 +689,12 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                         <Reply className="mr-2 h-4 w-4" />
                                         <span>Reply</span>
                                     </DropdownMenuItem>
+                                     {showReplyAll && (
+                                        <DropdownMenuItem onClick={() => handleReplyAllClick(message.id)}>
+                                            <ReplyAll className="mr-2 h-4 w-4" />
+                                            <span>Reply All</span>
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem onClick={() => handleForwardClick(message.id)}>
                                         <Share className="mr-2 h-4 w-4" />
                                         <span>Forward</span>
