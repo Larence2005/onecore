@@ -1,3 +1,4 @@
+
 "use server";
 
 import type { Settings } from '@/providers/settings-provider';
@@ -594,34 +595,9 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
-    let replyPayload: any = {
-        comment: comment,
-        message: {
-            ccRecipients: parseRecipients(cc),
-            bccRecipients: parseRecipients(bcc),
-        }
-    };
-
-    if (attachments && attachments.length > 0) {
-        replyPayload.message.attachments = attachments.map(att => ({
-            '@odata.type': '#microsoft.graph.fileAttachment',
-            name: att.name,
-            contentBytes: att.contentBytes,
-            contentType: att.contentType,
-        }));
-    }
-    
-    // Note: The 'reply' endpoint doesn't directly support adding new recipients or attachments in one go.
-    // The standard 'reply' action with a simple 'comment' body is simpler.
-    // For advanced scenarios like adding attachments or changing recipients, creating a draft reply and then sending it is the robust way.
-    // However, for this implementation, we try a more direct approach which might have limitations depending on the exact API version/behavior.
-    // The Graph API for `reply` *can* take a `message` object to create a more complex reply draft. Let's build that.
-
     const finalPayload = {
         comment: comment, // The text part of the reply
         message: { // The message object part of the reply
-            // MS Graph automatically adds the original sender to 'toRecipients' when replying.
-            // We can add CC and BCC recipients here.
             ccRecipients: parseRecipients(cc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
@@ -654,9 +630,13 @@ export async function replyToEmailAction(
         }
     }
 
-    // After successfully sending a reply, DO NOT invalidate the cache immediately.
-    // Let the background sync handle it to prevent race conditions.
-    
+    if (conversationId) {
+        // Use a small delay to give Graph API time to process the reply
+        setTimeout(() => {
+            fetchAndStoreFullConversation(settings, organizationId, conversationId).catch(console.error);
+        }, 5000); // 5-second delay
+    }
+
     return { success: true };
 }
 
@@ -1547,3 +1527,6 @@ export async function updateCompany(
     
 
 
+
+
+    
