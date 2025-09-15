@@ -602,6 +602,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     
             // Add the current user's email to the CC list
             allRecipients.add(user.email.toLowerCase());
+            
+            // Explicitly remove the admin email (sender email from settings) from the CC list
+            if (settings.userId) {
+                allRecipients.delete(settings.userId.toLowerCase());
+            }
     
             setReplyCc(Array.from(allRecipients).join(', '));
             setReplyBcc('');
@@ -626,6 +631,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setForwardTo('');
             const ccRecipients = new Set<string>();
             ccRecipients.add(user.email);
+            if (settings.userId) {
+                ccRecipients.delete(settings.userId.toLowerCase());
+            }
             setForwardCc(Array.from(ccRecipients).join(', '));
             setForwardBcc('');
             setForwardComment('');
