@@ -96,7 +96,7 @@ export interface DetailedEmail extends Email {
 }
 
 export interface OrganizationMember {
-    uid?: string;
+    uid: string;
     name: string;
     email: string;
     address?: string;
@@ -1230,7 +1230,11 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
         return [];
     }
     
-    const members = (orgDoc.data().members || []) as OrganizationMember[];
+    const members = (orgDoc.data().members || []).map((m: any) => ({
+        ...m,
+        uid: m.uid || m.email, // Use email as a fallback key if uid is missing
+    })) as OrganizationMember[];
+    
     membersCache.set(cacheKey, members);
     return members;
 }
@@ -1529,3 +1533,4 @@ export async function updateCompany(
     
 
     
+
