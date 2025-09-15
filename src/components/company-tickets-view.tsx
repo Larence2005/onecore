@@ -5,12 +5,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany } from '@/app/actions';
 import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -64,6 +64,14 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [updatedEmployeeAddress, setUpdatedEmployeeAddress] = useState('');
     const [updatedEmployeeMobile, setUpdatedEmployeeMobile] = useState('');
     const [updatedEmployeeLandline, setUpdatedEmployeeLandline] = useState('');
+
+    const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+    const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+    const [newEmployeeName, setNewEmployeeName] = useState('');
+    const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
+    const [newEmployeeAddress, setNewEmployeeAddress] = useState('');
+    const [newEmployeeMobile, setNewEmployeeMobile] = useState('');
+    const [newEmployeeLandline, setNewEmployeeLandline] = useState('');
 
 
 
@@ -224,6 +232,39 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             toast({ variant: 'destructive', title: "Update Failed", description: errorMessage });
         } finally {
             setIsUpdatingEmployee(false);
+        }
+    };
+
+    const handleAddEmployee = async () => {
+        if (!company || !userProfile?.organizationId) return;
+        if (!newEmployeeName.trim() || !newEmployeeEmail.trim()) {
+            toast({ variant: 'destructive', title: "Name and email are required" });
+            return;
+        }
+
+        setIsAddingEmployee(true);
+        try {
+            const newEmployee: Employee = {
+                name: newEmployeeName,
+                email: newEmployeeEmail,
+                address: newEmployeeAddress,
+                mobile: newEmployeeMobile,
+                landline: newEmployeeLandline,
+            };
+            await addEmployeeToCompany(userProfile.organizationId, company.id, newEmployee);
+            toast({ title: "Employee Added", description: `${newEmployeeName} has been added to ${company.name}.` });
+            await fetchCompanyData();
+            setIsAddEmployeeDialogOpen(false);
+            setNewEmployeeName('');
+            setNewEmployeeEmail('');
+            setNewEmployeeAddress('');
+            setNewEmployeeMobile('');
+            setNewEmployeeLandline('');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({ variant: 'destructive', title: "Failed to add employee", description: errorMessage });
+        } finally {
+            setIsAddingEmployee(false);
         }
     };
 
@@ -526,9 +567,58 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                     </TabsContent>
                                     <TabsContent value="employees">
                                         <Card>
-                                            <CardHeader>
-                                                <CardTitle>Employees at {company?.name}</CardTitle>
-                                                <CardDescription>A list of employees associated with this company.</CardDescription>
+                                            <CardHeader className="flex items-center justify-between">
+                                                 <div>
+                                                    <CardTitle>Employees at {company?.name}</CardTitle>
+                                                    <CardDescription>A list of employees associated with this company.</CardDescription>
+                                                </div>
+                                                {isOwner && (
+                                                    <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
+                                                        <DialogTrigger asChild>
+                                                            <Button size="sm">
+                                                                <UserPlus className="mr-2 h-4 w-4" />
+                                                                Add Employee
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="sm:max-w-2xl">
+                                                            <DialogHeader>
+                                                                <DialogTitle>Add New Employee</DialogTitle>
+                                                                <DialogDescription>Enter the details for the new employee.</DialogDescription>
+                                                            </DialogHeader>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="new-employee-name">Name</Label>
+                                                                    <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="new-employee-email">Email</Label>
+                                                                    <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="new-employee-mobile">Mobile Number</Label>
+                                                                    <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label htmlFor="new-employee-landline">Landline</Label>
+                                                                    <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
+                                                                </div>
+                                                                <div className="space-y-2 sm:col-span-2">
+                                                                    <Label htmlFor="new-employee-address">Address</Label>
+                                                                    <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
+                                                                </div>
+                                                            </div>
+                                                            <DialogFooter>
+                                                                <DialogClose asChild>
+                                                                    <Button variant="outline">Cancel</Button>
+                                                                </DialogClose>
+                                                                <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
+                                                                    {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                    Save Employee
+                                                                </Button>
+                                                            </DialogFooter>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                )}
                                             </CardHeader>
                                             <CardContent>
                                                 {employees.length > 0 ? (
@@ -561,7 +651,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                         <User className="h-4 w-4" />
                                                         <AlertTitle>No Employees Found</AlertTitle>
                                                         <AlertDescription>
-                                                            No employees have been associated with this company yet. Assigning a ticket from a new contact will add them automatically.
+                                                           No employees have been associated with this company yet. You can add one manually.
                                                         </AlertDescription>
                                                     </Alert>
                                                 )}

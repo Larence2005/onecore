@@ -881,13 +881,6 @@ export async function updateTicket(
             }
 
             transaction.update(ticketDocRef, updateData);
-            
-            if (data.companyId && ticketData.senderEmail) {
-                await addEmployeeToCompany(organizationId, data.companyId, {
-                    name: ticketData.sender,
-                    email: ticketData.senderEmail,
-                });
-            }
         });
 
         // --- Post-transaction actions (like sending emails) ---
