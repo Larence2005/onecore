@@ -16,7 +16,7 @@ import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/ac
 import { getLatestEmails, getCompanies, fetchAndStoreFullConversation, getOrganizationMembers } from '@/app/actions';
 import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Image from 'next/image';
 
@@ -163,21 +163,18 @@ function HomePageContent() {
                 const convDocRef = doc(db, 'organizations', userProfile.organizationId!, 'conversations', conversationId);
                 const convUnsub = onSnapshot(convDocRef, async (convDoc) => {
                     if (convDoc.exists()) {
+                        const messages = convDoc.data()?.messages as DetailedEmail[];
+                        if (!messages || messages.length === 0) return;
+
+                        const lastMessage = messages[messages.length - 1];
+                        const allMembers = memberMap.size > 0 ? Array.from(memberMap.values()) : (await getOrganizationMembers(userProfile!.organizationId!)).map(m=>m.email);
+                        const isAgentReply = allMembers.some(m => m.toLowerCase() === lastMessage.senderEmail?.toLowerCase());
+
                          setEmails(prevEmails => {
                             const newEmails = [...prevEmails];
                             const ticketIndex = newEmails.findIndex(e => e.id === ticketDoc.id);
                             if (ticketIndex !== -1) {
-                                const messages = convDoc.data()?.messages as DetailedEmail[];
-                                if (messages && messages.length > 0) {
-                                    const lastMessage = messages[messages.length - 1];
-                                    const allMembers = memberMap.size > 0 ? Array.from(memberMap.keys()).map(uid => members.find(m=>m.uid===uid)?.email).filter(Boolean) as string[] : [];
-                                    
-                                    if (allMembers.some(m => m.toLowerCase() === lastMessage.senderEmail?.toLowerCase())) {
-                                        newEmails[ticketIndex].lastReplier = 'agent';
-                                    } else {
-                                        newEmails[ticketIndex].lastReplier = 'client';
-                                    }
-                                }
+                                newEmails[ticketIndex].lastReplier = isAgentReply ? 'agent' : 'client';
                             }
                             return newEmails;
                         });
@@ -356,3 +353,5 @@ export default function Home() {
       <HomePageContent />
   )
 }
+
+    
