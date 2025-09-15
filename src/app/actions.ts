@@ -1,4 +1,3 @@
-
 "use server";
 
 import type { Settings } from '@/providers/settings-provider';
@@ -871,15 +870,32 @@ export async function updateTicket(
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
                 const members = await getOrganizationMembers(organizationId);
-                const finalAssigneeId = data.assignee !== undefined ? data.assignee : ticketData.assignee;
-                const assignedAgent = members.find(m => m.uid === finalAssigneeId);
+                const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
+                const ownerUid = orgDoc.data()?.owner;
 
-                const ccRecipients: string[] = [];
-                if (assignedAgent && assignedAgent.email) {
-                    ccRecipients.push(assignedAgent.email);
+                const owner = members.find(m => m.uid === ownerUid);
+                const assignedAgent = members.find(m => m.uid === (data.assignee || ticketData.assignee));
+                
+                const detailedTicket = await getEmail(organizationId, id);
+                const emailParticipants = new Set<string>();
+
+                if (detailedTicket?.conversation) {
+                    detailedTicket.conversation.forEach(message => {
+                        if (message.senderEmail) emailParticipants.add(message.senderEmail.toLowerCase());
+                        message.toRecipients?.forEach(r => emailParticipants.add(r.emailAddress.address.toLowerCase()));
+                        message.ccRecipients?.forEach(r => emailParticipants.add(r.emailAddress.address.toLowerCase()));
+                    });
                 }
                 
-                // Notify the client, with agent in CC
+                // Add owner and agent emails to the participants set
+                if (owner?.email) emailParticipants.add(owner.email.toLowerCase());
+                if (assignedAgent?.email) emailParticipants.add(assignedAgent.email.toLowerCase());
+
+                // Remove the primary client from the participants set to avoid them being in CC
+                emailParticipants.delete(ticketData.senderEmail.toLowerCase());
+                
+                const ccRecipients = Array.from(emailParticipants);
+
                 const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                 const notificationBody = `
                     <p>Hello,</p>
@@ -889,6 +905,7 @@ export async function updateTicket(
                     <br>
                     <p>This is a notification-only message.</p>
                 `;
+
                 try {
                     await sendEmailAction(settings, {
                         recipient: ticketData.senderEmail,
