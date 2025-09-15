@@ -1,3 +1,4 @@
+
 "use server";
 
 import type { Settings } from '@/providers/settings-provider';
@@ -176,10 +177,24 @@ export async function getLatestEmails(settings: Settings, organizationId: string
     try {
         const authResponse = await getAccessToken(settings);
         if (!authResponse?.accessToken) {
-            // Silently fail if not configured
             console.log("Skipping email sync: API credentials not configured.");
             return;
         }
+
+        // --- Start of new logic: Gather all authorized emails ---
+        const authorizedEmails = new Set<string>();
+
+        // 1. Get organization members
+        const orgMembers = await getOrganizationMembers(organizationId);
+        orgMembers.forEach(member => authorizedEmails.add(member.email.toLowerCase()));
+
+        // 2. Get all employees from all companies
+        const companies = await getCompanies(organizationId);
+        for (const company of companies) {
+            const employees = await getCompanyEmployees(organizationId, company.id);
+            employees.forEach(employee => authorizedEmails.add(employee.email.toLowerCase()));
+        }
+        // --- End of new logic ---
 
         const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
@@ -204,7 +219,16 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                // This is a new conversation thread, create a new ticket
+                // This is a new conversation thread.
+                
+                // --- New check: Is sender authorized? ---
+                const senderEmail = email.from.emailAddress.address.toLowerCase();
+                if (!authorizedEmails.has(senderEmail)) {
+                    console.log(`Ignoring email from unauthorized sender: ${senderEmail}`);
+                    continue; // Skip to the next email
+                }
+                // --- End of new check ---
+                
                  const conversationThread = await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
                  if (conversationThread.length === 0) continue;
 
@@ -1502,6 +1526,8 @@ export async function updateCompany(
 
 
 
+
+    
 
     
 
