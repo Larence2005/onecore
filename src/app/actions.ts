@@ -892,7 +892,9 @@ export async function updateTicket(
 
                 const finalAssigneeId = data.assignee !== undefined ? data.assignee : ticketData.assignee;
                 const assignedAgentEmail = members.find(m => m.uid === finalAssigneeId)?.email;
-                if (assignedAgentEmail) allEmailsInThread.add(assignedAgentEmail.toLowerCase());
+                if (assignedAgentEmail) {
+                    allEmailsInThread.add(assignedAgentEmail.toLowerCase());
+                }
                 
                 // The client is the primary recipient, remove them from CC list
                 const clientEmailLower = ticketData.senderEmail.toLowerCase();
@@ -1508,6 +1510,8 @@ export async function updateCompany(
 
 
 
+
+    
 
     
 
