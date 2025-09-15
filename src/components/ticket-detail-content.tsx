@@ -590,7 +590,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if (message && user?.email) {
             setReplyingToMessageId(messageId);
             setReplyTo(message.senderEmail || '');
-
+    
             const allRecipients = new Set<string>();
             message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
@@ -599,16 +599,17 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (message.senderEmail) {
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
-
+    
             // Add the current user's email to the CC list
             allRecipients.add(user.email.toLowerCase());
-
+    
             setReplyCc(Array.from(allRecipients).join(', '));
             setReplyBcc('');
             setForwardingMessageId(null);
             setReplyContent('');
         }
     };
+    
 
     const handleCancelReply = () => {
         setReplyingToMessageId(null);
@@ -623,12 +624,15 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if(user?.email){
             setReplyingToMessageId(null);
             setForwardTo('');
-            setForwardCc(user.email);
+            const ccRecipients = new Set<string>();
+            ccRecipients.add(user.email);
+            setForwardCc(Array.from(ccRecipients).join(', '));
             setForwardBcc('');
             setForwardComment('');
             setForwardingMessageId(messageId);
         }
     };
+    
 
     const handleCancelForward = () => {
         setForwardingMessageId(null);
