@@ -364,9 +364,12 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
         companyId: null,
         assignee: null,
     };
+    let ticketId: string | null = null;
 
     if (!querySnapshot.empty) {
-        const ticketData = querySnapshot.docs[0].data();
+        const ticketDoc = querySnapshot.docs[0];
+        ticketId = ticketDoc.id;
+        const ticketData = ticketDoc.data();
         ticketProperties = {
             priority: ticketData.priority || 'Low',
             status: ticketData.status || 'Open',
@@ -404,17 +407,19 @@ export async function fetchAndStoreFullConversation(settings: Settings, organiza
     await setDoc(conversationDocRef, { messages: conversationMessages });
     
     // When a conversation is updated, we also need to update the main ticket's bodyPreview and received time
-    if (conversationMessages.length > 0) {
+    if (conversationMessages.length > 0 && !querySnapshot.empty) {
         const lastMessage = conversationMessages[conversationMessages.length - 1];
-
-        // Find the corresponding ticket document
-        if (!querySnapshot.empty) {
-            const ticketDocRef = querySnapshot.docs[0].ref;
-            await updateDoc(ticketDocRef, {
-                bodyPreview: lastMessage.bodyPreview,
-                receivedDateTime: lastMessage.receivedDateTime,
-            });
-        }
+        const ticketDocRef = querySnapshot.docs[0].ref;
+        await updateDoc(ticketDocRef, {
+            bodyPreview: lastMessage.bodyPreview,
+            receivedDateTime: lastMessage.receivedDateTime,
+        });
+    }
+    
+    // Invalidate caches to ensure the UI updates
+    if (ticketId) {
+        ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
+        ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
     }
 
 
@@ -1526,5 +1531,7 @@ export async function updateCompany(
 
       
 
+
+    
 
     
