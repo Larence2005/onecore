@@ -596,9 +596,15 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
     
-    // Add current user's email to CC if it's not already there
-    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e));
-    ccRecipients.add(currentUser.email);
+    // Combine provided CC with the current user's email
+    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e.trim() !== '').map(e => e.toLowerCase()));
+    ccRecipients.add(currentUser.email.toLowerCase());
+    
+    // Explicitly remove the admin email (sender email from settings) from the CC list
+    if (settings.userId) {
+        ccRecipients.delete(settings.userId.toLowerCase());
+    }
+
 
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
@@ -669,9 +675,13 @@ export async function forwardEmailAction(
         throw new Error("Forward recipient is required.");
     }
     
-    // Add current user's email to CC if it's not already there
-    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e));
-    ccRecipients.add(currentUser.email);
+    // Add current user's email to CC, but exclude the admin's email
+    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e.trim() !== '').map(e => e.toLowerCase()));
+    ccRecipients.add(currentUser.email.toLowerCase());
+
+    if (settings.userId) {
+        ccRecipients.delete(settings.userId.toLowerCase());
+    }
 
 
     const forwardPayload = {
@@ -1541,3 +1551,5 @@ export async function updateCompany(
     
 
     
+
+      
