@@ -181,21 +181,6 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             return;
         }
 
-        // --- Start of new logic: Gather all authorized emails ---
-        const authorizedEmails = new Set<string>();
-
-        // 1. Get organization members
-        const orgMembers = await getOrganizationMembers(organizationId);
-        orgMembers.forEach(member => authorizedEmails.add(member.email.toLowerCase()));
-
-        // 2. Get all employees from all companies
-        const companies = await getCompanies(organizationId);
-        for (const company of companies) {
-            const employees = await getCompanyEmployees(organizationId, company.id);
-            employees.forEach(employee => authorizedEmails.add(employee.email.toLowerCase()));
-        }
-        // --- End of new logic ---
-
         const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
@@ -220,31 +205,19 @@ export async function getLatestEmails(settings: Settings, organizationId: string
 
             if (querySnapshot.empty) {
                 // This is a new conversation thread.
-                
-                // --- New check: Is sender authorized? ---
-                const senderEmail = email.from.emailAddress.address.toLowerCase();
-                if (!authorizedEmails.has(senderEmail)) {
-                    console.log(`Ignoring email from unauthorized sender: ${senderEmail}`);
-                    continue; // Skip to the next email
-                }
-                // --- End of new check ---
-                
-                 const conversationThread = await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
-                 if (conversationThread.length === 0) continue;
+                // To prevent race conditions, create a ticket document immediately.
+                const ticketNumber = await getNextTicketNumber(organizationId);
+                const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
+                const ticketId = ticketDocRef.id;
 
-                 const firstMessage = conversationThread[0];
-                 const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
-                 const ticketId = ticketDocRef.id;
-                 const ticketNumber = await getNextTicketNumber(organizationId);
-
-                 const newTicketData = {
-                    id: ticketId, // Store the document's own ID
-                    title: firstMessage.subject || 'No Subject',
-                    sender: firstMessage.sender || 'Unknown Sender',
-                    senderEmail: firstMessage.senderEmail || 'Unknown Email',
-                    bodyPreview: firstMessage.bodyPreview,
-                    receivedDateTime: firstMessage.receivedDateTime,
-                    conversationId: firstMessage.conversationId,
+                const preliminaryTicketData = {
+                    id: ticketId,
+                    title: email.subject || 'No Subject',
+                    sender: email.from.emailAddress.name || 'Unknown Sender',
+                    senderEmail: email.from.emailAddress.address || 'Unknown Email',
+                    bodyPreview: email.bodyPreview,
+                    receivedDateTime: email.receivedDateTime,
+                    conversationId: email.conversationId,
                     priority: 'Low',
                     status: 'Open',
                     type: 'Incident',
@@ -254,15 +227,29 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     ticketNumber: ticketNumber,
                     assignee: null,
                 };
-                await setDoc(ticketDocRef, newTicketData);
 
-                // Add the "Ticket Created" activity log here
-                await addActivityLog(organizationId, ticketId, {
-                    type: 'Create',
-                    details: 'Ticket created',
-                    date: firstMessage.receivedDateTime,
-                    user: firstMessage.senderEmail || 'System',
-                });
+                try {
+                    // This set operation will fail if another process created it in the meantime,
+                    // which is fine, as we just want one.
+                    await setDoc(ticketDocRef, preliminaryTicketData);
+                    
+                    // Add the "Ticket Created" activity log here
+                    await addActivityLog(organizationId, ticketId, {
+                        type: 'Create',
+                        details: 'Ticket created',
+                        date: email.receivedDateTime,
+                        user: email.from.emailAddress.address || 'System',
+                    });
+
+                    // Now, fetch the full conversation in the background to populate conversation details.
+                    await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
+
+                } catch (e) {
+                    // This likely means a document with this ID was created by another process.
+                    // We can safely ignore this error and move on, as the ticket exists.
+                    console.log(`Ticket creation for conversation ${email.conversationId} skipped, likely already exists.`);
+                }
+
             } else {
                 // It's a reply to an existing ticket.
                 // Let's update the conversation in the background.
