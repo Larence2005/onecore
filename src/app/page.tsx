@@ -47,15 +47,16 @@ function HomePageContent() {
   });
 
   const syncLatestEmails = useCallback(async () => {
-    // Only the organization owner (who has the settings) should sync emails.
-    if (isConfigured && userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
+    // Any member of the organization can trigger a sync.
+    // The `getLatestEmails` action uses the owner's settings which are loaded by the SettingsProvider.
+    if (isConfigured && userProfile?.organizationId) {
         try {
             await getLatestEmails(settings, userProfile.organizationId);
         } catch (syncError) {
             // Silently fail, error is logged in the action
         }
     }
-  }, [settings, isConfigured, userProfile, user]);
+  }, [settings, isConfigured, userProfile]);
 
   useEffect(() => {
     if (!user || !userProfile?.organizationId) return;
@@ -357,3 +358,5 @@ export default function Home() {
       <HomePageContent />
   )
 }
+
+    
