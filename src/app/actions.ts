@@ -196,6 +196,18 @@ export async function getLatestEmails(settings: Settings, organizationId: string
         
         const emailsToProcess = data.value;
 
+        // Fetch all allowed email senders once
+        const allowedSenders = new Set<string>();
+        const orgMembers = await getOrganizationMembers(organizationId);
+        orgMembers.forEach(member => allowedSenders.add(member.email.toLowerCase()));
+
+        const clientCompanies = await getCompanies(organizationId);
+        for (const company of clientCompanies) {
+            const employees = await getCompanyEmployees(organizationId, company.id);
+            employees.forEach(employee => allowedSenders.add(employee.email.toLowerCase()));
+        }
+
+
         for (const email of emailsToProcess) {
             
             if (!email.conversationId) continue;
@@ -203,10 +215,16 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
             const q = query(ticketsCollectionRef, where('conversationId', '==', email.conversationId));
             const querySnapshot = await getDocs(q);
+            const senderEmail = email.from.emailAddress.address.toLowerCase();
+
 
             if (querySnapshot.empty) {
                 // This is a new conversation thread.
-                // To prevent race conditions, create a ticket document immediately.
+                // Only create a new ticket if the sender is an allowed contact.
+                if (!allowedSenders.has(senderEmail)) {
+                    continue; // Skip creating a ticket for this email
+                }
+
                 const ticketNumber = await getNextTicketNumber(organizationId);
                 const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
                 const ticketId = ticketDocRef.id;
@@ -230,11 +248,8 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                 };
 
                 try {
-                    // This set operation will fail if another process created it in the meantime,
-                    // which is fine, as we just want one.
                     await setDoc(ticketDocRef, preliminaryTicketData);
                     
-                    // Add the "Ticket Created" activity log here
                     await addActivityLog(organizationId, ticketId, {
                         type: 'Create',
                         details: 'Ticket created',
@@ -242,18 +257,15 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                         user: email.from.emailAddress.address || 'System',
                     });
 
-                    // Now, fetch the full conversation in the background to populate conversation details.
                     await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
 
                 } catch (e) {
-                    // This likely means a document with this ID was created by another process.
-                    // We can safely ignore this error and move on, as the ticket exists.
                     console.log(`Ticket creation for conversation ${email.conversationId} skipped, likely already exists.`);
                 }
 
             } else {
                 // It's a reply to an existing ticket.
-                // Let's update the conversation in the background.
+                // We should process replies from anyone, as long as it's an existing thread.
                 await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
             }
         }
