@@ -870,7 +870,39 @@ export async function updateTicket(
         // --- Post-transaction actions (like sending emails) ---
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
-                // Notify the client
+                
+                // Gather all emails to CC
+                const detailedTicket = await getEmail(organizationId, id);
+                const allEmailsInThread = new Set<string>();
+
+                if (detailedTicket?.conversation) {
+                    detailedTicket.conversation.forEach(message => {
+                        if (message.senderEmail) allEmailsInThread.add(message.senderEmail.toLowerCase());
+                        message.toRecipients?.forEach(r => allEmailsInThread.add(r.emailAddress.address.toLowerCase()));
+                        message.ccRecipients?.forEach(r => allEmailsInThread.add(r.emailAddress.address.toLowerCase()));
+                    });
+                }
+                
+                // Get admin and assignee emails
+                const members = await getOrganizationMembers(organizationId);
+                const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
+                const ownerId = orgDoc.data()?.owner;
+                const ownerEmail = members.find(m => m.uid === ownerId)?.email;
+                if(ownerEmail) allEmailsInThread.add(ownerEmail.toLowerCase());
+
+                const finalAssigneeId = data.assignee !== undefined ? data.assignee : ticketData.assignee;
+                const assignedAgentEmail = members.find(m => m.uid === finalAssigneeId)?.email;
+                if (assignedAgentEmail) allEmailsInThread.add(assignedAgentEmail.toLowerCase());
+                
+                // The client is the primary recipient, remove them from CC list
+                const clientEmailLower = ticketData.senderEmail.toLowerCase();
+                allEmailsInThread.delete(clientEmailLower);
+                // Also remove the current user who made the change from CC if they are in the list
+                allEmailsInThread.delete(currentUser.email.toLowerCase());
+
+                const ccRecipients = Array.from(allEmailsInThread).join(',');
+                
+                // Notify the client, with others in CC
                 const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                 const notificationBody = `
                     <p>Hello,</p>
@@ -883,32 +915,12 @@ export async function updateTicket(
                 try {
                     await sendEmailAction(settings, {
                         recipient: ticketData.senderEmail,
+                        cc: ccRecipients,
                         subject: notificationSubject,
                         body: notificationBody,
                     });
                 } catch (e) {
-                    console.error(`Failed to send resolution notification to client ${ticketData.senderEmail}:`, e);
-                }
-
-                // Notify the assigned agent (if they exist and are not the current user)
-                const finalAssigneeId = data.assignee !== undefined ? data.assignee : ticketData.assignee;
-                if (finalAssigneeId) {
-                    const members = await getOrganizationMembers(organizationId);
-                    const assignedAgent = members.find(m => m.uid === finalAssigneeId);
-
-                    if (assignedAgent && assignedAgent.email && assignedAgent.email !== currentUser.email) {
-                        const agentNotificationSubject = `[Resolved] Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
-                        const agentNotificationBody = `<p>The ticket assigned to you, #${ticketData.ticketNumber} ("${ticketData.title}"), was just marked as ${data.status} by ${currentUser.name}.</p>`;
-                        try {
-                            await sendEmailAction(settings, {
-                                recipient: assignedAgent.email,
-                                subject: agentNotificationSubject,
-                                body: agentNotificationBody,
-                            });
-                        } catch (e) {
-                            console.error(`Failed to send resolution notification to agent ${assignedAgent.email}:`, e);
-                        }
-                    }
+                    console.error(`Failed to send resolution notification for ticket ${id}:`, e);
                 }
             }
         }
@@ -1496,6 +1508,8 @@ export async function updateCompany(
 
 
 
+
+    
 
     
 
