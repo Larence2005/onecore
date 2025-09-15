@@ -181,22 +181,6 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             return;
         }
 
-        // --- Start: Fetch all authorized emails ---
-        const authorizedSenders = new Set<string>();
-        
-        // 1. Get organization members
-        const orgMembers = await getOrganizationMembers(organizationId);
-        orgMembers.forEach(member => authorizedSenders.add(member.email.toLowerCase()));
-
-        // 2. Get all employees from all client companies
-        const companies = await getCompanies(organizationId);
-        for (const company of companies) {
-            const employees = await getCompanyEmployees(organizationId, company.id);
-            employees.forEach(employee => authorizedSenders.add(employee.email.toLowerCase()));
-        }
-        // --- End: Fetch all authorized emails ---
-
-
         const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
@@ -214,15 +198,6 @@ export async function getLatestEmails(settings: Settings, organizationId: string
 
         for (const email of emailsToProcess) {
             
-            // --- Start: Validate sender ---
-            const senderEmail = email.from.emailAddress.address.toLowerCase();
-            if (!authorizedSenders.has(senderEmail)) {
-                // If sender is not authorized, skip this email
-                console.log(`Skipping email from unauthorized sender: ${senderEmail}`);
-                continue;
-            }
-             // --- End: Validate sender ---
-
             if (!email.conversationId) continue;
 
             const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
@@ -596,20 +571,10 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
     
-    // Combine provided CC with the current user's email
-    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e.trim() !== '').map(e => e.toLowerCase()));
-    ccRecipients.add(currentUser.email.toLowerCase());
-    
-    // Explicitly remove the admin email (sender email from settings) from the CC list
-    if (settings.userId) {
-        ccRecipients.delete(settings.userId.toLowerCase());
-    }
-
-
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
-            ccRecipients: Array.from(ccRecipients).map(email => ({ emailAddress: { address: email } })),
+            ccRecipients: parseRecipients(cc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
                 '@odata.type': '#microsoft.graph.fileAttachment',
@@ -675,19 +640,10 @@ export async function forwardEmailAction(
         throw new Error("Forward recipient is required.");
     }
     
-    // Add current user's email to CC, but exclude the admin's email
-    const ccRecipients = new Set((cc || '').split(/[,;]\s*/).filter(e => e.trim() !== '').map(e => e.toLowerCase()));
-    ccRecipients.add(currentUser.email.toLowerCase());
-
-    if (settings.userId) {
-        ccRecipients.delete(settings.userId.toLowerCase());
-    }
-
-
     const forwardPayload = {
         comment: `Forwarded by ${currentUser.name}:<br><br>${comment}`,
         toRecipients: toRecipients,
-        ccRecipients: Array.from(ccRecipients).map(email => ({ emailAddress: { address: email } })),
+        ccRecipients: parseRecipients(cc),
         bccRecipients: parseRecipients(bcc),
     };
 

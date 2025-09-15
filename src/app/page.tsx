@@ -108,7 +108,6 @@ function HomePageContent() {
                             const messages = conversationData.messages as DetailedEmail[];
                             if (messages && messages.length > 0) {
                                 const lastMessage = messages[messages.length - 1];
-                                // Check if sender is any of the organization members
                                 const allMembers = await getOrganizationMembers(userProfile.organizationId!);
                                 if(allMembers.some(m => m.email.toLowerCase() === lastMessage.senderEmail?.toLowerCase())) {
                                     lastReplier = 'agent';
@@ -155,7 +154,44 @@ function HomePageContent() {
             setIsLoading(false);
         });
 
-        return unsubscribe;
+        // Add listeners for all conversation documents to update lastReplier status
+        const conversationListeners = new Map<string, () => void>();
+        const ticketsSnapshot = await getDocs(q);
+        ticketsSnapshot.docs.forEach(ticketDoc => {
+            const conversationId = ticketDoc.data().conversationId;
+            if(conversationId) {
+                const convDocRef = doc(db, 'organizations', userProfile.organizationId!, 'conversations', conversationId);
+                const convUnsub = onSnapshot(convDocRef, async (convDoc) => {
+                    if (convDoc.exists()) {
+                         setEmails(prevEmails => {
+                            const newEmails = [...prevEmails];
+                            const ticketIndex = newEmails.findIndex(e => e.id === ticketDoc.id);
+                            if (ticketIndex !== -1) {
+                                const messages = convDoc.data()?.messages as DetailedEmail[];
+                                if (messages && messages.length > 0) {
+                                    const lastMessage = messages[messages.length - 1];
+                                    const allMembers = memberMap.size > 0 ? Array.from(memberMap.keys()).map(uid => members.find(m=>m.uid===uid)?.email).filter(Boolean) as string[] : [];
+                                    
+                                    if (allMembers.some(m => m.toLowerCase() === lastMessage.senderEmail?.toLowerCase())) {
+                                        newEmails[ticketIndex].lastReplier = 'agent';
+                                    } else {
+                                        newEmails[ticketIndex].lastReplier = 'client';
+                                    }
+                                }
+                            }
+                            return newEmails;
+                        });
+                    }
+                });
+                conversationListeners.set(conversationId, convUnsub);
+            }
+        });
+
+
+        return () => {
+            unsubscribe();
+            conversationListeners.forEach(unsub => unsub());
+        };
     };
     
     const unsubscribePromise = setupListener();
