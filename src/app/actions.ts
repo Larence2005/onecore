@@ -1,4 +1,3 @@
-
 "use server";
 
 import type { Settings } from '@/providers/settings-provider';
@@ -181,6 +180,22 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             return;
         }
 
+        // --- Start: Fetch all authorized emails ---
+        const authorizedSenders = new Set<string>();
+        
+        // 1. Get organization members
+        const orgMembers = await getOrganizationMembers(organizationId);
+        orgMembers.forEach(member => authorizedSenders.add(member.email.toLowerCase()));
+
+        // 2. Get all employees from all client companies
+        const companies = await getCompanies(organizationId);
+        for (const company of companies) {
+            const employees = await getCompanyEmployees(organizationId, company.id);
+            employees.forEach(employee => authorizedSenders.add(employee.email.toLowerCase()));
+        }
+        // --- End: Fetch all authorized emails ---
+
+
         const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
@@ -197,6 +212,16 @@ export async function getLatestEmails(settings: Settings, organizationId: string
         const emailsToProcess = data.value;
 
         for (const email of emailsToProcess) {
+            
+            // --- Start: Validate sender ---
+            const senderEmail = email.from.emailAddress.address.toLowerCase();
+            if (!authorizedSenders.has(senderEmail)) {
+                // If sender is not authorized, skip this email
+                console.log(`Skipping email from unauthorized sender: ${senderEmail}`);
+                continue;
+            }
+             // --- End: Validate sender ---
+
             if (!email.conversationId) continue;
 
             const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
@@ -1520,4 +1545,5 @@ export async function updateCompany(
     
 
     
+
 
