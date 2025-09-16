@@ -175,12 +175,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const [replyTo, setReplyTo] = useState('');
     const [replyCc, setReplyCc] = useState('');
     const [replyBcc, setReplyBcc] = useState('');
+    const [showReplyCc, setShowReplyCc] = useState(false);
+    const [showReplyBcc, setShowReplyBcc] = useState(false);
 
     const [forwardingMessageId, setForwardingMessageId] = useState<string | null>(null);
     const [forwardTo, setForwardTo] = useState('');
     const [forwardCc, setForwardCc] = useState('');
     const [forwardBcc, setForwardBcc] = useState('');
     const [forwardComment, setForwardComment] = useState('');
+    const [showForwardCc, setShowForwardCc] = useState(false);
+    const [showForwardBcc, setShowForwardBcc] = useState(false);
 
     const [isSending, setIsSending] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -503,6 +507,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyTo('');
             setReplyCc('');
             setReplyBcc('');
+            setShowReplyCc(false);
+            setShowReplyBcc(false);
 
         } catch (err)
             {
@@ -551,6 +557,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setForwardCc('');
             setForwardBcc('');
             setForwardComment('');
+            setShowForwardCc(false);
+            setShowForwardBcc(false);
     
             if (email?.conversationId) {
                 await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
@@ -577,6 +585,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyContent('');
             setReplyCc(user.email);
             setReplyBcc('');
+            setShowReplyCc(false);
+            setShowReplyBcc(false);
         }
     };
     
@@ -607,6 +617,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyBcc('');
             setForwardingMessageId(null);
             setReplyContent('');
+            setShowReplyCc(false);
+            setShowReplyBcc(false);
         }
     };
     
@@ -618,6 +630,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyTo('');
         setReplyCc('');
         setReplyBcc('');
+        setShowReplyCc(false);
+        setShowReplyBcc(false);
     };
 
     const handleForwardClick = (messageId: string) => {
@@ -633,6 +647,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setForwardBcc('');
             setForwardComment('');
             setForwardingMessageId(messageId);
+            setShowForwardCc(false);
+            setShowForwardBcc(false);
         }
     };
     
@@ -643,6 +659,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setForwardCc('');
         setForwardBcc('');
         setForwardComment('');
+        setShowForwardCc(false);
+        setShowForwardBcc(false);
     };
 
     const renderRecipientList = (recipients: Recipient[] | undefined) => {
@@ -650,6 +668,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         return recipients.map(r => r.emailAddress.address).join(', ');
     }
 
+    const isReplyCcVisible = showReplyCc || !!replyCc;
+    const isReplyBccVisible = showReplyBcc || !!replyBcc;
+    const isForwardCcVisible = showForwardCc || !!forwardCc;
+    const isForwardBccVisible = showForwardBcc || !!forwardBcc;
     
     const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => {
         const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
@@ -751,37 +773,49 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 </Alert>
                             ) : (
                                 <>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="reply-to">To</Label>
+                                    <div className="flex items-center gap-2 border-b">
+                                        <Label htmlFor="reply-to" className="py-2.5">To</Label>
                                         <Input 
                                             id="reply-to"
                                             value={replyTo}
                                             readOnly
-                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                            className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
                                         />
+                                        <div className="flex-shrink-0">
+                                            {!isReplyCcVisible && (
+                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyCc(true)}>Cc</Button>
+                                            )}
+                                            {!isReplyBccVisible && (
+                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyBcc(true)}>Bcc</Button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="reply-cc">Cc</Label>
-                                        <AutocompleteInput 
-                                            id="reply-cc"
-                                            suggestions={members}
-                                            value={replyCc}
-                                            onChange={setReplyCc}
-                                            placeholder="cc@example.com" 
-                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="reply-bcc">Bcc</Label>
-                                        <AutocompleteInput
-                                            id="reply-bcc"
-                                            suggestions={members}
-                                            value={replyBcc}
-                                            onChange={setReplyBcc}
-                                            placeholder="bcc@example.com"
-                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                        />
-                                    </div>
+                                    {isReplyCcVisible && (
+                                        <div className="flex items-center gap-2 border-b">
+                                            <Label htmlFor="reply-cc" className="py-2.5">Cc</Label>
+                                            <AutocompleteInput 
+                                                id="reply-cc"
+                                                suggestions={members}
+                                                value={replyCc}
+                                                onChange={setReplyCc}
+                                                placeholder="cc@example.com" 
+                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                            />
+                                        </div>
+                                    )}
+                                    {isReplyBccVisible && (
+                                        <div className="flex items-center gap-2 border-b">
+                                            <Label htmlFor="reply-bcc" className="py-2.5">Bcc</Label>
+                                            <AutocompleteInput
+                                                id="reply-bcc"
+                                                suggestions={members}
+                                                value={replyBcc}
+                                                onChange={setReplyBcc}
+                                                placeholder="bcc@example.com"
+                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                            />
+                                        </div>
+                                    )}
                                     <RichTextEditor
                                         value={replyContent}
                                         onChange={setReplyContent}
@@ -853,40 +887,52 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 </Alert>
                             ) : (
                                 <>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="forward-to">To</Label>
+                                    <div className="flex items-center gap-2 border-b">
+                                        <Label htmlFor="forward-to" className="py-2.5">To</Label>
                                         <AutocompleteInput 
                                             id="forward-to"
                                             suggestions={members}
                                             value={forwardTo}
                                             onChange={setForwardTo}
                                             placeholder="recipient@example.com"
-                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                                            className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                        />
+                                        <div className="flex-shrink-0">
+                                            {!isForwardCcVisible && (
+                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowForwardCc(true)}>Cc</Button>
+                                            )}
+                                            {!isForwardBccVisible && (
+                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowForwardBcc(true)}>Bcc</Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {isForwardCcVisible && (
+                                        <div className="flex items-center gap-2 border-b">
+                                            <Label htmlFor="forward-cc" className="py-2.5">Cc</Label>
+                                            <AutocompleteInput
+                                                id="forward-cc"
+                                                suggestions={members}
+                                                value={forwardCc}
+                                                onChange={setForwardCc}
+                                                placeholder="cc@example.com"
+                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
                                             />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="forward-cc">Cc</Label>
-                                        <AutocompleteInput
-                                            id="forward-cc"
-                                            suggestions={members}
-                                            value={forwardCc}
-                                            onChange={setForwardCc}
-                                            placeholder="cc@example.com"
-                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="forward-bcc">Bcc</Label>
-                                        <AutocompleteInput
-                                            id="forward-bcc"
-                                            suggestions={members}
-                                            value={forwardBcc}
-                                            onChange={setForwardBcc}
-                                            placeholder="bcc@example.com"
-                                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
+                                        </div>
+                                    )}
+                                    {isForwardBccVisible && (
+                                        <div className="flex items-center gap-2 border-b">
+                                            <Label htmlFor="forward-bcc" className="py-2.5">Bcc</Label>
+                                            <AutocompleteInput
+                                                id="forward-bcc"
+                                                suggestions={members}
+                                                value={forwardBcc}
+                                                onChange={setForwardBcc}
+                                                placeholder="bcc@example.com"
+                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="space-y-2 pt-4">
                                         <Label htmlFor="forward-comment">Comment (optional)</Label>
                                         <RichTextEditor
                                             value={forwardComment}
