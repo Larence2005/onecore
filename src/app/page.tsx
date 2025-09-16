@@ -351,108 +351,106 @@ function HomePageContent() {
 
         <main className="flex-1 flex flex-col min-w-0">
           <Header>
-            <div className="flex items-center justify-between w-full">
-                <div>
-                    {activeView === 'tickets' && <h1 className="text-xl font-bold">Tickets</h1>}
-                    {activeView === 'compose' && <h1 className="text-xl font-bold">Compose</h1>}
-                    {activeView === 'analytics' && <h1 className="text-xl font-bold">Dashboard</h1>}
-                    {activeView === 'clients' && <h1 className="text-xl font-bold">Clients</h1>}
-                    {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
-                    {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
-                    {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
-                </div>
-                {activeView === 'analytics' && (
-                <div className="flex items-center gap-4">
-                    <div className="grid items-center gap-1.5">
-                        <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                            <SelectTrigger id="company-filter" className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Select a company" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    <div className="flex items-center gap-2">
-                                        <Building className="h-4 w-4" />
-                                        All Companies
-                                    </div>
-                                </SelectItem>
-                                {companies.map(company => (
-                                    <SelectItem key={company.id} value={company.id}>
-                                        {company.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid items-center">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full sm:w-[240px] justify-start text-left font-normal",
-                                    !customDateRange && dateRangeOption === 'all' && "text-muted-foreground"
-                                )}
-                                >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRangeOption === 'custom' && customDateRange?.from ? (
-                                    customDateRange.to ? (
-                                    <>
-                                        {format(customDateRange.from, "LLL dd, y")} -{" "}
-                                        {format(customDateRange.to, "LLL dd, y")}
-                                    </>
-                                    ) : (
-                                    format(customDateRange.from, "LLL dd, y")
-                                    )
-                                ) : (
-                                    {
-                                    'all': 'All Time',
-                                    '7d': 'Last 7 Days',
-                                    '30d': 'Last 30 Days',
-                                    '90d': 'Last 90 Days',
-                                    'custom': 'Custom Range'
-                                    }[dateRangeOption] || 'Select a date range'
-                                )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                                <Select
-                                    onValueChange={(value) => {
-                                        setDateRangeOption(value);
-                                        if (value !== 'custom') {
-                                            setCustomDateRange(undefined);
-                                        }
-                                    }}
-                                    value={dateRangeOption}
-                                >
-                                    <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
-                                        <SelectValue placeholder="Select a range" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Time</SelectItem>
-                                        <SelectItem value="7d">Last 7 Days</SelectItem>
-                                        <SelectItem value="30d">Last 30 Days</SelectItem>
-                                        <SelectItem value="90d">Last 90 Days</SelectItem>
-                                        <SelectItem value="custom">Custom Range</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={customDateRange?.from}
-                                    selected={customDateRange}
-                                    onSelect={(range) => {
-                                        setCustomDateRange(range)
-                                        if(range) setDateRangeOption('custom')
-                                    }}
-                                    numberOfMonths={2}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </div>
-                )}
+            <div className="flex-1">
+                {activeView === 'tickets' && <h1 className="text-xl font-bold">Tickets</h1>}
+                {activeView === 'compose' && <h1 className="text-xl font-bold">Compose</h1>}
+                {activeView === 'analytics' && <h1 className="text-xl font-bold">Dashboard</h1>}
+                {activeView === 'clients' && <h1 className="text-xl font-bold">Clients</h1>}
+                {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
+                {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
+                {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
             </div>
+            {activeView === 'analytics' && (
+            <div className="flex flex-1 justify-end items-center gap-4">
+                <div className="grid items-center gap-1.5">
+                    <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                        <SelectTrigger id="company-filter" className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-4 w-4" />
+                                    All Companies
+                                </div>
+                            </SelectItem>
+                            {companies.map(company => (
+                                <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid items-center">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                                "w-full sm:w-[240px] justify-start text-left font-normal",
+                                !customDateRange && dateRangeOption === 'all' && "text-muted-foreground"
+                            )}
+                            >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRangeOption === 'custom' && customDateRange?.from ? (
+                                customDateRange.to ? (
+                                <>
+                                    {format(customDateRange.from, "LLL dd, y")} -{" "}
+                                    {format(customDateRange.to, "LLL dd, y")}
+                                </>
+                                ) : (
+                                format(customDateRange.from, "LLL dd, y")
+                                )
+                            ) : (
+                                {
+                                'all': 'All Time',
+                                '7d': 'Last 7 Days',
+                                '30d': 'Last 30 Days',
+                                '90d': 'Last 90 Days',
+                                'custom': 'Custom Range'
+                                }[dateRangeOption] || 'Select a date range'
+                            )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                            <Select
+                                onValueChange={(value) => {
+                                    setDateRangeOption(value);
+                                    if (value !== 'custom') {
+                                        setCustomDateRange(undefined);
+                                    }
+                                }}
+                                value={dateRangeOption}
+                            >
+                                <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
+                                    <SelectValue placeholder="Select a range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Time</SelectItem>
+                                    <SelectItem value="7d">Last 7 Days</SelectItem>
+                                    <SelectItem value="30d">Last 30 Days</SelectItem>
+                                    <SelectItem value="90d">Last 90 Days</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={customDateRange?.from}
+                                selected={customDateRange}
+                                onSelect={(range) => {
+                                    setCustomDateRange(range)
+                                    if(range) setDateRangeOption('custom')
+                                }}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+            </div>
+            )}
           </Header>
           <MainView 
               activeView={activeView} 

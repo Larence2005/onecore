@@ -14,8 +14,10 @@ export function Header({ children }: HeaderProps) {
             <div className="lg:hidden">
                 <SidebarTrigger />
             </div>
-            {children}
         </div>
+        {children}
     </header>
   );
 }
+
+    
