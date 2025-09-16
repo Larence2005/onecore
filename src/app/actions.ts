@@ -212,7 +212,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             
             if (!email.conversationId) continue;
             
-            // SECURITY: Always check if the sender is an allowed contact first.
+            // SECURITY: Always check if the sender is an allowed contact first, regardless of new ticket or reply.
             const senderEmail = email.from.emailAddress.address.toLowerCase();
             if (!allowedSenders.has(senderEmail)) {
                 continue; // Skip this email entirely if the sender is unknown.
@@ -1531,6 +1531,8 @@ export async function updateCompany(
 
       
 
+
+    
 
     
 
