@@ -8,15 +8,20 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity, Building } from 'lucide-react';
+import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity, Building, Calendar as CalendarIcon } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
-import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays, subDays, isAfter } from 'date-fns';
+import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays, subDays, isAfter, format, isBefore } from 'date-fns';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { useAuth } from '@/providers/auth-provider';
 import { TimelineItem } from './timeline-item';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Label } from './ui/label';
+import { DateRange } from 'react-day-picker';
+import { Button } from './ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { cn } from '@/lib/utils';
+import { Calendar } from './ui/calendar';
 
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
@@ -38,7 +43,8 @@ export function DashboardView() {
     const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
-    const [dateRange, setDateRange] = useState<string>('all');
+    const [dateRangeOption, setDateRangeOption] = useState<string>('all');
+    const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
@@ -82,22 +88,27 @@ export function DashboardView() {
             ? tickets
             : tickets.filter(t => t.companyId === selectedCompanyId);
 
-        const dateFilteredTickets = dateRange === 'all'
-            ? companyFilteredTickets
-            : companyFilteredTickets.filter(t => {
-                const ticketDate = parseISO(t.receivedDateTime);
+        const dateFilteredTickets = companyFilteredTickets.filter(t => {
+            const ticketDate = parseISO(t.receivedDateTime);
+            
+            if (dateRangeOption !== 'custom' && dateRangeOption !== 'all') {
                 let startDate: Date;
-                if (dateRange === '7d') {
+                if (dateRangeOption === '7d') {
                     startDate = subDays(new Date(), 7);
-                } else if (dateRange === '30d') {
+                } else if (dateRangeOption === '30d') {
                     startDate = subDays(new Date(), 30);
-                } else if (dateRange === '90d') {
+                } else if (dateRangeOption === '90d') {
                     startDate = subDays(new Date(), 90);
                 } else {
-                    return true;
+                    return true; // Should not happen
                 }
                 return isAfter(ticketDate, startDate);
-            });
+            } else if (dateRangeOption === 'custom' && customDateRange?.from && customDateRange?.to) {
+                 return isAfter(ticketDate, customDateRange.from) && isBefore(ticketDate, customDateRange.to);
+            }
+            // If 'all' or custom is not fully selected, include all tickets from company filter
+            return true;
+        });
 
         const filteredTickets = dateFilteredTickets;
 
@@ -145,7 +156,7 @@ export function DashboardView() {
             .slice(0, 5);
         
         return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
-    }, [tickets, selectedCompanyId, dateRange]);
+    }, [tickets, selectedCompanyId, dateRangeOption, customDateRange]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
         'Low': '#22c55e',
@@ -215,7 +226,7 @@ export function DashboardView() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-end gap-4">
                 <div className="grid w-full max-w-sm items-center gap-1.5">
                     <Label htmlFor="company-filter">Filter by Company</Label>
                     <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
@@ -239,17 +250,56 @@ export function DashboardView() {
                 </div>
                  <div className="grid w-full max-w-sm items-center gap-1.5">
                     <Label htmlFor="date-range-filter">Filter by Date</Label>
-                    <Select value={dateRange} onValueChange={setDateRange}>
-                        <SelectTrigger id="date-range-filter" className="w-[280px]">
-                            <SelectValue placeholder="Select a date range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Time</SelectItem>
-                            <SelectItem value="7d">Last 7 Days</SelectItem>
-                            <SelectItem value="30d">Last 30 Days</SelectItem>
-                            <SelectItem value="90d">Last 90 Days</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                        <Select value={dateRangeOption} onValueChange={(value) => { setDateRangeOption(value); if (value !== 'custom') setCustomDateRange(undefined); }}>
+                            <SelectTrigger id="date-range-filter">
+                                <SelectValue placeholder="Select a date range" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="7d">Last 7 Days</SelectItem>
+                                <SelectItem value="30d">Last 30 Days</SelectItem>
+                                <SelectItem value="90d">Last 90 Days</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                    "w-[280px] justify-start text-left font-normal",
+                                    !customDateRange && "text-muted-foreground"
+                                )}
+                                onClick={() => setDateRangeOption('custom')}
+                                >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {customDateRange?.from ? (
+                                    customDateRange.to ? (
+                                    <>
+                                        {format(customDateRange.from, "LLL dd, y")} -{" "}
+                                        {format(customDateRange.to, "LLL dd, y")}
+                                    </>
+                                    ) : (
+                                    format(customDateRange.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Custom Range</span>
+                                )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={customDateRange?.from}
+                                    selected={customDateRange}
+                                    onSelect={setCustomDateRange}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 </div>
             </div>
 
@@ -400,3 +450,5 @@ export function DashboardView() {
         </div>
     );
 }
+
+    
