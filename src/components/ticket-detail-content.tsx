@@ -129,7 +129,7 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
             {parse(styledHtml(mainContent))}
             {quotedContent && (
                  <Accordion type="single" collapsible className="my-4 border-0">
-                    <AccordionItem value="item-1" className="border-l pl-4">
+                    <AccordionItem value="item-1" className="pl-4">
                         <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
                             <MoreHorizontal className="h-4 w-4" />
                         </AccordionTrigger>
