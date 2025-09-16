@@ -33,12 +33,15 @@ interface AuthContextType {
   logout: () => Promise<void>;
   fetchUserProfile: (user: User) => Promise<void>;
   signInWithGoogle: () => Promise<any>;
+  getLockoutEndTime: () => number | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const MAX_LOGIN_ATTEMPTS = 3;
 const LOCKOUT_DURATION = 60 * 1000; // 1 minute in milliseconds
+const LOGIN_ATTEMPTS_KEY = 'loginAttempts';
+
 
 export class LockoutError extends Error {
     public lockoutUntil: number;
@@ -55,6 +58,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginAttempts, setLoginAttempts] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Load attempts from localStorage on initial load
+    try {
+        const storedAttempts = localStorage.getItem(LOGIN_ATTEMPTS_KEY);
+        if (storedAttempts) {
+            const parsedAttempts = JSON.parse(storedAttempts) as number[];
+            const now = Date.now();
+            // Filter out attempts that are older than the lockout duration
+            const recentAttempts = parsedAttempts.filter(attempt => now - attempt < LOCKOUT_DURATION);
+            setLoginAttempts(recentAttempts);
+        }
+    } catch (e) {
+        console.error("Failed to parse login attempts from localStorage", e);
+    }
+  }, []);
+
+  const getLockoutEndTime = useCallback(() => {
+    const now = Date.now();
+    const recentAttempts = loginAttempts.filter(attempt => now - attempt < LOCKOUT_DURATION);
+    if (recentAttempts.length >= MAX_LOGIN_ATTEMPTS) {
+        const lastAttempt = recentAttempts[recentAttempts.length - 1];
+        return lastAttempt + LOCKOUT_DURATION;
+    }
+    return null;
+  }, [loginAttempts]);
 
   const fetchUserProfile = useCallback(async (user: User) => {
     if (!user.email) {
@@ -88,6 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if(members.some(m => m.email === user.email && !m.uid)) {
                  q = query(organizationsRef, where("__name__", "==", orgDoc.id));
                  orgSnapshot = await getDocs(q);
+                 
+                 // Add the UID to the member record
+                 if (!orgSnapshot.empty) {
+                    const orgToUpdateRef = orgDoc.ref;
+                    const updatedMembers = members.map(m => m.email === user.email ? { ...m, uid: user.uid } : m);
+                    await updateDoc(orgToUpdateRef, { members: updatedMembers });
+                 }
+
                  break;
             }
         }
@@ -95,24 +132,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     if (!orgSnapshot.empty) {
-        const orgDoc = orgSnapshot.docs[0];
-        const orgData = orgDoc.data();
-        const memberInfo = (orgData.members as {name: string, email: string, uid?: string}[]).find(m => m.email === user.email);
+      const orgDoc = orgSnapshot.docs[0];
+      const orgData = orgDoc.data();
+      const memberData = (orgData.members || []).find((m: any) => m.uid === user.uid || m.email === user.email);
 
-        setUserProfile({
-            uid: user.uid,
-            email: user.email,
-            name: memberInfo?.name || user.email,
-            organizationId: orgDoc.id,
-            organizationName: orgData.name,
-            organizationOwnerUid: orgData.owner,
-            address: orgData.address,
-            mobile: orgData.mobile,
-            landline: orgData.landline,
-            website: orgData.website,
-        });
+      setUserProfile({
+        uid: user.uid,
+        email: user.email,
+        name: memberData?.name || user.displayName || user.email,
+        organizationId: orgDoc.id,
+        organizationName: orgData.name,
+        organizationOwnerUid: orgData.owner,
+        address: orgData.address,
+        mobile: orgData.mobile,
+        landline: orgData.landline,
+        website: orgData.website,
+      });
     } else {
-        setUserProfile({ uid: user.uid, email: user.email, name: user.email });
+      // User is authenticated but doesn't belong to any organization
+      const userSettingsDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userSettingsDoc.exists()) {
+           setUserProfile({
+                uid: user.uid,
+                email: user.email!,
+                name: user.displayName || user.email!,
+           });
+      } else {
+        setUserProfile(null);
+      }
     }
   }, []);
 
@@ -120,7 +167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        setLoginAttempts([]); // Clear attempts on successful login
         await fetchUserProfile(user);
       } else {
         setUser(null);
@@ -128,92 +174,143 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, [fetchUserProfile]);
+  
+  const handleLoginSuccess = () => {
+    localStorage.removeItem(LOGIN_ATTEMPTS_KEY);
+    setLoginAttempts([]);
+  };
 
   const signup = async (data: SignUpFormData) => {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const user = userCredential.user;
-
-    if (user && user.email) {
-        await createOrganization(data.organizationName, user.uid, data.name, user.email);
-        await fetchUserProfile(user);
-    }
-    return userCredential;
-  }
+    
+    // Create the organization in Firestore
+    await createOrganization(data.organizationName, userCredential.user.uid, data.name, data.email);
+    
+    // Create the user-specific settings document
+    await setDoc(doc(db, "users", userCredential.user.uid), {
+        name: data.name,
+        email: data.email,
+        // Default empty settings
+        clientId: "",
+        tenantId: "",
+        clientSecret: "",
+    });
+    
+    await fetchUserProfile(userCredential.user);
+    handleLoginSuccess();
+  };
   
   const memberSignup = async (data: MemberSignUpFormData) => {
     const organizationsRef = collection(db, "organizations");
+    const q = query(organizationsRef, where("members", "array-contains", { email: data.email, name: '' })); // This is a limitation, we can't query partial objects easily.
     
-    let orgDocToUpdate = null;
-    let memberToUpdate = null;
-    
-    // We can't query for a partial object in an array, so we fetch all orgs and check manually.
-    // This is not ideal for very large numbers of organizations, but it's the most reliable way on Firestore.
-    const allOrgsSnapshot = await getDocs(organizationsRef);
-    for (const doc of allOrgsSnapshot.docs) {
-        const members = doc.data().members as any[];
-        // Find a member that has a matching email and does NOT have a UID yet. This identifies an open invitation.
-        const foundMember = members.find(m => m.email === data.email && !m.uid);
-        if (foundMember) {
-            orgDocToUpdate = doc.ref;
-            memberToUpdate = foundMember;
-            break; // Stop searching once we find a match
-        }
+    let orgId: string | null = null;
+    let memberName: string | null = null;
+    const orgsSnapshot = await getDocs(collection(db, "organizations"));
+
+    for(const orgDoc of orgsSnapshot.docs) {
+      const members = orgDoc.data().members as {email: string, name: string}[];
+      const foundMember = members.find(m => m.email.toLowerCase() === data.email.toLowerCase());
+      if (foundMember) {
+        orgId = orgDoc.id;
+        memberName = foundMember.name;
+        break;
+      }
     }
 
-    if (!orgDocToUpdate || !memberToUpdate) {
-        throw new Error("Your email has not been invited to an organization. Please contact your administrator.");
+    if (!orgId) {
+      throw new Error("You have not been invited to any organization. Please contact your administrator.");
     }
     
-    // Create the user
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const user = userCredential.user;
-
-    if (user) {
-        // Update the member record with the new UID
-        const updatedMember = { ...memberToUpdate, uid: user.uid };
-        const orgData = (await getDoc(orgDocToUpdate)).data();
-        const updatedMembers = (orgData?.members || []).map((m: any) => m.email === data.email ? updatedMember : m);
-
-        await updateDoc(orgDocToUpdate, { members: updatedMembers });
-
-        await fetchUserProfile(user);
-    }
     
-    return userCredential;
-  };
+    // Add the UID to the member in the organization
+    const orgRef = doc(db, 'organizations', orgId);
+    const orgDoc = await getDoc(orgRef);
+    if(orgDoc.exists()){
+        const members = orgDoc.data().members as {name: string, email: string, uid?: string}[];
+        const updatedMembers = members.map(m => m.email.toLowerCase() === data.email.toLowerCase() ? { ...m, uid: userCredential.user.uid } : m);
+        await updateDoc(orgRef, { members: updatedMembers });
+    }
 
+    // Create user settings doc
+    await setDoc(doc(db, "users", userCredential.user.uid), {
+        name: memberName,
+        email: data.email,
+    });
+    
+    await fetchUserProfile(userCredential.user);
+    handleLoginSuccess();
+  }
+  
+  const recordFailedLogin = () => {
+    const now = Date.now();
+    const updatedAttempts = [...loginAttempts, now];
+    localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(updatedAttempts));
+    setLoginAttempts(updatedAttempts);
+    return updatedAttempts;
+};
 
   const login = async (data: LoginFormData) => {
-    const now = Date.now();
-    const recentAttempts = loginAttempts.filter(attempt => now - attempt < LOCKOUT_DURATION);
-
-    if (recentAttempts.length >= MAX_LOGIN_ATTEMPTS) {
-        const lastAttempt = recentAttempts[recentAttempts.length - 1];
-        const lockoutUntil = lastAttempt + LOCKOUT_DURATION;
-        throw new LockoutError(`Too many failed login attempts.`, lockoutUntil);
+    const lockoutEndTime = getLockoutEndTime();
+    if (lockoutEndTime && Date.now() < lockoutEndTime) {
+        throw new LockoutError('Too many failed login attempts.', lockoutEndTime);
     }
-
+    
     try {
         const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-        setLoginAttempts([]); // Clear attempts on successful login
-        return userCredential;
-    } catch (error) {
-        setLoginAttempts(prev => [...prev, Date.now()]);
-        throw error; // Re-throw the original Firebase error to be displayed
+        await fetchUserProfile(userCredential.user);
+        handleLoginSuccess();
+    } catch(error) {
+        const attempts = recordFailedLogin();
+        const now = Date.now();
+        const recentAttempts = attempts.filter(a => now - a < LOCKOUT_DURATION);
+
+        if (recentAttempts.length >= MAX_LOGIN_ATTEMPTS) {
+            const newLockoutTime = (recentAttempts[recentAttempts.length - 1] || now) + LOCKOUT_DURATION;
+            throw new LockoutError('Too many failed login attempts.', newLockoutTime);
+        }
+        
+        throw error;
     }
-  }
-
-  const signInWithGoogle = () => {
-    const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
-  }
-
-  const logout = () => {
-    return signOut(auth);
   };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
+  
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        // This gives you a Google Access Token. You can use it to access the Google API.
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential?.accessToken;
+        
+        const user = result.user;
+
+        // Check if user exists in Firestore
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+             // New user, create a document. For now, we assume they are not part of an org.
+             await setDoc(userDocRef, {
+                name: user.displayName,
+                email: user.email,
+             });
+        }
+        
+        await fetchUserProfile(user);
+        handleLoginSuccess();
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        throw error;
+    }
+  };
+
 
   const value = {
     user,
@@ -224,16 +321,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     fetchUserProfile,
-    signInWithGoogle
+    signInWithGoogle,
+    getLockoutEndTime,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
