@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity, Building } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
-import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays } from 'date-fns';
+import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays, subDays, isAfter } from 'date-fns';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { useAuth } from '@/providers/auth-provider';
@@ -38,6 +38,7 @@ export function DashboardView() {
     const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
+    const [dateRange, setDateRange] = useState<string>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
@@ -77,9 +78,28 @@ export function DashboardView() {
     }, [userProfile, toast]);
     
     const stats = useMemo(() => {
-        const filteredTickets = selectedCompanyId === 'all'
+        const companyFilteredTickets = selectedCompanyId === 'all'
             ? tickets
             : tickets.filter(t => t.companyId === selectedCompanyId);
+
+        const dateFilteredTickets = dateRange === 'all'
+            ? companyFilteredTickets
+            : companyFilteredTickets.filter(t => {
+                const ticketDate = parseISO(t.receivedDateTime);
+                let startDate: Date;
+                if (dateRange === '7d') {
+                    startDate = subDays(new Date(), 7);
+                } else if (dateRange === '30d') {
+                    startDate = subDays(new Date(), 30);
+                } else if (dateRange === '90d') {
+                    startDate = subDays(new Date(), 90);
+                } else {
+                    return true;
+                }
+                return isAfter(ticketDate, startDate);
+            });
+
+        const filteredTickets = dateFilteredTickets;
 
         const totalTickets = filteredTickets.length;
         const openTickets = filteredTickets.filter(t => t.status === 'Open' || t.status === 'Pending').length;
@@ -125,7 +145,7 @@ export function DashboardView() {
             .slice(0, 5);
         
         return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
-    }, [tickets, selectedCompanyId]);
+    }, [tickets, selectedCompanyId, dateRange]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
         'Low': '#22c55e',
@@ -195,26 +215,42 @@ export function DashboardView() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-                <Label htmlFor="company-filter">Filter by Company</Label>
-                 <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                    <SelectTrigger id="company-filter" className="w-[280px]">
-                        <SelectValue placeholder="Select a company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">
-                            <div className="flex items-center gap-2">
-                                <Building className="h-4 w-4" />
-                                All Companies
-                            </div>
-                        </SelectItem>
-                        {companies.map(company => (
-                            <SelectItem key={company.id} value={company.id}>
-                                {company.name}
+            <div className="flex flex-wrap gap-4">
+                <div className="grid w-full max-w-sm items-center gap-1.5">
+                    <Label htmlFor="company-filter">Filter by Company</Label>
+                    <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                        <SelectTrigger id="company-filter" className="w-[280px]">
+                            <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-4 w-4" />
+                                    All Companies
+                                </div>
                             </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                            {companies.map(company => (
+                                <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="grid w-full max-w-sm items-center gap-1.5">
+                    <Label htmlFor="date-range-filter">Filter by Date</Label>
+                    <Select value={dateRange} onValueChange={setDateRange}>
+                        <SelectTrigger id="date-range-filter" className="w-[280px]">
+                            <SelectValue placeholder="Select a date range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="7d">Last 7 Days</SelectItem>
+                            <SelectItem value="30d">Last 30 Days</SelectItem>
+                            <SelectItem value="90d">Last 90 Days</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
