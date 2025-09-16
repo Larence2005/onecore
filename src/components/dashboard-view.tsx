@@ -250,7 +250,7 @@ export function DashboardView() {
                     </Select>
                 </div>
                  <div className="grid w-full max-w-sm items-center">
-                    <Label htmlFor="date-range-filter" className="mb-1.5">Filter by Date</Label>
+                    <Label htmlFor="date-range-filter">Filter by Date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
