@@ -37,10 +37,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOCKOUT_DURATION = 60 * 1000; // 1 minute in milliseconds
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loginAttempts, setLoginAttempts] = useState<number[]>([]);
 
   const fetchUserProfile = useCallback(async (user: User) => {
     if (!user.email) {
@@ -106,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
+        setLoginAttempts([]); // Clear attempts on successful login
         await fetchUserProfile(user);
       } else {
         setUser(null);
@@ -171,8 +176,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
 
-  const login = (data: LoginFormData) => {
-    return signInWithEmailAndPassword(auth, data.email, data.password);
+  const login = async (data: LoginFormData) => {
+    const now = Date.now();
+    const recentAttempts = loginAttempts.filter(attempt => now - attempt < LOCKOUT_DURATION);
+
+    if (recentAttempts.length >= MAX_LOGIN_ATTEMPTS) {
+        const lastAttempt = recentAttempts[recentAttempts.length - 1];
+        const timeToWait = Math.ceil((LOCKOUT_DURATION - (now - lastAttempt)) / 1000);
+        throw new Error(`Too many failed login attempts. Please try again in ${timeToWait} seconds.`);
+    }
+
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+        setLoginAttempts([]); // Clear attempts on successful login
+        return userCredential;
+    } catch (error) {
+        setLoginAttempts(prev => [...prev, Date.now()]);
+        throw error; // Re-throw the original Firebase error to be displayed
+    }
   }
 
   const signInWithGoogle = () => {
