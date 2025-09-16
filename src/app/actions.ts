@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
-import { isPast, parseISO } from 'date-fns';
+import { isPast, parseISO, isWithinInterval, addHours } from 'date-fns';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 
@@ -1491,7 +1491,67 @@ export async function updateCompany(
 }
     
     
+export async function checkTicketDeadlinesAndNotify(settings: Settings, organizationId: string) {
+    if (!organizationId || !settings.clientId) return;
 
+    try {
+        const now = new Date();
+        const reminderTimeFrame = addHours(now, 24);
+
+        const ticketsRef = collection(db, 'organizations', organizationId, 'tickets');
+        const q = query(ticketsRef, 
+            where('status', 'in', ['Open', 'Pending']),
+            where('deadline', '!=', null)
+        );
+
+        const querySnapshot = await getDocs(q);
+        const members = await getOrganizationMembers(organizationId);
+
+        for (const ticketDoc of querySnapshot.docs) {
+            const ticket = ticketDoc.data() as Email;
+            const ticketDeadline = parseISO(ticket.deadline!);
+
+            const isApproaching = isWithinInterval(ticketDeadline, { start: now, end: reminderTimeFrame });
+            const hasBeenNotified = ticket.tags?.includes('deadline-reminder-sent');
+
+            if (isApproaching && !hasBeenNotified && ticket.assignee) {
+                const assignee = members.find(m => m.uid === ticket.assignee);
+                if (assignee?.email) {
+                    const headersList = headers();
+                    const host = headersList.get('host') || '';
+                    const protocol = headersList.get('x-forwarded-proto') || 'http';
+                    const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
+                    
+                    const subject = `Reminder: Ticket #${ticket.ticketNumber} is due soon`;
+                    const body = `
+                        <p>Hello ${assignee.name},</p>
+                        <p>This is a reminder that the following ticket is approaching its deadline:</p>
+                        <p><b>Ticket #${ticket.ticketNumber}: ${ticket.subject}</b></p>
+                        <p><b>Deadline:</b> ${new Date(ticket.deadline!).toLocaleString()}</p>
+                        <p>You can view and respond to the ticket here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                    `;
+
+                    try {
+                        await sendEmailAction(settings, {
+                            recipient: assignee.email,
+                            subject: subject,
+                            body: body,
+                        });
+
+                        // Add a tag to prevent re-sending notifications
+                        await updateDoc(ticketDoc.ref, {
+                            tags: arrayUnion('deadline-reminder-sent')
+                        });
+                    } catch (e) {
+                        console.error(`Failed to send deadline reminder for ticket ${ticket.id}:`, e);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Failed to check ticket deadlines:", error);
+    }
+}
     
 
     

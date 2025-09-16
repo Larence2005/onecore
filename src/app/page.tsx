@@ -13,7 +13,7 @@ import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
 import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
-import { getLatestEmails, getCompanies, fetchAndStoreFullConversation, getOrganizationMembers } from '@/app/actions';
+import { getLatestEmails, getCompanies, fetchAndStoreFullConversation, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
@@ -57,6 +57,16 @@ function HomePageContent() {
         }
     }
   }, [settings, isConfigured, userProfile]);
+  
+  const runDeadlineChecks = useCallback(async () => {
+    if (isConfigured && userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
+        try {
+            await checkTicketDeadlinesAndNotify(settings, userProfile.organizationId);
+        } catch (deadlineError) {
+            // Silently fail, error is logged in the action
+        }
+    }
+  }, [settings, isConfigured, userProfile, user]);
 
   useEffect(() => {
     if (!user || !userProfile?.organizationId) return;
@@ -199,15 +209,17 @@ function HomePageContent() {
     const unsubscribePromise = setupListener();
     
     // This part handles syncing new emails from the mail server.
-    // It should only run for the organization owner.
     syncLatestEmails();
     const intervalId = setInterval(syncLatestEmails, 30000);
+    
+    // Run deadline checks on component mount
+    runDeadlineChecks();
 
     return () => {
       unsubscribePromise.then(unsub => unsub && unsub());
       clearInterval(intervalId);
     }
-  }, [user, userProfile, syncLatestEmails]);
+  }, [user, userProfile, syncLatestEmails, runDeadlineChecks]);
 
 
   useEffect(() => {
