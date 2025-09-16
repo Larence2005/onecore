@@ -6,7 +6,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive, Building, Calendar as CalendarIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
@@ -19,6 +19,12 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Image from 'next/image';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
 
 
 type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
@@ -45,6 +51,13 @@ function HomePageContent() {
     tags: '',
     created: 'any',
   });
+  
+  // State for dashboard filters
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
+  const [dateRangeOption, setDateRangeOption] = useState<string>('all');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+
 
   const syncLatestEmails = useCallback(async () => {
     // Any member of the organization can trigger a sync.
@@ -94,11 +107,12 @@ function HomePageContent() {
 
     const setupListener = async () => {
         try {
-            const [companies, members] = await Promise.all([
+            const [fetchedCompanies, members] = await Promise.all([
                 getCompanies(userProfile.organizationId!),
                 getOrganizationMembers(userProfile.organizationId!)
             ]);
-            companyMap = new Map(companies.map(c => [c.id, c.name]));
+            companyMap = new Map(fetchedCompanies.map(c => [c.id, c.name]));
+            setCompanies(fetchedCompanies); // Set companies for the dashboard filter
             memberMap = new Map(members.map(m => [m.uid!, m.name]));
             memberEmails = new Set(members.map(m => m.email.toLowerCase()));
 
@@ -337,17 +351,106 @@ function HomePageContent() {
 
         <main className="flex-1 flex flex-col min-w-0">
           <Header>
-            {activeView === 'tickets' && (
+            <div className="flex-1">
+                {activeView === 'tickets' && <h1 className="text-xl font-bold">Tickets</h1>}
+                {activeView === 'compose' && <h1 className="text-xl font-bold">Compose</h1>}
+                {activeView === 'analytics' && <h1 className="text-xl font-bold">Dashboard</h1>}
+                {activeView === 'clients' && <h1 className="text-xl font-bold">Clients</h1>}
+                {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
+                {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
+                {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
+            </div>
+            {activeView === 'analytics' && (
               <div className="flex items-center gap-4">
-                <h1 className="text-xl font-bold">Tickets</h1>
+                  <div className="grid items-center gap-1.5">
+                    <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                        <SelectTrigger id="company-filter" className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">
+                                <div className="flex items-center gap-2">
+                                    <Building className="h-4 w-4" />
+                                    All Companies
+                                </div>
+                            </SelectItem>
+                            {companies.map(company => (
+                                <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="grid items-center">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                                "w-full sm:w-[240px] justify-start text-left font-normal",
+                                !customDateRange && dateRangeOption === 'all' && "text-muted-foreground"
+                            )}
+                            >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRangeOption === 'custom' && customDateRange?.from ? (
+                                customDateRange.to ? (
+                                <>
+                                    {format(customDateRange.from, "LLL dd, y")} -{" "}
+                                    {format(customDateRange.to, "LLL dd, y")}
+                                </>
+                                ) : (
+                                format(customDateRange.from, "LLL dd, y")
+                                )
+                            ) : (
+                                {
+                                'all': 'All Time',
+                                '7d': 'Last 7 Days',
+                                '30d': 'Last 30 Days',
+                                '90d': 'Last 90 Days',
+                                'custom': 'Custom Range'
+                                }[dateRangeOption] || 'Select a date range'
+                            )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                            <Select
+                                onValueChange={(value) => {
+                                    setDateRangeOption(value);
+                                    if (value !== 'custom') {
+                                        setCustomDateRange(undefined);
+                                    }
+                                }}
+                                value={dateRangeOption}
+                            >
+                                <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
+                                    <SelectValue placeholder="Select a range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Time</SelectItem>
+                                    <SelectItem value="7d">Last 7 Days</SelectItem>
+                                    <SelectItem value="30d">Last 30 Days</SelectItem>
+                                    <SelectItem value="90d">Last 90 Days</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={customDateRange?.from}
+                                selected={customDateRange}
+                                onSelect={(range) => {
+                                    setCustomDateRange(range)
+                                    if(range) setDateRangeOption('custom')
+                                }}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </div>
               </div>
             )}
-            {activeView === 'compose' && <h1 className="text-xl font-bold">Compose</h1>}
-            {activeView === 'analytics' && <h1 className="text-xl font-bold">Dashboard</h1>}
-            {activeView === 'clients' && <h1 className="text-xl font-bold">Clients</h1>}
-            {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
-            {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
-            {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
           </Header>
           <MainView 
               activeView={activeView} 
@@ -356,6 +459,12 @@ function HomePageContent() {
               error={error}
               onRefresh={syncLatestEmails}
               filters={filters}
+              dashboardFilters={{
+                companies,
+                selectedCompanyId,
+                dateRangeOption,
+                customDateRange
+              }}
           />
         </main>
         

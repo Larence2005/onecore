@@ -16,7 +16,6 @@ export function Header({ children }: HeaderProps) {
             </div>
             {children}
         </div>
-        <div className="w-7 h-7 md:hidden" />
     </header>
   );
 }

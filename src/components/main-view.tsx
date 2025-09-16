@@ -4,13 +4,14 @@
 import { ReadEmails } from '@/components/read-emails';
 import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
-import type { Email } from '@/app/actions';
+import type { Email, Company } from '@/app/actions';
 import { FilterState } from './tickets-filter';
 import { ArchiveView } from './archive-view';
 import { DashboardView } from './dashboard-view';
 import { OrganizationView } from './organization-view';
 import { useAuth } from '@/providers/auth-provider';
 import { ClientsView } from './clients-view';
+import { DateRange } from 'react-day-picker';
 
 type MainViewProps = {
     activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
@@ -19,15 +20,22 @@ type MainViewProps = {
     error?: string | null;
     onRefresh?: () => void;
     filters?: FilterState;
+    dashboardFilters?: {
+        companies: Company[];
+        selectedCompanyId: string;
+        dateRangeOption: string;
+        customDateRange?: DateRange;
+    }
 }
 
-export function MainView({ activeView, emails, isLoading, error, onRefresh, filters }: MainViewProps) {
+export function MainView({ activeView, emails, isLoading, error, onRefresh, filters, dashboardFilters }: MainViewProps) {
     const { userProfile } = useAuth();
     
     const renderView = () => {
         switch (activeView) {
             case 'analytics':
-                return <DashboardView />;
+                 if (!dashboardFilters) return null;
+                return <DashboardView {...dashboardFilters} />;
             case 'tickets':
                 if (!emails || isLoading === undefined || error === undefined || !onRefresh || !filters) {
                     return null;

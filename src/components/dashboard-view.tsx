@@ -15,13 +15,7 @@ import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { useAuth } from '@/providers/auth-provider';
 import { TimelineItem } from './timeline-item';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Label } from './ui/label';
 import { DateRange } from 'react-day-picker';
-import { Button } from './ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { cn } from '@/lib/utils';
-import { Calendar } from './ui/calendar';
 
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
@@ -36,15 +30,17 @@ const StatCard = ({ title, value, icon: Icon }: { title: string, value: string |
     </Card>
 );
 
+interface DashboardViewProps {
+  companies: Company[];
+  selectedCompanyId: string;
+  dateRangeOption: string;
+  customDateRange?: DateRange;
+}
 
-export function DashboardView() {
+export function DashboardView({ companies, selectedCompanyId, dateRangeOption, customDateRange }: DashboardViewProps) {
     const { userProfile } = useAuth();
     const [tickets, setTickets] = useState<Email[]>([]);
     const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-    const [companies, setCompanies] = useState<Company[]>([]);
-    const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
-    const [dateRangeOption, setDateRangeOption] = useState<string>('all');
-    const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
@@ -57,15 +53,13 @@ export function DashboardView() {
             setError(null);
             try {
                 // Fetch all tickets including archived for historical data
-                const [allTickets, allLogs, allCompanies] = await Promise.all([
+                const [allTickets, allLogs] = await Promise.all([
                     getTicketsFromDB(userProfile.organizationId!, { fetchAll: true }),
                     getAllActivityLogs(userProfile.organizationId!),
-                    getCompanies(userProfile.organizationId!)
                 ]);
 
                 setTickets(allTickets);
                 setActivityLogs(allLogs);
-                setCompanies(allCompanies);
 
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -194,7 +188,6 @@ export function DashboardView() {
     if (isLoading) {
         return (
             <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-                <Skeleton className="h-10 w-64" />
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Skeleton className="h-[108px] w-full" />
                     <Skeleton className="h-[108px] w-full" />
@@ -227,98 +220,6 @@ export function DashboardView() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="flex flex-wrap items-end gap-4">
-                <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="company-filter">Filter by Company</Label>
-                    <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                        <SelectTrigger id="company-filter" className="w-[280px]">
-                            <SelectValue placeholder="Select a company" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">
-                                <div className="flex items-center gap-2">
-                                    <Building className="h-4 w-4" />
-                                    All Companies
-                                </div>
-                            </SelectItem>
-                            {companies.map(company => (
-                                <SelectItem key={company.id} value={company.id}>
-                                    {company.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="grid w-full max-w-sm items-center">
-                    <Label htmlFor="date-range-filter" className="mb-1.5">Filter by Date</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                                "w-[280px] justify-start text-left font-normal",
-                                !customDateRange && dateRangeOption === 'all' && "text-muted-foreground"
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRangeOption === 'custom' && customDateRange?.from ? (
-                                customDateRange.to ? (
-                                <>
-                                    {format(customDateRange.from, "LLL dd, y")} -{" "}
-                                    {format(customDateRange.to, "LLL dd, y")}
-                                </>
-                                ) : (
-                                format(customDateRange.from, "LLL dd, y")
-                                )
-                            ) : (
-                                {
-                                'all': 'All Time',
-                                '7d': 'Last 7 Days',
-                                '30d': 'Last 30 Days',
-                                '90d': 'Last 90 Days',
-                                'custom': 'Custom Range'
-                                }[dateRangeOption] || 'Select a date range'
-                            )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Select
-                                onValueChange={(value) => {
-                                    setDateRangeOption(value);
-                                    if (value !== 'custom') {
-                                        setCustomDateRange(undefined);
-                                    }
-                                }}
-                                value={dateRangeOption}
-                            >
-                                <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
-                                    <SelectValue placeholder="Select a range" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Time</SelectItem>
-                                    <SelectItem value="7d">Last 7 Days</SelectItem>
-                                    <SelectItem value="30d">Last 30 Days</SelectItem>
-                                    <SelectItem value="90d">Last 90 Days</SelectItem>
-                                    <SelectItem value="custom">Custom Range</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={customDateRange?.from}
-                                selected={customDateRange}
-                                onSelect={(range) => {
-                                    setCustomDateRange(range)
-                                    if(range) setDateRangeOption('custom')
-                                }}
-                                numberOfMonths={2}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-            </div>
-
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="Total Tickets" value={stats.totalTickets} icon={Ticket} />
                 <StatCard title="Open Tickets" value={stats.openTickets} icon={Clock} />
@@ -466,7 +367,3 @@ export function DashboardView() {
         </div>
     );
 }
-
-    
-
-    
