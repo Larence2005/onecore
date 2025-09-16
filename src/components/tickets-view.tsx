@@ -27,28 +27,30 @@ type TicketsViewProps = {
 
 const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
     return emails.filter(email => {
-        // Search filter (Subject, Sender, Ticket Number, Tags)
+        // Search filter (Subject, Sender, Ticket Number)
         if (filters.search) {
             const searchTerm = filters.search.toLowerCase();
             const subjectMatch = email.subject.toLowerCase().includes(searchTerm);
             const senderMatch = email.sender.toLowerCase().includes(searchTerm);
             const ticketNumberMatch = email.ticketNumber?.toString().includes(searchTerm);
-            const tagsMatch = (email.tags || []).some(tag => tag.toLowerCase().includes(searchTerm));
 
-            if (!subjectMatch && !senderMatch && !ticketNumberMatch && !tagsMatch) {
+            if (!subjectMatch && !senderMatch && !ticketNumberMatch) {
                 return false;
             }
         }
         
-        // Tags filter from sidebar
+        // Tags and Company filter from sidebar
         if (filters.tags) {
             const tagSearchTerms = filters.tags.toLowerCase().split(',').map(t => t.trim()).filter(t => t);
             if (tagSearchTerms.length > 0) {
                 const emailTags = (email.tags || []).map(t => t.toLowerCase());
-                const hasAllTags = tagSearchTerms.every(searchTerm => 
-                    emailTags.some(emailTag => emailTag.includes(searchTerm))
+                const companyName = (email.companyName || '').toLowerCase();
+
+                const hasMatch = tagSearchTerms.every(searchTerm => 
+                    emailTags.some(emailTag => emailTag.includes(searchTerm)) ||
+                    companyName.includes(searchTerm)
                 );
-                if (!hasAllTags) {
+                if (!hasMatch) {
                     return false;
                 }
             }

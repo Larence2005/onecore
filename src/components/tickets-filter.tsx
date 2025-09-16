@@ -193,10 +193,10 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
               </AccordionContent>
             </AccordionItem>
              <AccordionItem value="tags">
-              <AccordionTrigger className="px-4 text-base font-semibold">Tags</AccordionTrigger>
+              <AccordionTrigger className="px-4 text-base font-semibold">Tags / Company</AccordionTrigger>
               <AccordionContent className="px-4">
                 <Input 
-                    placeholder="Filter by comma-separated tags" 
+                    placeholder="Filter by tags or company" 
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
                 />
