@@ -40,6 +40,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const MAX_LOGIN_ATTEMPTS = 3;
 const LOCKOUT_DURATION = 60 * 1000; // 1 minute in milliseconds
 
+export class LockoutError extends Error {
+    public lockoutUntil: number;
+    constructor(message: string, lockoutUntil: number) {
+        super(message);
+        this.name = 'LockoutError';
+        this.lockoutUntil = lockoutUntil;
+    }
+}
+
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -182,8 +192,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (recentAttempts.length >= MAX_LOGIN_ATTEMPTS) {
         const lastAttempt = recentAttempts[recentAttempts.length - 1];
-        const timeToWait = Math.ceil((LOCKOUT_DURATION - (now - lastAttempt)) / 1000);
-        throw new Error(`Too many failed login attempts. Please try again in ${timeToWait} seconds.`);
+        const lockoutUntil = lastAttempt + LOCKOUT_DURATION;
+        throw new LockoutError(`Too many failed login attempts.`, lockoutUntil);
     }
 
     try {

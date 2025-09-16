@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from 'next/link';
 
@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RefreshCw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
+import { LockoutError } from "@/providers/auth-provider";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address."),
@@ -35,6 +36,27 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lockoutEndTime, setLockoutEndTime] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (lockoutEndTime) {
+      const updateTimer = () => {
+        const remaining = Math.ceil((lockoutEndTime - Date.now()) / 1000);
+        if (remaining > 0) {
+          setTimeRemaining(remaining);
+        } else {
+          setLockoutEndTime(null);
+          setTimeRemaining(0);
+        }
+      };
+      updateTimer();
+      timer = setInterval(updateTimer, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [lockoutEndTime]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,11 +73,15 @@ export default function LoginPage() {
       await login(values);
       router.push("/");
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "An unknown error occurred.",
-      });
+       if (error instanceof LockoutError) {
+        setLockoutEndTime(error.lockoutUntil);
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: error.message || "An unknown error occurred.",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -81,78 +107,87 @@ export default function LoginPage() {
             <p className="text-2xl font-bold text-primary">Login Your Account</p>
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-semibold">Email Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="your@email.com"
-                        {...field}
-                        className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-semibold">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="********"
-                        {...field}
-                        className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex items-center justify-between text-sm">
+          {lockoutEndTime ? (
+            <div className="space-y-4 text-center">
+                <p className="font-semibold text-destructive">Too many failed login attempts.</p>
+                <p className="text-muted-foreground">For your security, your account has been temporarily locked.</p>
+                <p>Please try again in:</p>
+                <div className="text-4xl font-bold text-primary">{timeRemaining}s</div>
+            </div>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="remember"
+                  name="email"
                   render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormItem>
+                      <FormLabel className="font-semibold">Email Address</FormLabel>
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
+                        <Input
+                          type="email"
+                          placeholder="your@email.com"
+                          {...field}
+                          className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
                         />
                       </FormControl>
-                      <FormLabel className="font-normal">Remember me</FormLabel>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
-                <Link href="#" className="font-medium text-primary hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="********"
+                          {...field}
+                          className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <Button type="submit" className="w-full font-bold py-3" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Please wait
-                  </>
-                ) : (
-                  "SUBMIT"
-                )}
-              </Button>
-            </form>
-          </Form>
+                <div className="flex items-center justify-between text-sm">
+                  <FormField
+                    control={form.control}
+                    name="remember"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">Remember me</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <Link href="#" className="font-medium text-primary hover:underline">
+                    Forgot Password?
+                  </Link>
+                </div>
+
+                <Button type="submit" className="w-full font-bold py-3" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Please wait
+                    </>
+                  ) : (
+                    "SUBMIT"
+                  )}
+                </Button>
+              </form>
+            </Form>
+          )}
 
           <div className="mt-8 text-center text-sm">
             <p>
