@@ -2,19 +2,21 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import type { Email, ActivityLog } from '@/app/actions';
-import { getTicketsFromDB, getAllActivityLogs } from '@/app/actions';
+import type { Email, ActivityLog, Company } from '@/app/actions';
+import { getTicketsFromDB, getAllActivityLogs, getCompanies } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity } from 'lucide-react';
+import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity, Building } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays } from 'date-fns';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { useAuth } from '@/providers/auth-provider';
 import { TimelineItem } from './timeline-item';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Label } from './ui/label';
 
 
 const StatCard = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
@@ -34,6 +36,8 @@ export function DashboardView() {
     const { userProfile } = useAuth();
     const [tickets, setTickets] = useState<Email[]>([]);
     const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
@@ -46,13 +50,15 @@ export function DashboardView() {
             setError(null);
             try {
                 // Fetch all tickets including archived for historical data
-                const [allTickets, allLogs] = await Promise.all([
+                const [allTickets, allLogs, allCompanies] = await Promise.all([
                     getTicketsFromDB(userProfile.organizationId!, { fetchAll: true }),
-                    getAllActivityLogs(userProfile.organizationId!)
+                    getAllActivityLogs(userProfile.organizationId!),
+                    getCompanies(userProfile.organizationId!)
                 ]);
 
                 setTickets(allTickets);
                 setActivityLogs(allLogs);
+                setCompanies(allCompanies);
 
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -71,12 +77,16 @@ export function DashboardView() {
     }, [userProfile, toast]);
     
     const stats = useMemo(() => {
-        const totalTickets = tickets.length;
-        const openTickets = tickets.filter(t => t.status === 'Open' || t.status === 'Pending').length;
-        const resolvedToday = tickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
-        const overdueTickets = tickets.filter(t => t.deadline && isPast(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
+        const filteredTickets = selectedCompanyId === 'all'
+            ? tickets
+            : tickets.filter(t => t.companyId === selectedCompanyId);
 
-        const ticketsByStatus = tickets.reduce((acc, ticket) => {
+        const totalTickets = filteredTickets.length;
+        const openTickets = filteredTickets.filter(t => t.status === 'Open' || t.status === 'Pending').length;
+        const resolvedToday = filteredTickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
+        const overdueTickets = filteredTickets.filter(t => t.deadline && isPast(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
+
+        const ticketsByStatus = filteredTickets.reduce((acc, ticket) => {
             const status = ticket.status;
             acc[status] = (acc[status] || 0) + 1;
             return acc;
@@ -87,7 +97,7 @@ export function DashboardView() {
             value: ticketsByStatus[status]
         }));
         
-        const ticketsByPriority = tickets.reduce((acc, ticket) => {
+        const ticketsByPriority = filteredTickets.reduce((acc, ticket) => {
             const priority = ticket.priority;
             acc[priority] = (acc[priority] || 0) + 1;
             return acc;
@@ -98,7 +108,7 @@ export function DashboardView() {
             value: ticketsByPriority[priority]
         }));
         
-        const ticketsByType = tickets.reduce((acc, ticket) => {
+        const ticketsByType = filteredTickets.reduce((acc, ticket) => {
             const type = ticket.type || 'Incident'; // Default to Incident if type is not set
             acc[type] = (acc[type] || 0) + 1;
             return acc;
@@ -109,13 +119,13 @@ export function DashboardView() {
             value: ticketsByType[type]
         }));
 
-        const upcomingDeadlines = tickets
+        const upcomingDeadlines = filteredTickets
             .filter(t => t.ticketNumber && t.deadline && isFuture(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed')
             .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
             .slice(0, 5);
         
         return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
-    }, [tickets]);
+    }, [tickets, selectedCompanyId]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
         'Low': '#22c55e',
@@ -152,6 +162,7 @@ export function DashboardView() {
     if (isLoading) {
         return (
             <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+                <Skeleton className="h-10 w-64" />
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Skeleton className="h-[108px] w-full" />
                     <Skeleton className="h-[108px] w-full" />
@@ -184,6 +195,28 @@ export function DashboardView() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+                <Label htmlFor="company-filter">Filter by Company</Label>
+                 <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                    <SelectTrigger id="company-filter" className="w-[280px]">
+                        <SelectValue placeholder="Select a company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">
+                            <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4" />
+                                All Companies
+                            </div>
+                        </SelectItem>
+                        {companies.map(company => (
+                            <SelectItem key={company.id} value={company.id}>
+                                {company.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="Total Tickets" value={stats.totalTickets} icon={Ticket} />
                 <StatCard title="Open Tickets" value={stats.openTickets} icon={Clock} />
