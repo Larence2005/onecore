@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +43,7 @@ export function SendEmailForm() {
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [showCcBcc, setShowCcBcc] = useState(false);
 
   useEffect(() => {
     async function fetchMembers() {
@@ -81,6 +83,7 @@ export function SendEmailForm() {
         description: `Your email to ${values.recipient} has been sent successfully.`,
       });
       form.reset();
+      setShowCcBcc(false);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -120,7 +123,14 @@ export function SendEmailForm() {
               name="recipient"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Recipient</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Recipient</FormLabel>
+                    {!showCcBcc && (
+                      <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setShowCcBcc(true)}>
+                        Show Cc/Bcc
+                      </Button>
+                    )}
+                  </div>
                   <FormControl>
                     <Input placeholder="name@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
                   </FormControl>
@@ -128,42 +138,46 @@ export function SendEmailForm() {
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="cc"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>CC</FormLabel>
-                  <FormControl>
-                    <AutocompleteInput 
-                      {...field}
-                      suggestions={members}
-                      placeholder="cc@example.com, another@example.com" 
-                      className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+            {showCcBcc && (
+                <>
+                    <FormField
+                    control={form.control}
+                    name="cc"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>CC</FormLabel>
+                        <FormControl>
+                            <AutocompleteInput 
+                            {...field}
+                            suggestions={members}
+                            placeholder="cc@example.com, another@example.com" 
+                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="bcc"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>BCC</FormLabel>
-                  <FormControl>
-                    <AutocompleteInput 
-                      {...field}
-                      suggestions={members}
-                      placeholder="bcc@example.com" 
-                      className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                    <FormField
+                    control={form.control}
+                    name="bcc"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>BCC</FormLabel>
+                        <FormControl>
+                            <AutocompleteInput 
+                            {...field}
+                            suggestions={members}
+                            placeholder="bcc@example.com" 
+                            className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </>
+            )}
             <FormField
               control={form.control}
               name="subject"
