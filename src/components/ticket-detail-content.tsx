@@ -779,7 +779,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             id="reply-to"
                                             value={replyTo}
                                             readOnly
-                                            className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                            className="flex-1 h-auto px-0"
                                         />
                                         <div className="flex-shrink-0">
                                             {!isReplyCcVisible && (
@@ -799,7 +799,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 value={replyCc}
                                                 onChange={setReplyCc}
                                                 placeholder="cc@example.com" 
-                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                                className="flex-1 h-auto px-0"
                                             />
                                         </div>
                                     )}
@@ -812,7 +812,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 value={replyBcc}
                                                 onChange={setReplyBcc}
                                                 placeholder="bcc@example.com"
-                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                                className="flex-1 h-auto px-0"
                                             />
                                         </div>
                                     )}
@@ -895,7 +895,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             value={forwardTo}
                                             onChange={setForwardTo}
                                             placeholder="recipient@example.com"
-                                            className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                            className="flex-1 h-auto px-0"
                                         />
                                         <div className="flex-shrink-0">
                                             {!isForwardCcVisible && (
@@ -915,7 +915,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 value={forwardCc}
                                                 onChange={setForwardCc}
                                                 placeholder="cc@example.com"
-                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                                className="flex-1 h-auto px-0"
                                             />
                                         </div>
                                     )}
@@ -928,7 +928,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 value={forwardBcc}
                                                 onChange={setForwardBcc}
                                                 placeholder="bcc@example.com"
-                                                className="flex-1 bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                                className="flex-1 h-auto px-0"
                                             />
                                         </div>
                                     )}

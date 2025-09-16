@@ -83,7 +83,7 @@ export default function MemberSignupPage() {
                         <FormItem>
                         <FormLabel className="font-semibold">Email Address</FormLabel>
                         <FormControl>
-                            <Input type="email" placeholder="your-invited-email@example.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                            <Input type="email" placeholder="your-invited-email@example.com" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -97,7 +97,7 @@ export default function MemberSignupPage() {
                       <FormItem>
                       <FormLabel className="font-semibold">Password</FormLabel>
                       <FormControl>
-                          <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                          <Input type="password" placeholder="********" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -110,7 +110,7 @@ export default function MemberSignupPage() {
                       <FormItem>
                       <FormLabel className="font-semibold">Confirm Password</FormLabel>
                       <FormControl>
-                          <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                          <Input type="password" placeholder="********" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>

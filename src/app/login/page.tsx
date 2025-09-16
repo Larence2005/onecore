@@ -128,7 +128,6 @@ export default function LoginPage() {
                           type="email"
                           placeholder="your@email.com"
                           {...field}
-                          className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
                         />
                       </FormControl>
                       <FormMessage />
@@ -146,7 +145,6 @@ export default function LoginPage() {
                           type="password"
                           placeholder="********"
                           {...field}
-                          className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0"
                         />
                       </FormControl>
                       <FormMessage />

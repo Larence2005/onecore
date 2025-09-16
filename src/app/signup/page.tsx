@@ -85,7 +85,7 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel className="font-semibold">Organization Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your Company, Inc." {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                        <Input placeholder="Your Company, Inc." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -98,7 +98,7 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel className="font-semibold">Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                        <Input placeholder="John Doe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -111,7 +111,7 @@ export default function SignupPage() {
                     <FormItem>
                     <FormLabel className="font-semibold">Email Address</FormLabel>
                     <FormControl>
-                        <Input type="email" placeholder="your@email.com" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                        <Input type="email" placeholder="your@email.com" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -125,7 +125,7 @@ export default function SignupPage() {
                       <FormItem>
                       <FormLabel className="font-semibold">Password</FormLabel>
                       <FormControl>
-                          <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                          <Input type="password" placeholder="********" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
@@ -138,7 +138,7 @@ export default function SignupPage() {
                       <FormItem>
                       <FormLabel className="font-semibold">Confirm Password</FormLabel>
                       <FormControl>
-                          <Input type="password" placeholder="********" {...field} className="bg-transparent border-0 border-b rounded-none px-0 focus:ring-0" />
+                          <Input type="password" placeholder="********" {...field} />
                       </FormControl>
                       <FormMessage />
                       </FormItem>
