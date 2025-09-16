@@ -249,8 +249,8 @@ export function DashboardView() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="date-range-filter">Filter by Date</Label>
+                 <div className="grid w-full max-w-sm items-center">
+                    <Label htmlFor="date-range-filter" className="mb-1.5">Filter by Date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -290,6 +290,7 @@ export function DashboardView() {
                                         setCustomDateRange(undefined);
                                     }
                                 }}
+                                value={dateRangeOption}
                             >
                                 <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
                                     <SelectValue placeholder="Select a range" />
