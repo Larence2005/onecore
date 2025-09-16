@@ -128,8 +128,8 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
         <div className="p-4">
             {parse(styledHtml(mainContent))}
             {quotedContent && (
-                 <Accordion type="single" collapsible className="my-4 border-0">
-                    <AccordionItem value="item-1" className="pl-4">
+                 <Accordion type="single" collapsible className="my-4">
+                    <AccordionItem value="item-1" className="border-0 pl-4">
                         <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
                             <MoreHorizontal className="h-4 w-4" />
                         </AccordionTrigger>
@@ -1115,7 +1115,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             )}
 
                             {!isLoading && !error && email && (
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     {email.conversation && email.conversation.length > 0 ? (
                                         email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
                                     ) : (
@@ -1355,3 +1355,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    
