@@ -43,8 +43,7 @@ export function SendEmailForm() {
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [showCc, setShowCc] = useState(false);
-  const [showBcc, setShowBcc] = useState(false);
+  const [showCcBcc, setShowCcBcc] = useState(false);
 
   useEffect(() => {
     async function fetchMembers() {
@@ -67,13 +66,6 @@ export function SendEmailForm() {
     },
   });
 
-  const ccValue = form.watch('cc');
-  const bccValue = form.watch('bcc');
-
-  const isCcVisible = showCc || !!ccValue;
-  const isBccVisible = showBcc || !!bccValue;
-
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!isConfigured) {
         toast({
@@ -91,8 +83,7 @@ export function SendEmailForm() {
         description: `Your email to ${values.recipient} has been sent successfully.`,
       });
       form.reset();
-      setShowCc(false);
-      setShowBcc(false);
+      setShowCcBcc(false);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -141,59 +132,52 @@ export function SendEmailForm() {
                         </FormItem>
                     )}
                  />
-                 <div className="flex-shrink-0">
-                    {!isCcVisible && (
-                        <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowCc(true)}>Cc</Button>
-                    )}
-                    {!isBccVisible && (
-                        <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowBcc(true)}>Bcc</Button>
-                    )}
-                </div>
+                 <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowCcBcc(!showCcBcc)}>Cc/Bcc</Button>
             </div>
             
-            {isCcVisible && (
-                <div className="flex items-center gap-2 border-b">
-                    <FormLabel className="py-2.5">Cc</FormLabel>
-                    <FormField
-                        control={form.control}
-                        name="cc"
-                        render={({ field }) => (
-                            <FormItem className="flex-1">
-                            <FormControl>
-                                <AutocompleteInput 
-                                {...field}
-                                suggestions={members}
-                                placeholder="cc@example.com" 
-                                className="bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
-                                />
-                            </FormControl>
-                            <FormMessage className="pt-2"/>
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            )}
-            {isBccVisible && (
-                <div className="flex items-center gap-2 border-b">
-                    <FormLabel className="py-2.5">Bcc</FormLabel>
-                    <FormField
-                        control={form.control}
-                        name="bcc"
-                        render={({ field }) => (
-                            <FormItem className="flex-1">
-                            <FormControl>
-                                <AutocompleteInput 
-                                {...field}
-                                suggestions={members}
-                                placeholder="bcc@example.com" 
-                                className="bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
-                                />
-                            </FormControl>
-                            <FormMessage className="pt-2"/>
-                            </FormItem>
-                        )}
-                    />
-                </div>
+            {showCcBcc && (
+                <>
+                    <div className="flex items-center gap-2 border-b">
+                        <FormLabel className="py-2.5">Cc</FormLabel>
+                        <FormField
+                            control={form.control}
+                            name="cc"
+                            render={({ field }) => (
+                                <FormItem className="flex-1">
+                                <FormControl>
+                                    <AutocompleteInput 
+                                    {...field}
+                                    suggestions={members}
+                                    placeholder="cc@example.com" 
+                                    className="bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                    />
+                                </FormControl>
+                                <FormMessage className="pt-2"/>
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 border-b">
+                        <FormLabel className="py-2.5">Bcc</FormLabel>
+                        <FormField
+                            control={form.control}
+                            name="bcc"
+                            render={({ field }) => (
+                                <FormItem className="flex-1">
+                                <FormControl>
+                                    <AutocompleteInput 
+                                    {...field}
+                                    suggestions={members}
+                                    placeholder="bcc@example.com" 
+                                    className="bg-transparent border-0 rounded-none px-0 focus:ring-0 h-auto"
+                                    />
+                                </FormControl>
+                                <FormMessage className="pt-2"/>
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </>
             )}
             <FormField
               control={form.control}
