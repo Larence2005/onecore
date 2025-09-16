@@ -249,8 +249,8 @@ export function DashboardView() {
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="date-range-filter" className="mb-0">Filter by Date</Label>
+                 <div className="grid w-full max-w-sm items-center">
+                    <Label htmlFor="date-range-filter" className="mb-1.5">Filter by Date</Label>
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
