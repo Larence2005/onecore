@@ -211,20 +211,20 @@ export async function getLatestEmails(settings: Settings, organizationId: string
         for (const email of emailsToProcess) {
             
             if (!email.conversationId) continue;
+            
+            // SECURITY: Always check if the sender is an allowed contact first.
+            const senderEmail = email.from.emailAddress.address.toLowerCase();
+            if (!allowedSenders.has(senderEmail)) {
+                continue; // Skip this email entirely if the sender is unknown.
+            }
 
             const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
             const q = query(ticketsCollectionRef, where('conversationId', '==', email.conversationId));
             const querySnapshot = await getDocs(q);
-            const senderEmail = email.from.emailAddress.address.toLowerCase();
-
-
+            
             if (querySnapshot.empty) {
                 // This is a new conversation thread.
-                // Only create a new ticket if the sender is an allowed contact.
-                if (!allowedSenders.has(senderEmail)) {
-                    continue; // Skip creating a ticket for this email
-                }
-
+                // The sender has already been verified above.
                 const ticketNumber = await getNextTicketNumber(organizationId);
                 const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
                 const ticketId = ticketDocRef.id;
@@ -265,7 +265,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
 
             } else {
                 // It's a reply to an existing ticket.
-                // We should process replies from anyone, as long as it's an existing thread.
+                // The sender has already been verified above.
                 await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
             }
         }
@@ -1531,6 +1531,8 @@ export async function updateCompany(
 
       
 
+
+    
 
     
 
