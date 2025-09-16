@@ -103,8 +103,9 @@ export function DashboardView() {
                     return true; // Should not happen
                 }
                 return isAfter(ticketDate, startDate);
-            } else if (dateRangeOption === 'custom' && customDateRange?.from && customDateRange?.to) {
-                 return isAfter(ticketDate, customDateRange.from) && isBefore(ticketDate, customDateRange.to);
+            } else if (dateRangeOption === 'custom' && customDateRange?.from) {
+                 const toDate = customDateRange.to || customDateRange.from;
+                 return isAfter(ticketDate, customDateRange.from) && isBefore(ticketDate, toDate);
             }
             // If 'all' or custom is not fully selected, include all tickets from company filter
             return true;
@@ -250,56 +251,70 @@ export function DashboardView() {
                 </div>
                  <div className="grid w-full max-w-sm items-center gap-1.5">
                     <Label htmlFor="date-range-filter">Filter by Date</Label>
-                    <div className="flex gap-2">
-                        <Select value={dateRangeOption} onValueChange={(value) => { setDateRangeOption(value); if (value !== 'custom') setCustomDateRange(undefined); }}>
-                            <SelectTrigger id="date-range-filter">
-                                <SelectValue placeholder="Select a date range" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Time</SelectItem>
-                                <SelectItem value="7d">Last 7 Days</SelectItem>
-                                <SelectItem value="30d">Last 30 Days</SelectItem>
-                                <SelectItem value="90d">Last 90 Days</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                id="date"
-                                variant={"outline"}
-                                className={cn(
-                                    "w-[280px] justify-start text-left font-normal",
-                                    !customDateRange && "text-muted-foreground"
-                                )}
-                                onClick={() => setDateRangeOption('custom')}
-                                >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {customDateRange?.from ? (
-                                    customDateRange.to ? (
-                                    <>
-                                        {format(customDateRange.from, "LLL dd, y")} -{" "}
-                                        {format(customDateRange.to, "LLL dd, y")}
-                                    </>
-                                    ) : (
-                                    format(customDateRange.from, "LLL dd, y")
-                                    )
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                                "w-[280px] justify-start text-left font-normal",
+                                !customDateRange && dateRangeOption === 'all' && "text-muted-foreground"
+                            )}
+                            >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRangeOption === 'custom' && customDateRange?.from ? (
+                                customDateRange.to ? (
+                                <>
+                                    {format(customDateRange.from, "LLL dd, y")} -{" "}
+                                    {format(customDateRange.to, "LLL dd, y")}
+                                </>
                                 ) : (
-                                    <span>Custom Range</span>
-                                )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={customDateRange?.from}
-                                    selected={customDateRange}
-                                    onSelect={setCustomDateRange}
-                                    numberOfMonths={2}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                                format(customDateRange.from, "LLL dd, y")
+                                )
+                            ) : (
+                                {
+                                'all': 'All Time',
+                                '7d': 'Last 7 Days',
+                                '30d': 'Last 30 Days',
+                                '90d': 'Last 90 Days',
+                                'custom': 'Custom Range'
+                                }[dateRangeOption] || 'Select a date range'
+                            )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Select
+                                onValueChange={(value) => {
+                                    setDateRangeOption(value);
+                                    if (value !== 'custom') {
+                                        setCustomDateRange(undefined);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
+                                    <SelectValue placeholder="Select a range" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Time</SelectItem>
+                                    <SelectItem value="7d">Last 7 Days</SelectItem>
+                                    <SelectItem value="30d">Last 30 Days</SelectItem>
+                                    <SelectItem value="90d">Last 90 Days</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={customDateRange?.from}
+                                selected={customDateRange}
+                                onSelect={(range) => {
+                                    setCustomDateRange(range)
+                                    if(range) setDateRangeOption('custom')
+                                }}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
 
@@ -450,5 +465,7 @@ export function DashboardView() {
         </div>
     );
 }
+
+    
 
     
