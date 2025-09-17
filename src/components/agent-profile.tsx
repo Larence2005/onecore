@@ -71,6 +71,8 @@ export function AgentProfile({ email }: { email: string }) {
   const [updatedAddress, setUpdatedAddress] = useState('');
   const [updatedMobile, setUpdatedMobile] = useState('');
   const [updatedLandline, setUpdatedLandline] = useState('');
+  const [activeTab, setActiveTab] = useState('assigned');
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -258,7 +260,7 @@ export function AgentProfile({ email }: { email: string }) {
 
     const sortedAssignedTickets = useMemo(() => sortAndFilterTickets(assignedTickets, sortOptions.assigned, statusFilters.assigned), [assignedTickets, sortOptions.assigned, statusFilters.assigned]);
     const sortedCcTickets = useMemo(() => sortAndFilterTickets(ccTickets, sortOptions.cc, statusFilters.cc), [ccTickets, sortOptions.cc, statusFilters.cc]);
-    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.bcc), [bccTickets, sortOptions.bcc, statusFilters.bcc]);
+    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.bcc), [bccTickets, sortOptions.bcc, statusFilters.cc]);
     
     const handleSortChange = (list: 'assigned' | 'cc' | 'bcc', value: SortOption) => {
         setSortOptions(prev => ({ ...prev, [list]: value }));
@@ -273,6 +275,94 @@ export function AgentProfile({ email }: { email: string }) {
     }
     
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
+    const renderActiveFilters = () => {
+        if (activeTab === 'assigned') {
+            return (
+                <div className="flex items-center gap-2">
+                    <Select value={sortOptions.assigned} onValueChange={(value) => handleSortChange('assigned', value as SortOption)}>
+                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortOptions.assigned === 'status' && (
+                        <Select value={statusFilters.assigned} onValueChange={(value) => handleStatusFilterChange('assigned', value as StatusFilter)}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            );
+        }
+        if (activeTab === 'cc') {
+             return (
+                <div className="flex items-center gap-2">
+                    <Select value={sortOptions.cc} onValueChange={(value) => handleSortChange('cc', value as SortOption)}>
+                         <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortOptions.cc === 'status' && (
+                        <Select value={statusFilters.cc} onValueChange={(value) => handleStatusFilterChange('cc', value as StatusFilter)}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            );
+        }
+        if (activeTab === 'bcc') {
+             return (
+                <div className="flex items-center gap-2">
+                    <Select value={sortOptions.bcc} onValueChange={(value) => handleSortChange('bcc', value as SortOption)}>
+                         <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortOptions.bcc === 'status' && (
+                        <Select value={statusFilters.bcc} onValueChange={(value) => handleStatusFilterChange('bcc', value as StatusFilter)}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            );
+        }
+        return null;
+    };
 
 
   return (
@@ -389,47 +479,18 @@ export function AgentProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                            <Tabs defaultValue="assigned" className="w-full">
-                                <TabsList className="mb-4">
-                                    <TabsTrigger value="assigned">Assigned ({assignedTickets.length})</TabsTrigger>
-                                    <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
-                                    <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
-                                    <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
-                                </TabsList>
+                            <Tabs defaultValue="assigned" value={activeTab} onValueChange={(value) => setActiveTab(value)} className="w-full">
+                                <div className="flex justify-between items-center mb-4">
+                                    <TabsList>
+                                        <TabsTrigger value="assigned">Assigned ({assignedTickets.length})</TabsTrigger>
+                                        <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                                        <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                                        <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
+                                    </TabsList>
+                                    {renderActiveFilters()}
+                                </div>
                                 <TabsContent value="assigned">
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-xl font-bold">Assigned Tickets</h3>
-                                            <div className="flex items-center gap-2">
-                                                <Select value={sortOptions.assigned} onValueChange={(value) => handleSortChange('assigned', value as SortOption)}>
-                                                    <SelectTrigger className="w-[180px]">
-                                                        <SelectValue placeholder="Sort by" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="newest">Newest</SelectItem>
-                                                        <SelectItem value="oldest">Oldest</SelectItem>
-                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                        <SelectItem value="overdue">Overdue</SelectItem>
-                                                        <SelectItem value="status">Status</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                {sortOptions.assigned === 'status' && (
-                                                    <Select value={statusFilters.assigned} onValueChange={(value) => handleStatusFilterChange('assigned', value as StatusFilter)}>
-                                                        <SelectTrigger className="w-[120px]">
-                                                            <SelectValue placeholder="Filter status" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All</SelectItem>
-                                                            <SelectItem value="Open">Open</SelectItem>
-                                                            <SelectItem value="Pending">Pending</SelectItem>
-                                                            <SelectItem value="Resolved">Resolved</SelectItem>
-                                                            <SelectItem value="Closed">Closed</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <p className="text-muted-foreground">Tickets directly assigned to {profileData.name}.</p>
                                         <div className="border-t">
                                             {sortedAssignedTickets.length > 0 ? (
                                                 <ul className="space-y-0">
@@ -445,38 +506,6 @@ export function AgentProfile({ email }: { email: string }) {
                                 </TabsContent>
                                 <TabsContent value="cc">
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-xl font-bold">Tickets (Cc)</h3>
-                                            <div className="flex items-center gap-2">
-                                                <Select value={sortOptions.cc} onValueChange={(value) => handleSortChange('cc', value as SortOption)}>
-                                                    <SelectTrigger className="w-[180px]">
-                                                        <SelectValue placeholder="Sort by" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="newest">Newest</SelectItem>
-                                                        <SelectItem value="oldest">Oldest</SelectItem>
-                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                        <SelectItem value="overdue">Overdue</SelectItem>
-                                                        <SelectItem value="status">Status</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                {sortOptions.cc === 'status' && (
-                                                     <Select value={statusFilters.cc} onValueChange={(value) => handleStatusFilterChange('cc', value as StatusFilter)}>
-                                                        <SelectTrigger className="w-[120px]">
-                                                            <SelectValue placeholder="Filter status" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All</SelectItem>
-                                                            <SelectItem value="Open">Open</SelectItem>
-                                                            <SelectItem value="Pending">Pending</SelectItem>
-                                                            <SelectItem value="Resolved">Resolved</SelectItem>
-                                                            <SelectItem value="Closed">Closed</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <p className="text-muted-foreground">Tickets where {profileData.name} was in the Cc field.</p>
                                         <div className="border-t">
                                             {sortedCcTickets.length > 0 ? (
                                                 <ul className="space-y-0">
@@ -492,38 +521,6 @@ export function AgentProfile({ email }: { email: string }) {
                                 </TabsContent>
                                 <TabsContent value="bcc">
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="text-xl font-bold">Tickets (Bcc)</h3>
-                                            <div className="flex items-center gap-2">
-                                                <Select value={sortOptions.bcc} onValueChange={(value) => handleSortChange('bcc', value as SortOption)}>
-                                                    <SelectTrigger className="w-[180px]">
-                                                        <SelectValue placeholder="Sort by" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="newest">Newest</SelectItem>
-                                                        <SelectItem value="oldest">Oldest</SelectItem>
-                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                        <SelectItem value="overdue">Overdue</SelectItem>
-                                                        <SelectItem value="status">Status</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                {sortOptions.bcc === 'status' && (
-                                                     <Select value={statusFilters.bcc} onValueChange={(value) => handleStatusFilterChange('bcc', value as StatusFilter)}>
-                                                        <SelectTrigger className="w-[120px]">
-                                                            <SelectValue placeholder="Filter status" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="all">All</SelectItem>
-                                                            <SelectItem value="Open">Open</SelectItem>
-                                                            <SelectItem value="Pending">Pending</SelectItem>
-                                                            <SelectItem value="Resolved">Resolved</SelectItem>
-                                                            <SelectItem value="Closed">Closed</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <p className="text-muted-foreground">Tickets where {profileData.name} was in the Bcc field.</p>
                                         <div className="border-t">
                                             {sortedBccTickets.length > 0 ? (
                                                 <ul className="space-y-0">
@@ -644,5 +641,7 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
 
     
