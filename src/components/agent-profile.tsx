@@ -274,7 +274,7 @@ export function AgentProfile({ email }: { email: string }) {
                  <SidebarHeader className="mt-auto p-4">
                     <div className="flex flex-col items-center justify-center gap-2">
                         <span className="text-xs text-muted-foreground">Product of</span>
-                        <Image src="/navlogo.jpg" alt="Onecore Logo" width="120" height="60" />
+                        <Image src={`/navlogo.jpg?t=${new Date().getTime()}`} alt="Onecore Logo" width="120" height="60" />
                     </div>
                 </SidebarHeader>
                 </div>
