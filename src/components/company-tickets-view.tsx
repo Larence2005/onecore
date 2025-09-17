@@ -509,9 +509,6 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                 ) : (
                                     <>
                                         <div className="flex items-center justify-between mb-4">
-                                            <div>
-                                                <h1 className="text-2xl font-bold">{company?.name || 'Company Details'}</h1>
-                                            </div>
                                             {isOwner && activeTab === 'employees' && (
                                                 <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
                                                     <DialogTrigger asChild>
@@ -727,7 +724,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                     </>
                                 )}
                             </div>
-                            <aside className="h-screen overflow-y-auto sticky top-0 lg:col-span-1">
+                            <aside className="lg:col-span-1">
                                 {isLoading ? (
                                     <Card>
                                         <CardHeader>
