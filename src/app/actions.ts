@@ -818,6 +818,19 @@ export async function updateCompanyEmployee(
     return { success: true };
 }
 
+export async function deleteCompanyEmployee(organizationId: string, companyId: string, email: string) {
+    if (!organizationId || !companyId || !email) {
+        throw new Error("Missing required parameters to delete employee.");
+    }
+
+    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', email);
+    await deleteDoc(employeeDocRef);
+
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+
+    return { success: true };
+}
+
 
 
 export async function updateTicket(
@@ -1591,6 +1604,8 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
 
       
 
+
+    
 
     
 

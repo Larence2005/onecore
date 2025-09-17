@@ -1,16 +1,17 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee } from '@/app/actions';
 import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +30,8 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import Image from 'next/image';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 type ActiveTab = 'tickets' | 'employees';
@@ -72,6 +75,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [newEmployeeAddress, setNewEmployeeAddress] = useState('');
     const [newEmployeeMobile, setNewEmployeeMobile] = useState('');
     const [newEmployeeLandline, setNewEmployeeLandline] = useState('');
+    
+    const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
 
 
@@ -265,6 +271,26 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             toast({ variant: 'destructive', title: "Failed to add employee", description: errorMessage });
         } finally {
             setIsAddingEmployee(false);
+        }
+    };
+    
+    const handleDeleteClick = (employee: Employee) => {
+        setDeletingEmployee(employee);
+    };
+
+    const handleDeleteEmployee = async () => {
+        if (!deletingEmployee || !company || !userProfile?.organizationId) return;
+        setIsDeleting(true);
+        try {
+            await deleteCompanyEmployee(userProfile.organizationId, company.id, deletingEmployee.email);
+            toast({ title: 'Employee Deleted', description: `${deletingEmployee.name} has been removed.` });
+            await fetchCompanyData();
+            setDeletingEmployee(null);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Deletion Failed', description: errorMessage });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -629,7 +655,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                             <TableRow>
                                                                 <TableHead>Name</TableHead>
                                                                 <TableHead>Email</TableHead>
-                                                                <TableHead className="text-right">Tickets Created</TableHead>
+                                                                <TableHead>Tickets</TableHead>
+                                                                {isOwner && <TableHead className="w-[50px] text-right">Actions</TableHead>}
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -641,9 +668,49 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                         </Link>
                                                                     </TableCell>
                                                                     <TableCell>{employee.email}</TableCell>
-                                                                    <TableCell className="text-right">
+                                                                    <TableCell>
                                                                         {tickets.filter(t => t.senderEmail?.toLowerCase() === employee.email.toLowerCase()).length}
                                                                     </TableCell>
+                                                                    {isOwner && (
+                                                                        <TableCell className="text-right">
+                                                                            <AlertDialog open={deletingEmployee?.email === employee.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingEmployee(null); }}>
+                                                                                <DropdownMenu>
+                                                                                    <DropdownMenuTrigger asChild>
+                                                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                                            <MoreHorizontal className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </DropdownMenuTrigger>
+                                                                                    <DropdownMenuContent align="end">
+                                                                                        <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
+                                                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                                                            Edit
+                                                                                        </DropdownMenuItem>
+                                                                                        <AlertDialogTrigger asChild>
+                                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                                                Delete
+                                                                                            </DropdownMenuItem>
+                                                                                        </AlertDialogTrigger>
+                                                                                    </DropdownMenuContent>
+                                                                                </DropdownMenu>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            This action will delete {deletingEmployee?.name} and cannot be undone.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                            Delete
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        </TableCell>
+                                                                    )}
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
@@ -725,3 +792,5 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
+
+    
