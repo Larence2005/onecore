@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -730,7 +729,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                 </Tabs>
                             )}
                         </div>
-                        <aside className="lg:col-span-1 xl:col-span-1 space-y-6">
+                        <aside className="space-y-6 lg:col-span-1 xl:col-span-1">
                             {isLoading ? (
                                  <Card>
                                     <CardHeader>
@@ -792,5 +791,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
+
+    
 
     
