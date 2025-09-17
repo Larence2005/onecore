@@ -790,7 +790,3 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
-
-    
-
-    
