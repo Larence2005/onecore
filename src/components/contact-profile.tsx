@@ -55,6 +55,8 @@ export function ContactProfile({ email }: { email: string }) {
   const [involvedTickets, setInvolvedTickets] = useState<Map<string, Email>>(new Map());
   const [isInternalMember, setIsInternalMember] = useState(false);
   
+  const [activeTab, setActiveTab] = useState('submitted');
+
   const [sortOptions, setSortOptions] = useState<{ submitted: SortOption, cc: SortOption, bcc: SortOption }>({
     submitted: 'newest',
     cc: 'newest',
@@ -293,6 +295,94 @@ export function ContactProfile({ email }: { email: string }) {
     
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 
+    const renderActiveFilters = () => {
+        if (activeTab === 'submitted') {
+            return (
+                <div className="flex items-center gap-2">
+                    <Select value={sortOptions.submitted} onValueChange={(value) => handleSortChange('submitted', value as SortOption)}>
+                        <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortOptions.submitted === 'status' && (
+                        <Select value={statusFilters.submitted} onValueChange={(value) => handleStatusFilterChange('submitted', value as StatusFilter)}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            );
+        }
+        if (activeTab === 'cc') {
+             return (
+                <div className="flex items-center gap-2">
+                    <Select value={sortOptions.cc} onValueChange={(value) => handleSortChange('cc', value as SortOption)}>
+                         <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortOptions.cc === 'status' && (
+                        <Select value={statusFilters.cc} onValueChange={(value) => handleStatusFilterChange('cc', value as StatusFilter)}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            );
+        }
+        if (activeTab === 'bcc') {
+             return (
+                <div className="flex items-center gap-2">
+                    <Select value={sortOptions.bcc} onValueChange={(value) => handleSortChange('bcc', value as SortOption)}>
+                         <SelectTrigger className="w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="status">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {sortOptions.bcc === 'status' && (
+                        <Select value={statusFilters.bcc} onValueChange={(value) => handleStatusFilterChange('bcc', value as StatusFilter)}>
+                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            );
+        }
+        return null;
+    };
+
 
   return (
     <SidebarProvider>
@@ -408,44 +498,17 @@ export function ContactProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                            <Tabs defaultValue="submitted" className="w-full">
-                                <TabsList className="mb-4">
-                                    <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
-                                    <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
-                                    <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
-                                    <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
-                                </TabsList>
+                            <Tabs defaultValue="submitted" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                                <div className="flex justify-between items-center mb-4">
+                                    <TabsList>
+                                        <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
+                                        <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                                        <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                                        <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
+                                    </TabsList>
+                                    {renderActiveFilters()}
+                                </div>
                                 <TabsContent value="submitted">
-                                    <div className="flex justify-end items-center mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <Select value={sortOptions.submitted} onValueChange={(value) => handleSortChange('submitted', value as SortOption)}>
-                                                <SelectTrigger className="w-[180px]">
-                                                    <SelectValue placeholder="Sort by" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="newest">Newest</SelectItem>
-                                                    <SelectItem value="oldest">Oldest</SelectItem>
-                                                    <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                    <SelectItem value="overdue">Overdue</SelectItem>
-                                                    <SelectItem value="status">Status</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {sortOptions.submitted === 'status' && (
-                                                <Select value={statusFilters.submitted} onValueChange={(value) => handleStatusFilterChange('submitted', value as StatusFilter)}>
-                                                    <SelectTrigger className="w-[120px]">
-                                                        <SelectValue placeholder="Filter status" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All</SelectItem>
-                                                        <SelectItem value="Open">Open</SelectItem>
-                                                        <SelectItem value="Pending">Pending</SelectItem>
-                                                        <SelectItem value="Resolved">Resolved</SelectItem>
-                                                        <SelectItem value="Closed">Closed</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
-                                        </div>
-                                    </div>
                                     <div className="border-t">
                                         {sortedSubmittedTickets.length > 0 ? (
                                             <ul className="space-y-0">
@@ -459,36 +522,6 @@ export function ContactProfile({ email }: { email: string }) {
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="cc">
-                                     <div className="flex justify-end items-center mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <Select value={sortOptions.cc} onValueChange={(value) => handleSortChange('cc', value as SortOption)}>
-                                                <SelectTrigger className="w-[180px]">
-                                                    <SelectValue placeholder="Sort by" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="newest">Newest</SelectItem>
-                                                    <SelectItem value="oldest">Oldest</SelectItem>
-                                                    <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                    <SelectItem value="overdue">Overdue</SelectItem>
-                                                    <SelectItem value="status">Status</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {sortOptions.cc === 'status' && (
-                                                <Select value={statusFilters.cc} onValueChange={(value) => handleStatusFilterChange('cc', value as StatusFilter)}>
-                                                    <SelectTrigger className="w-[120px]">
-                                                        <SelectValue placeholder="Filter status" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All</SelectItem>
-                                                        <SelectItem value="Open">Open</SelectItem>
-                                                        <SelectItem value="Pending">Pending</SelectItem>
-                                                        <SelectItem value="Resolved">Resolved</SelectItem>
-                                                        <SelectItem value="Closed">Closed</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
-                                        </div>
-                                    </div>
                                     <div className="border-t">
                                         {sortedCcTickets.length > 0 ? (
                                             <ul className="space-y-0">
@@ -502,36 +535,6 @@ export function ContactProfile({ email }: { email: string }) {
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="bcc">
-                                     <div className="flex justify-end items-center mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <Select value={sortOptions.bcc} onValueChange={(value) => handleSortChange('bcc', value as SortOption)}>
-                                                <SelectTrigger className="w-[180px]">
-                                                    <SelectValue placeholder="Sort by" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="newest">Newest</SelectItem>
-                                                    <SelectItem value="oldest">Oldest</SelectItem>
-                                                    <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                    <SelectItem value="overdue">Overdue</SelectItem>
-                                                    <SelectItem value="status">Status</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {sortOptions.bcc === 'status' && (
-                                                <Select value={statusFilters.bcc} onValueChange={(value) => handleStatusFilterChange('bcc', value as StatusFilter)}>
-                                                    <SelectTrigger className="w-[120px]">
-                                                        <SelectValue placeholder="Filter status" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All</SelectItem>
-                                                        <SelectItem value="Open">Open</SelectItem>
-                                                        <SelectItem value="Pending">Pending</SelectItem>
-                                                        <SelectItem value="Resolved">Resolved</SelectItem>
-                                                        <SelectItem value="Closed">Closed</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
-                                        </div>
-                                    </div>
                                     <div className="border-t">
                                         {sortedBccTickets.length > 0 ? (
                                             <ul className="space-y-0">
@@ -640,3 +643,5 @@ export function ContactProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
