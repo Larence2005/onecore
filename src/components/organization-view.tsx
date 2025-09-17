@@ -136,12 +136,12 @@ export function OrganizationView() {
         setIsAddingMember(true);
         try {
             await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail, newMemberAddress, newMemberMobile, newMemberLandline);
-            toast({ title: 'Member Added', description: `${newMemberName} has been invited to the organization.` });
+            toast({ title: 'Agent Added', description: `${newMemberName} has been invited to the organization.` });
             await fetchMembers();
             resetAddMemberForm();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            toast({ variant: 'destructive', title: 'Failed to Add Member', description: errorMessage });
+            toast({ variant: 'destructive', title: 'Failed to Add Agent', description: errorMessage });
         } finally {
             setIsAddingMember(false);
         }
@@ -162,7 +162,7 @@ export function OrganizationView() {
         setIsUpdating(true);
         try {
             await updateMemberInOrganization(userProfile.organizationId, editingMember.email, updatedName, updatedEmail, updatedAddress, updatedMobile, updatedLandline);
-            toast({ title: "Member Updated", description: "The member's details have been updated." });
+            toast({ title: "Agent Updated", description: "The agent's details have been updated." });
             await fetchMembers();
             setIsEditDialogOpen(false);
             setEditingMember(null);
@@ -183,7 +183,7 @@ export function OrganizationView() {
         setIsDeleting(true);
         try {
             await deleteMemberFromOrganization(userProfile.organizationId, deletingMember.email);
-            toast({ title: 'Member Deleted', description: `${deletingMember.name} has been removed from the organization.` });
+            toast({ title: 'Agent Deleted', description: `${deletingMember.name} has been removed from the organization.` });
             await fetchMembers();
             setDeletingMember(null);
         } catch (error) {
@@ -286,7 +286,7 @@ export function OrganizationView() {
                     <div>
                         <h1 className="text-2xl font-bold">{userProfile.organizationName || 'Your Organization'}</h1>
                         <p className="text-muted-foreground">
-                            Invite and manage your organization's members.
+                            Invite and manage your organization's agents.
                         </p>
                     </div>
                     {isOwner && (
@@ -295,14 +295,14 @@ export function OrganizationView() {
                                 <DialogTrigger asChild>
                                     <Button variant="default" size="sm">
                                         <UserPlus className="mr-2 h-4 w-4" />
-                                        Add Member
+                                        Add Agent
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-2xl">
                                     <DialogHeader>
-                                        <DialogTitle>Add New Member</DialogTitle>
+                                        <DialogTitle>Add New Agent</DialogTitle>
                                         <DialogDescription>
-                                            Invite a new person to your organization. They will be able to sign up with their email.
+                                            Invite a new agent to your organization. They will be able to sign up with their email.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -333,7 +333,7 @@ export function OrganizationView() {
                                         </DialogClose>
                                         <Button onClick={handleAddMember} disabled={isAddingMember}>
                                             {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                            Add Member
+                                            Add Agent
                                         </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -419,7 +419,7 @@ export function OrganizationView() {
                                                     </AlertDialog>
                                                     <DialogContent className="sm:max-w-2xl">
                                                         <DialogHeader>
-                                                            <DialogTitle>Edit Member</DialogTitle>
+                                                            <DialogTitle>Edit Agent</DialogTitle>
                                                         </DialogHeader>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                                             <div className="space-y-2">
@@ -461,7 +461,7 @@ export function OrganizationView() {
                             }) : (
                                 <TableRow>
                                     <TableCell colSpan={isOwner ? 4 : 3} className="h-24 text-center">
-                                        No members found.
+                                        No agents found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -558,7 +558,7 @@ export function OrganizationView() {
                     <CardContent>
                         <dl className="grid grid-cols-1 gap-y-4">
                             <PropertyItem icon={Building} label="Organization Name" value={userProfile.organizationName} />
-                            <PropertyItem icon={Users} label="Total Members" value={members.length.toString()} />
+                            <PropertyItem icon={Users} label="Total Agents" value={members.length.toString()} />
                             <PropertyItem icon={MapPin} label="Address" value={userProfile.address} />
                             <PropertyItem icon={Phone} label="Mobile" value={userProfile.mobile} />
                             <PropertyItem icon={Phone} label="Landline" value={userProfile.landline} />
