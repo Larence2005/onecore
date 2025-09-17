@@ -86,7 +86,7 @@ export function ClientsView() {
     const isOwner = userProfile?.uid === userProfile?.organizationOwnerUid;
 
     const renderSkeleton = () => (
-        <div className="border rounded-md p-6 space-y-4">
+        <div className="space-y-4">
             <Skeleton className="h-8 w-48" />
             <div className="space-y-2">
                 {[...Array(5)].map((_, i) => (
@@ -155,18 +155,18 @@ export function ClientsView() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Company Name</TableHead>
-                                    <TableHead className="text-right">Total Tickets</TableHead>
-                                    <TableHead className="text-right">Unresolved Tickets</TableHead>
                                     <TableHead className="text-right">Employees</TableHead>
+                                    <TableHead className="text-right">Unresolved Tickets</TableHead>
+                                    <TableHead className="text-right">Total Tickets</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {paginatedCompanies.map((company) => (
                                      <TableRow key={company.id} className="cursor-pointer" onClick={() => router.push(`/clients/${company.id}`)}>
                                         <TableCell className="font-medium">{company.name}</TableCell>
-                                        <TableCell className="text-right">{company.ticketCount}</TableCell>
-                                        <TableCell className="text-right">{company.unresolvedTicketCount}</TableCell>
                                         <TableCell className="text-right">{company.employeeCount}</TableCell>
+                                        <TableCell className="text-right">{company.unresolvedTicketCount}</TableCell>
+                                        <TableCell className="text-right">{company.ticketCount}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -218,5 +218,3 @@ export function ClientsView() {
         </div>
     );
 }
-
-    
