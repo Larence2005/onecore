@@ -646,7 +646,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                 </div>
                                                 
                                                 {employees.length > 0 ? (
-                                                    <div className="border rounded-lg">
+                                                    <div className="border-t">
                                                         <Table>
                                                             <TableHeader>
                                                                 <TableRow>
@@ -790,4 +790,3 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
-
