@@ -331,14 +331,12 @@ export function AgentProfile({ email }: { email: string }) {
                                     <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="assigned">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Assigned Tickets</CardTitle>
-                                            <CardDescription>Tickets directly assigned to {profileData.name}.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-bold">Assigned Tickets</h3>
+                                        <p className="text-muted-foreground">Tickets directly assigned to {profileData.name}.</p>
+                                        <div className="border-t">
                                             {assignedTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
+                                                <ul className="space-y-0">
                                                     {assignedTickets.map((ticket) => (
                                                         <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
                                                     ))}
@@ -346,18 +344,16 @@ export function AgentProfile({ email }: { email: string }) {
                                             ) : (
                                                 <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
                                             )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="cc">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Tickets (Cc)</CardTitle>
-                                            <CardDescription>Tickets where {profileData.name} was in the Cc field.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-bold">Tickets (Cc)</h3>
+                                        <p className="text-muted-foreground">Tickets where {profileData.name} was in the Cc field.</p>
+                                        <div className="border-t">
                                             {ccTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
+                                                <ul className="space-y-0">
                                                     {ccTickets.map((ticket) => (
                                                         <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
                                                     ))}
@@ -365,18 +361,16 @@ export function AgentProfile({ email }: { email: string }) {
                                             ) : (
                                                 <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
                                             )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="bcc">
-                                        <Card>
-                                        <CardHeader>
-                                            <CardTitle>Tickets (Bcc)</CardTitle>
-                                            <CardDescription>Tickets where {profileData.name} was in the Bcc field.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-bold">Tickets (Bcc)</h3>
+                                        <p className="text-muted-foreground">Tickets where {profileData.name} was in the Bcc field.</p>
+                                        <div className="border-t">
                                             {bccTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
+                                                <ul className="space-y-0">
                                                     {bccTickets.map((ticket) => (
                                                         <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
                                                     ))}
@@ -384,16 +378,14 @@ export function AgentProfile({ email }: { email: string }) {
                                             ) : (
                                                 <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
                                             )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="forwarded">
-                                        <Card>
-                                        <CardHeader>
-                                            <CardTitle>Forwarded Messages</CardTitle>
-                                            <CardDescription>Tickets that were forwarded to {profileData.name}.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-bold">Forwarded Messages</h3>
+                                        <p className="text-muted-foreground">Tickets that were forwarded to {profileData.name}.</p>
+                                        <div className="space-y-4 pt-4">
                                             {forwardedActivities.length > 0 ? (
                                                 forwardedActivities.map((log) => (
                                                     <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
@@ -408,8 +400,8 @@ export function AgentProfile({ email }: { email: string }) {
                                             ) : (
                                                 <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
                                             )}
-                                        </CardContent>
-                                    </Card>
+                                        </div>
+                                    </div>
                                 </TabsContent>
                             </Tabs>
                         </div>
@@ -496,3 +488,5 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
