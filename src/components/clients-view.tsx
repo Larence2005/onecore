@@ -151,28 +151,26 @@ export function ClientsView() {
             <div className="space-y-4">
                 {companies.length > 0 ? (
                     <>
-                        <div className="border rounded-md">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Company Name</TableHead>
-                                        <TableHead className="text-right">Total Tickets</TableHead>
-                                        <TableHead className="text-right">Unresolved Tickets</TableHead>
-                                        <TableHead className="text-right">Employees</TableHead>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Company Name</TableHead>
+                                    <TableHead className="text-right">Total Tickets</TableHead>
+                                    <TableHead className="text-right">Unresolved Tickets</TableHead>
+                                    <TableHead className="text-right">Employees</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedCompanies.map((company) => (
+                                     <TableRow key={company.id} className="cursor-pointer" onClick={() => router.push(`/clients/${company.id}`)}>
+                                        <TableCell className="font-medium">{company.name}</TableCell>
+                                        <TableCell className="text-right">{company.ticketCount}</TableCell>
+                                        <TableCell className="text-right">{company.unresolvedTicketCount}</TableCell>
+                                        <TableCell className="text-right">{company.employeeCount}</TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {paginatedCompanies.map((company) => (
-                                         <TableRow key={company.id} className="cursor-pointer" onClick={() => router.push(`/clients/${company.id}`)}>
-                                            <TableCell className="font-medium">{company.name}</TableCell>
-                                            <TableCell className="text-right">{company.ticketCount}</TableCell>
-                                            <TableCell className="text-right">{company.unresolvedTicketCount}</TableCell>
-                                            <TableCell className="text-right">{company.employeeCount}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                ))}
+                            </TableBody>
+                        </Table>
                         {totalPages > 1 && (
                             <div className="flex items-center justify-between pt-4">
                                 <div className="text-sm text-muted-foreground">
