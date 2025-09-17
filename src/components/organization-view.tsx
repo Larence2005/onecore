@@ -417,11 +417,11 @@ export function OrganizationView() {
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
-                                                    <DialogContent className="sm:max-w-md">
+                                                    <DialogContent className="sm:max-w-2xl">
                                                         <DialogHeader>
                                                             <DialogTitle>Edit Member</DialogTitle>
                                                         </DialogHeader>
-                                                        <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                                             <div className="space-y-2">
                                                                 <Label htmlFor="update-name">Name</Label>
                                                                 <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
@@ -431,16 +431,16 @@ export function OrganizationView() {
                                                                 <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
                                                             </div>
                                                             <div className="space-y-2">
-                                                                <Label htmlFor="update-address">Address</Label>
-                                                                <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
                                                                 <Label htmlFor="update-mobile">Mobile Number</Label>
                                                                 <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
                                                             </div>
                                                             <div className="space-y-2">
                                                                 <Label htmlFor="update-landline">Telephone Number</Label>
                                                                 <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2 sm:col-span-2">
+                                                                <Label htmlFor="update-address">Address</Label>
+                                                                <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
                                                             </div>
                                                         </div>
                                                         <DialogFooter>
