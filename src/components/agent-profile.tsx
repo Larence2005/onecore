@@ -32,6 +32,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { isPast, isFuture, parseISO } from 'date-fns';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
+type StatusFilter = 'all' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
+
 
 export function AgentProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout, fetchUserProfile } = useAuth();
@@ -48,6 +50,12 @@ export function AgentProfile({ email }: { email: string }) {
     assigned: 'newest',
     cc: 'newest',
     bcc: 'newest'
+  });
+  
+  const [statusFilters, setStatusFilters] = useState<{ assigned: StatusFilter, cc: StatusFilter, bcc: StatusFilter }>({
+    assigned: 'all',
+    cc: 'all',
+    bcc: 'all',
   });
 
 
@@ -212,39 +220,52 @@ export function AgentProfile({ email }: { email: string }) {
         }
     };
     
-    const sortTickets = (tickets: Email[], sortOption: SortOption): Email[] => {
-        let sorted = [...tickets];
+    const sortAndFilterTickets = (tickets: Email[], sortOption: SortOption, statusFilter: StatusFilter): Email[] => {
+        let processedTickets = [...tickets];
+
+        if (sortOption === 'status' && statusFilter !== 'all') {
+            processedTickets = processedTickets.filter(t => t.status === statusFilter);
+        }
+
         switch (sortOption) {
             case 'newest':
-                sorted.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+                processedTickets.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
                 break;
             case 'oldest':
-                sorted.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
+                processedTickets.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
                 break;
             case 'upcoming':
-                sorted = sorted
+                processedTickets = processedTickets
                     .filter(t => t.deadline && isFuture(parseISO(t.deadline)))
                     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
                 break;
             case 'overdue':
-                sorted = sorted
+                processedTickets = processedTickets
                     .filter(t => t.deadline && isPast(parseISO(t.deadline)) && !['Resolved', 'Closed'].includes(t.status))
                     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
                 break;
             case 'status':
-                const statusOrder = { 'Open': 1, 'Pending': 2, 'Resolved': 3, 'Closed': 4, 'Archived': 5 };
-                sorted.sort((a, b) => (statusOrder[a.status as keyof typeof statusOrder] || 99) - (statusOrder[b.status as keyof typeof statusOrder] || 99));
+                // If a specific status is chosen, we just use the filtered list.
+                // If 'all' is chosen, sort by status order.
+                if (statusFilter === 'all') {
+                    const statusOrder = { 'Open': 1, 'Pending': 2, 'Resolved': 3, 'Closed': 4, 'Archived': 5 };
+                    processedTickets.sort((a, b) => (statusOrder[a.status as keyof typeof statusOrder] || 99) - (statusOrder[b.status as keyof typeof statusOrder] || 99));
+                }
                 break;
         }
-        return sorted;
+        return processedTickets;
     };
 
-    const sortedAssignedTickets = useMemo(() => sortTickets(assignedTickets, sortOptions.assigned), [assignedTickets, sortOptions.assigned]);
-    const sortedCcTickets = useMemo(() => sortTickets(ccTickets, sortOptions.cc), [ccTickets, sortOptions.cc]);
-    const sortedBccTickets = useMemo(() => sortTickets(bccTickets, sortOptions.bcc), [bccTickets, sortOptions.bcc]);
+    const sortedAssignedTickets = useMemo(() => sortAndFilterTickets(assignedTickets, sortOptions.assigned, statusFilters.assigned), [assignedTickets, sortOptions.assigned, statusFilters.assigned]);
+    const sortedCcTickets = useMemo(() => sortAndFilterTickets(ccTickets, sortOptions.cc, statusFilters.cc), [ccTickets, sortOptions.cc, statusFilters.cc]);
+    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.bcc), [bccTickets, sortOptions.bcc, statusFilters.bcc]);
     
     const handleSortChange = (list: 'assigned' | 'cc' | 'bcc', value: SortOption) => {
         setSortOptions(prev => ({ ...prev, [list]: value }));
+    };
+    
+    const handleStatusFilterChange = (list: 'assigned' | 'cc' | 'bcc', value: StatusFilter) => {
+        setStatusFilters(prev => ({ ...prev, [list]: value }));
     };
 
     if (loading || !user) {
@@ -379,9 +400,9 @@ export function AgentProfile({ email }: { email: string }) {
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
                                             <h3 className="text-xl font-bold">Assigned Tickets</h3>
-                                            <div className="w-[180px]">
+                                            <div className="flex items-center gap-2">
                                                 <Select value={sortOptions.assigned} onValueChange={(value) => handleSortChange('assigned', value as SortOption)}>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="w-[180px]">
                                                         <SelectValue placeholder="Sort by" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -392,6 +413,20 @@ export function AgentProfile({ email }: { email: string }) {
                                                         <SelectItem value="status">Status</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                                {sortOptions.assigned === 'status' && (
+                                                    <Select value={statusFilters.assigned} onValueChange={(value) => handleStatusFilterChange('assigned', value as StatusFilter)}>
+                                                        <SelectTrigger className="w-[120px]">
+                                                            <SelectValue placeholder="Filter status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All</SelectItem>
+                                                            <SelectItem value="Open">Open</SelectItem>
+                                                            <SelectItem value="Pending">Pending</SelectItem>
+                                                            <SelectItem value="Resolved">Resolved</SelectItem>
+                                                            <SelectItem value="Closed">Closed</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
                                             </div>
                                         </div>
                                         <p className="text-muted-foreground">Tickets directly assigned to {profileData.name}.</p>
@@ -412,9 +447,9 @@ export function AgentProfile({ email }: { email: string }) {
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
                                             <h3 className="text-xl font-bold">Tickets (Cc)</h3>
-                                             <div className="w-[180px]">
+                                            <div className="flex items-center gap-2">
                                                 <Select value={sortOptions.cc} onValueChange={(value) => handleSortChange('cc', value as SortOption)}>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="w-[180px]">
                                                         <SelectValue placeholder="Sort by" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -425,6 +460,20 @@ export function AgentProfile({ email }: { email: string }) {
                                                         <SelectItem value="status">Status</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                                {sortOptions.cc === 'status' && (
+                                                     <Select value={statusFilters.cc} onValueChange={(value) => handleStatusFilterChange('cc', value as StatusFilter)}>
+                                                        <SelectTrigger className="w-[120px]">
+                                                            <SelectValue placeholder="Filter status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All</SelectItem>
+                                                            <SelectItem value="Open">Open</SelectItem>
+                                                            <SelectItem value="Pending">Pending</SelectItem>
+                                                            <SelectItem value="Resolved">Resolved</SelectItem>
+                                                            <SelectItem value="Closed">Closed</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
                                             </div>
                                         </div>
                                         <p className="text-muted-foreground">Tickets where {profileData.name} was in the Cc field.</p>
@@ -445,9 +494,9 @@ export function AgentProfile({ email }: { email: string }) {
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center">
                                             <h3 className="text-xl font-bold">Tickets (Bcc)</h3>
-                                            <div className="w-[180px]">
+                                            <div className="flex items-center gap-2">
                                                 <Select value={sortOptions.bcc} onValueChange={(value) => handleSortChange('bcc', value as SortOption)}>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="w-[180px]">
                                                         <SelectValue placeholder="Sort by" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -458,6 +507,20 @@ export function AgentProfile({ email }: { email: string }) {
                                                         <SelectItem value="status">Status</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                                {sortOptions.bcc === 'status' && (
+                                                     <Select value={statusFilters.bcc} onValueChange={(value) => handleStatusFilterChange('bcc', value as StatusFilter)}>
+                                                        <SelectTrigger className="w-[120px]">
+                                                            <SelectValue placeholder="Filter status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All</SelectItem>
+                                                            <SelectItem value="Open">Open</SelectItem>
+                                                            <SelectItem value="Pending">Pending</SelectItem>
+                                                            <SelectItem value="Resolved">Resolved</SelectItem>
+                                                            <SelectItem value="Closed">Closed</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
                                             </div>
                                         </div>
                                         <p className="text-muted-foreground">Tickets where {profileData.name} was in the Bcc field.</p>
@@ -581,3 +644,5 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
