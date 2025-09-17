@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -561,11 +562,11 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                         )}
                                     </div>
                                     <TabsContent value="tickets">
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <div className="flex flex-row items-center justify-between mb-4">
                                                 <div>
-                                                    <CardTitle>Tickets for {company?.name}</CardTitle>
-                                                    <CardDescription>A list of all tickets associated with this company.</CardDescription>
+                                                    <h2 className="text-xl font-bold">Tickets for {company?.name}</h2>
+                                                    <p className="text-sm text-muted-foreground">A list of all tickets associated with this company.</p>
                                                 </div>
                                                 <div className="w-[180px]">
                                                     <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
@@ -581,8 +582,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
-                                            </CardHeader>
-                                            <CardContent>
+                                            </div>
+                                            <div>
                                                 {paginatedTickets.length > 0 ? (
                                                     <ul className="space-y-0 border-t">
                                                         {paginatedTickets.map((ticket) => (
@@ -603,9 +604,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                         </AlertDescription>
                                                     </Alert>
                                                 )}
-                                            </CardContent>
+                                            </div>
                                             {totalPages > 1 && (
-                                                <CardFooter className="flex items-center justify-between pt-6">
+                                                <div className="flex items-center justify-between pt-6 mt-4 border-t">
                                                     <div className="text-sm text-muted-foreground">
                                                         Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
                                                     </div>
@@ -635,9 +636,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                             </Button>
                                                         </div>
                                                     </div>
-                                                </CardFooter>
+                                                </div>
                                             )}
-                                    </Card>
+                                        </div>
                                     </TabsContent>
                                     <TabsContent value="employees">
                                         <Card>
@@ -729,7 +730,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                 </Tabs>
                             )}
                         </div>
-                        <aside className="space-y-6 lg:col-span-1 xl:col-span-1">
+                        <aside className="space-y-6 lg:col-span-1 xl:col-span-1 sticky top-0 h-screen overflow-y-auto">
                             {isLoading ? (
                                  <Card>
                                     <CardHeader>
@@ -791,7 +792,3 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
-
-    
-
-    
