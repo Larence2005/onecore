@@ -486,12 +486,11 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                         <ArrowLeft className="h-4 w-4" />
                                     </Link>
                                 </Button>
-                                <h1 className="text-xl font-bold">{company?.name}</h1>
+                                <TabsList>
+                                    <TabsTrigger value="tickets">All Tickets</TabsTrigger>
+                                    <TabsTrigger value="employees">Employees</TabsTrigger>
+                                </TabsList>
                             </div>
-                            <TabsList>
-                                <TabsTrigger value="tickets">All Tickets</TabsTrigger>
-                                <TabsTrigger value="employees">Employees</TabsTrigger>
-                            </TabsList>
                         </Header>
                         <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-3 lg:p-8 xl:grid-cols-4">
                             <div className="lg:col-span-2 xl:col-span-3">
@@ -790,3 +789,4 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
+
