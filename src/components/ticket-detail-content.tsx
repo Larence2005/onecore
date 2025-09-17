@@ -1311,7 +1311,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                         <div className="space-y-2 col-span-2">
                                             <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
                                             <div className="flex flex-wrap gap-2">
-                                                {currentTags.map(tag => (
+                                                {currentTags.filter(tag => tag !== 'Resolved Late').map(tag => (
                                                     <Badge key={tag} variant="secondary">
                                                         {tag}
                                                         <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
@@ -1355,5 +1355,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
-    
