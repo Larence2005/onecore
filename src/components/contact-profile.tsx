@@ -347,91 +347,67 @@ export function ContactProfile({ email }: { email: string }) {
                             </div>
                             <Tabs defaultValue="submitted" className="w-full">
                                 <TabsList className="mb-4">
-                                    <TabsTrigger value="submitted">Submitted</TabsTrigger>
-                                    <TabsTrigger value="cc">Cc'd On</TabsTrigger>
-                                    <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
-                                    <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
+                                    <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="submitted">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Submitted Tickets</CardTitle>
-                                            <CardDescription>Tickets created by {profileData.name}.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {submittedTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
-                                                    {submittedTickets.map((ticket) => (
-                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                    <div className="border-t">
+                                        {submittedTickets.length > 0 ? (
+                                            <ul className="space-y-0">
+                                                {submittedTickets.map((ticket) => (
+                                                    <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                        )}
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="cc">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Tickets (Cc)</CardTitle>
-                                            <CardDescription>Tickets where {profileData.name} was in the Cc field.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {ccTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
-                                                    {ccTickets.map((ticket) => (
-                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                    <div className="border-t">
+                                        {ccTickets.length > 0 ? (
+                                            <ul className="space-y-0">
+                                                {ccTickets.map((ticket) => (
+                                                    <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                        )}
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="bcc">
-                                        <Card>
-                                        <CardHeader>
-                                            <CardTitle>Tickets (Bcc)</CardTitle>
-                                            <CardDescription>Tickets where {profileData.name} was in the Bcc field.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {bccTickets.length > 0 ? (
-                                                <ul className="space-y-0 border-t">
-                                                    {bccTickets.map((ticket) => (
-                                                        <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                    <div className="border-t">
+                                        {bccTickets.length > 0 ? (
+                                            <ul className="space-y-0">
+                                                {bccTickets.map((ticket) => (
+                                                    <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                        )}
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="forwarded">
-                                        <Card>
-                                        <CardHeader>
-                                            <CardTitle>Forwarded Messages</CardTitle>
-                                            <CardDescription>Tickets that were forwarded to {profileData.name}.</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            {forwardedActivities.length > 0 ? (
-                                                forwardedActivities.map((log) => (
-                                                    <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
-                                                        <div className="flex flex-wrap items-center gap-x-2">
-                                                            <span>{log.details} on ticket</span> 
-                                                            <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
-                                                                {log.ticketSubject}
-                                                            </Link>
-                                                        </div>
-                                                    </TimelineItem>
-                                                ))
-                                            ) : (
-                                                <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                    <div className="border-t pt-4 space-y-4">
+                                        {forwardedActivities.length > 0 ? (
+                                            forwardedActivities.map((log) => (
+                                                <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
+                                                    <div className="flex flex-wrap items-center gap-x-2">
+                                                        <span>{log.details} on ticket</span> 
+                                                        <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
+                                                            {log.ticketSubject}
+                                                        </Link>
+                                                    </div>
+                                                </TimelineItem>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
+                                        )}
+                                    </div>
                                 </TabsContent>
                             </Tabs>
                         </div>
@@ -511,3 +487,5 @@ export function ContactProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
+
+    
