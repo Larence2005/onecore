@@ -478,273 +478,273 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 </Sidebar>
 
                 <main className="flex-1 flex flex-col min-w-0">
-                    <Header>
-                        <div className="flex items-center gap-4">
-                             <Button variant="outline" size="icon" asChild>
-                                <Link href="/?view=clients">
-                                    <ArrowLeft className="h-4 w-4" />
-                                </Link>
-                            </Button>
-                            {isLoading ? (
-                                <Skeleton className="h-6 w-48" />
-                            ) : (
-                               <h1 className="text-xl font-bold truncate">{company?.name || 'Company Tickets'}</h1>
-                            )}
-                        </div>
-                    </Header>
-                    <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-3 lg:p-8 xl:grid-cols-4">
-                         <div className="lg:col-span-2 xl:col-span-3">
-                            {isLoading ? (
-                                <div className="space-y-4">
-                                    {[...Array(5)].map((_, i) => (
-                                        <div key={i} className="p-4 border rounded-lg space-y-3">
-                                            <Skeleton className="h-5 w-3/4 rounded-md" />
-                                            <div className="flex items-center gap-2">
-                                                <Skeleton className="h-4 w-24 rounded-md" />
-                                                <Skeleton className="h-4 w-48 rounded-md" />
+                    <Tabs defaultValue="tickets" value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
+                        <Header>
+                            <div className="flex items-center gap-4">
+                                <Button variant="outline" size="icon" asChild>
+                                    <Link href="/?view=clients">
+                                        <ArrowLeft className="h-4 w-4" />
+                                    </Link>
+                                </Button>
+                                <TabsList>
+                                    <TabsTrigger value="tickets">All Tickets</TabsTrigger>
+                                    <TabsTrigger value="employees">Employees</TabsTrigger>
+                                </TabsList>
+                            </div>
+                        </Header>
+                        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-3 lg:p-8 xl:grid-cols-4">
+                            <div className="lg:col-span-2 xl:col-span-3">
+                                {isLoading ? (
+                                    <div className="space-y-4">
+                                        {[...Array(5)].map((_, i) => (
+                                            <div key={i} className="p-4 border rounded-lg space-y-3">
+                                                <Skeleton className="h-5 w-3/4 rounded-md" />
+                                                <div className="flex items-center gap-2">
+                                                    <Skeleton className="h-4 w-24 rounded-md" />
+                                                    <Skeleton className="h-4 w-48 rounded-md" />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <Tabs defaultValue="tickets" className="w-full" onValueChange={(value) => setActiveTab(value as ActiveTab)}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <TabsList>
-                                            <TabsTrigger value="tickets">All Tickets</TabsTrigger>
-                                            <TabsTrigger value="employees">Employees</TabsTrigger>
-                                        </TabsList>
-                                        {isOwner && activeTab === 'employees' && (
-                                            <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
-                                                <DialogTrigger asChild>
-                                                    <Button size="sm">
-                                                        <UserPlus className="mr-2 h-4 w-4" />
-                                                        Add Employee
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="sm:max-w-2xl">
-                                                    <DialogHeader>
-                                                        <DialogTitle>Add New Employee</DialogTitle>
-                                                        <DialogDescription>Enter the details for the new employee.</DialogDescription>
-                                                    </DialogHeader>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="new-employee-name">Name</Label>
-                                                            <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="new-employee-email">Email</Label>
-                                                            <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="new-employee-mobile">Mobile Number</Label>
-                                                            <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label htmlFor="new-employee-landline">Landline</Label>
-                                                            <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
-                                                        </div>
-                                                        <div className="space-y-2 sm:col-span-2">
-                                                            <Label htmlFor="new-employee-address">Address</Label>
-                                                            <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
-                                                        </div>
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <DialogClose asChild>
-                                                            <Button variant="outline">Cancel</Button>
-                                                        </DialogClose>
-                                                        <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
-                                                            {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                            Save Employee
-                                                        </Button>
-                                                    </DialogFooter>
-                                                </DialogContent>
-                                            </Dialog>
-                                        )}
+                                        ))}
                                     </div>
-                                    <TabsContent value="tickets">
-                                        <div>
-                                            <div className="flex flex-row items-center justify-between mb-4">
-                                                <div>
-                                                    <h2 className="text-xl font-bold">Tickets for {company?.name}</h2>
-                                                    <p className="text-sm text-muted-foreground">A list of all tickets associated with this company.</p>
-                                                </div>
-                                                <div className="w-[180px]">
-                                                    <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Sort by" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="newest">Newest</SelectItem>
-                                                            <SelectItem value="oldest">Oldest</SelectItem>
-                                                            <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                            <SelectItem value="overdue">Overdue</SelectItem>
-                                                            <SelectItem value="status">Status</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                {paginatedTickets.length > 0 ? (
-                                                    <ul className="space-y-0 border-t">
-                                                        {paginatedTickets.map((ticket) => (
-                                                            <TicketItem 
-                                                                key={ticket.id} 
-                                                                email={ticket} 
-                                                                isSelected={false}
-                                                                onSelect={() => {}}
-                                                            />
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <Alert>
-                                                        <Ticket className="h-4 w-4" />
-                                                        <AlertTitle>No Tickets Found</AlertTitle>
-                                                        <AlertDescription>
-                                                            There are no tickets matching the current criteria for {company?.name}.
-                                                        </AlertDescription>
-                                                    </Alert>
-                                                )}
+                                                <h1 className="text-2xl font-bold">{company?.name || 'Company Details'}</h1>
                                             </div>
-                                            {totalPages > 1 && (
-                                                <div className="flex items-center justify-between pt-6 mt-4 border-t">
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm text-muted-foreground">Rows per page</span>
-                                                            <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
-                                                                <SelectTrigger className="h-8 w-[70px]">
-                                                                    <SelectValue placeholder={String(ticketsPerPage)} />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="10">10</SelectItem>
-                                                                    <SelectItem value="25">25</SelectItem>
-                                                                    <SelectItem value="50">50</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
+                                            {isOwner && activeTab === 'employees' && (
+                                                <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
+                                                    <DialogTrigger asChild>
+                                                        <Button size="sm">
+                                                            <UserPlus className="mr-2 h-4 w-4" />
+                                                            Add Employee
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-2xl">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Add New Employee</DialogTitle>
+                                                            <DialogDescription>Enter the details for the new employee.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-name">Name</Label>
+                                                                <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-email">Email</Label>
+                                                                <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-mobile">Mobile Number</Label>
+                                                                <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-landline">Landline</Label>
+                                                                <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2 sm:col-span-2">
+                                                                <Label htmlFor="new-employee-address">Address</Label>
+                                                                <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
+                                                            </div>
                                                         </div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            Page {currentPage} of {totalPages}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                                                                <ChevronLeft className="h-4 w-4" />
+                                                        <DialogFooter>
+                                                            <DialogClose asChild>
+                                                                <Button variant="outline">Cancel</Button>
+                                                            </DialogClose>
+                                                            <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
+                                                                {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Save Employee
                                                             </Button>
-                                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                                                                <ChevronRight className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
                                             )}
                                         </div>
-                                    </TabsContent>
-                                    <TabsContent value="employees">
-                                        <div>
-                                            <div className="mb-4">
-                                                <h2 className="text-xl font-bold">Employees at {company?.name}</h2>
-                                                <p className="text-sm text-muted-foreground">A list of employees associated with this company.</p>
-                                            </div>
-                                            <div className="border-t">
-                                                {employees.length > 0 ? (
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead>Name</TableHead>
-                                                                <TableHead>Email</TableHead>
-                                                                <TableHead>Tickets</TableHead>
-                                                                {isOwner && <TableHead className="w-[50px] text-right">Actions</TableHead>}
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {employees.map((employee) => (
-                                                                <TableRow key={employee.email}>
-                                                                    <TableCell className="font-medium">
-                                                                        <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
-                                                                            {employee.name}
-                                                                        </Link>
-                                                                    </TableCell>
-                                                                    <TableCell>{employee.email}</TableCell>
-                                                                    <TableCell>
-                                                                        {tickets.filter(t => t.senderEmail?.toLowerCase() === employee.email.toLowerCase()).length}
-                                                                    </TableCell>
-                                                                    {isOwner && (
-                                                                        <TableCell className="text-right">
-                                                                            <AlertDialog open={deletingEmployee?.email === employee.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingEmployee(null); }}>
-                                                                                <DropdownMenu>
-                                                                                    <DropdownMenuTrigger asChild>
-                                                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                                            <MoreHorizontal className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                    </DropdownMenuTrigger>
-                                                                                    <DropdownMenuContent align="end">
-                                                                                        <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
-                                                                                            <Pencil className="mr-2 h-4 w-4" />
-                                                                                            Edit
-                                                                                        </DropdownMenuItem>
-                                                                                        <AlertDialogTrigger asChild>
-                                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                                                Delete
-                                                                                            </DropdownMenuItem>
-                                                                                        </AlertDialogTrigger>
-                                                                                    </DropdownMenuContent>
-                                                                                </DropdownMenu>
-                                                                                <AlertDialogContent>
-                                                                                    <AlertDialogHeader>
-                                                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                                        <AlertDialogDescription>
-                                                                                            This action will delete {deletingEmployee?.name} and cannot be undone.
-                                                                                        </AlertDialogDescription>
-                                                                                    </AlertDialogHeader>
-                                                                                    <AlertDialogFooter>
-                                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                                        <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                                            Delete
-                                                                                        </AlertDialogAction>
-                                                                                    </AlertDialogFooter>
-                                                                                </AlertDialogContent>
-                                                                            </AlertDialog>
-                                                                        </TableCell>
-                                                                    )}
-                                                                </TableRow>
+                                        <TabsContent value="tickets">
+                                            <div>
+                                                <div className="flex flex-row items-center justify-between mb-4">
+                                                    <div>
+                                                        <h2 className="text-xl font-bold">Tickets for {company?.name}</h2>
+                                                        <p className="text-sm text-muted-foreground">A list of all tickets associated with this company.</p>
+                                                    </div>
+                                                    <div className="w-[180px]">
+                                                        <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Sort by" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="newest">Newest</SelectItem>
+                                                                <SelectItem value="oldest">Oldest</SelectItem>
+                                                                <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                                <SelectItem value="overdue">Overdue</SelectItem>
+                                                                <SelectItem value="status">Status</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    {paginatedTickets.length > 0 ? (
+                                                        <ul className="space-y-0 border-t">
+                                                            {paginatedTickets.map((ticket) => (
+                                                                <TicketItem 
+                                                                    key={ticket.id} 
+                                                                    email={ticket} 
+                                                                    isSelected={false}
+                                                                    onSelect={() => {}}
+                                                                />
                                                             ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                ) : (
-                                                    <Alert>
-                                                        <User className="h-4 w-4" />
-                                                        <AlertTitle>No Employees Found</AlertTitle>
-                                                        <AlertDescription>
-                                                           No employees have been associated with this company yet. You can add one manually.
-                                                        </AlertDescription>
-                                                    </Alert>
+                                                        </ul>
+                                                    ) : (
+                                                        <Alert>
+                                                            <Ticket className="h-4 w-4" />
+                                                            <AlertTitle>No Tickets Found</AlertTitle>
+                                                            <AlertDescription>
+                                                                There are no tickets matching the current criteria for {company?.name}.
+                                                            </AlertDescription>
+                                                        </Alert>
+                                                    )}
+                                                </div>
+                                                {totalPages > 1 && (
+                                                    <div className="flex items-center justify-between pt-6 mt-4 border-t">
+                                                        <div className="text-sm text-muted-foreground">
+                                                            Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm text-muted-foreground">Rows per page</span>
+                                                                <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
+                                                                    <SelectTrigger className="h-8 w-[70px]">
+                                                                        <SelectValue placeholder={String(ticketsPerPage)} />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="10">10</SelectItem>
+                                                                        <SelectItem value="25">25</SelectItem>
+                                                                        <SelectItem value="50">50</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div className="text-sm text-muted-foreground">
+                                                                Page {currentPage} of {totalPages}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                                                    <ChevronLeft className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                                                    <ChevronRight className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
-                                        </div>
-                                    </TabsContent>
-                                </Tabs>
-                            )}
+                                        </TabsContent>
+                                        <TabsContent value="employees">
+                                            <div>
+                                                <div className="mb-4">
+                                                    <h2 className="text-xl font-bold">Employees at {company?.name}</h2>
+                                                    <p className="text-sm text-muted-foreground">A list of employees associated with this company.</p>
+                                                </div>
+                                                <div className="border-t">
+                                                    {employees.length > 0 ? (
+                                                        <Table>
+                                                            <TableHeader>
+                                                                <TableRow>
+                                                                    <TableHead>Name</TableHead>
+                                                                    <TableHead>Email</TableHead>
+                                                                    <TableHead>Tickets</TableHead>
+                                                                    {isOwner && <TableHead className="w-[50px] text-right">Actions</TableHead>}
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {employees.map((employee) => (
+                                                                    <TableRow key={employee.email}>
+                                                                        <TableCell className="font-medium">
+                                                                            <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
+                                                                                {employee.name}
+                                                                            </Link>
+                                                                        </TableCell>
+                                                                        <TableCell>{employee.email}</TableCell>
+                                                                        <TableCell>
+                                                                            {tickets.filter(t => t.senderEmail?.toLowerCase() === employee.email.toLowerCase()).length}
+                                                                        </TableCell>
+                                                                        {isOwner && (
+                                                                            <TableCell className="text-right">
+                                                                                <AlertDialog open={deletingEmployee?.email === employee.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingEmployee(null); }}>
+                                                                                    <DropdownMenu>
+                                                                                        <DropdownMenuTrigger asChild>
+                                                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                                            </Button>
+                                                                                        </DropdownMenuTrigger>
+                                                                                        <DropdownMenuContent align="end">
+                                                                                            <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
+                                                                                                <Pencil className="mr-2 h-4 w-4" />
+                                                                                                Edit
+                                                                                            </DropdownMenuItem>
+                                                                                            <AlertDialogTrigger asChild>
+                                                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                                                    Delete
+                                                                                                </DropdownMenuItem>
+                                                                                            </AlertDialogTrigger>
+                                                                                        </DropdownMenuContent>
+                                                                                    </DropdownMenu>
+                                                                                    <AlertDialogContent>
+                                                                                        <AlertDialogHeader>
+                                                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                                            <AlertDialogDescription>
+                                                                                                This action will delete {deletingEmployee?.name} and cannot be undone.
+                                                                                            </AlertDialogDescription>
+                                                                                        </AlertDialogHeader>
+                                                                                        <AlertDialogFooter>
+                                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                            <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                                Delete
+                                                                                            </AlertDialogAction>
+                                                                                        </AlertDialogFooter>
+                                                                                    </AlertDialogContent>
+                                                                                </AlertDialog>
+                                                                            </TableCell>
+                                                                        )}
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    ) : (
+                                                        <Alert>
+                                                            <User className="h-4 w-4" />
+                                                            <AlertTitle>No Employees Found</AlertTitle>
+                                                            <AlertDescription>
+                                                            No employees have been associated with this company yet. You can add one manually.
+                                                            </AlertDescription>
+                                                        </Alert>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </TabsContent>
+                                    </>
+                                )}
+                            </div>
+                            <aside className="h-screen overflow-y-auto sticky top-0 lg:col-span-1">
+                                {isLoading ? (
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-1/2" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    renderSidebarContent()
+                                )}
+                            </aside>
                         </div>
-                        <aside className="h-screen overflow-y-auto sticky top-0 lg:col-span-1">
-                            {isLoading ? (
-                                 <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                renderSidebarContent()
-                            )}
-                        </aside>
-                    </div>
+                    </Tabs>
                 </main>
             </div>
             
