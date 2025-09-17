@@ -52,6 +52,9 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
                     if (searchTerm === 'overdue') {
                         return isOverdue;
                     }
+                    if (searchTerm === 'resolved late') {
+                        return isResolvedLate;
+                    }
                     return emailTags.some(emailTag => emailTag.includes(searchTerm)) ||
                            companyName.includes(searchTerm);
                 });
