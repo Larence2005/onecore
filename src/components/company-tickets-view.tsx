@@ -229,7 +229,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 landline: updatedEmployeeLandline,
             };
             await updateCompanyEmployee(userProfile.organizationId, company.id, editingEmployee.email, employeeData);
-            toast({ title: "Agent Updated", description: "The agent's details have been updated." });
+            toast({ title: "Employee Updated", description: "The employee's details have been updated." });
             await fetchCompanyData(); // Re-fetch all company data to reflect changes
             setIsEditEmployeeDialogOpen(false);
             setEditingEmployee(null);
@@ -258,7 +258,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 landline: newEmployeeLandline,
             };
             await addEmployeeToCompany(userProfile.organizationId, company.id, newEmployee);
-            toast({ title: "Agent Added", description: `${newEmployeeName} has been added to ${company.name}.` });
+            toast({ title: "Employee Added", description: `${newEmployeeName} has been added to ${company.name}.` });
             await fetchCompanyData();
             setIsAddEmployeeDialogOpen(false);
             setNewEmployeeName('');
@@ -268,7 +268,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             setNewEmployeeLandline('');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            toast({ variant: 'destructive', title: "Failed to add agent", description: errorMessage });
+            toast({ variant: 'destructive', title: "Failed to add employee", description: errorMessage });
         } finally {
             setIsAddingEmployee(false);
         }
@@ -283,7 +283,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         setIsDeleting(true);
         try {
             await deleteCompanyEmployee(userProfile.organizationId, company.id, deletingEmployee.email);
-            toast({ title: 'Agent Deleted', description: `${deletingEmployee.name} has been removed.` });
+            toast({ title: 'Employee Deleted', description: `${deletingEmployee.name} has been removed.` });
             await fetchCompanyData();
             setDeletingEmployee(null);
         } catch (error) {
@@ -490,7 +490,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                 </Button>
                                 <TabsList>
                                     <TabsTrigger value="tickets">All Tickets</TabsTrigger>
-                                    <TabsTrigger value="employees">Agents</TabsTrigger>
+                                    <TabsTrigger value="employees">Employees</TabsTrigger>
                                 </TabsList>
                             </div>
                         </Header>
@@ -593,21 +593,21 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                              <div>
                                                 <div className="flex justify-between items-center mb-4">
                                                     <div>
-                                                        <h2 className="text-xl font-bold">Agents at {company?.name}</h2>
-                                                        <p className="text-muted-foreground">A list of agents associated with this company.</p>
+                                                        <h2 className="text-xl font-bold">Employees at {company?.name}</h2>
+                                                        <p className="text-muted-foreground">A list of employees associated with this company.</p>
                                                     </div>
                                                     {isOwner && (
                                                         <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
                                                             <DialogTrigger asChild>
                                                                 <Button size="sm">
                                                                     <UserPlus className="mr-2 h-4 w-4" />
-                                                                    Add Agent
+                                                                    Add Employee
                                                                 </Button>
                                                             </DialogTrigger>
                                                             <DialogContent className="sm:max-w-2xl">
                                                                 <DialogHeader>
-                                                                    <DialogTitle>Add New Agent</DialogTitle>
-                                                                    <DialogDescription>Enter the details for the new agent.</DialogDescription>
+                                                                    <DialogTitle>Add New Employee</DialogTitle>
+                                                                    <DialogDescription>Enter the details for the new employee.</DialogDescription>
                                                                 </DialogHeader>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                                                                     <div className="space-y-2">
@@ -637,7 +637,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                     </DialogClose>
                                                                     <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
                                                                         {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                        Save Agent
+                                                                        Save Employee
                                                                     </Button>
                                                                 </DialogFooter>
                                                             </DialogContent>
@@ -716,9 +716,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                 ) : (
                                                     <Alert>
                                                         <User className="h-4 w-4" />
-                                                        <AlertTitle>No Agents Found</AlertTitle>
+                                                        <AlertTitle>No Employees Found</AlertTitle>
                                                         <AlertDescription>
-                                                        No agents have been associated with this company yet. You can add one manually.
+                                                        No employees have been associated with this company yet. You can add one manually.
                                                         </AlertDescription>
                                                     </Alert>
                                                 )}
@@ -751,8 +751,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
              <Dialog open={isEditEmployeeDialogOpen} onOpenChange={setIsEditEmployeeDialogOpen}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Edit Agent: {editingEmployee?.name}</DialogTitle>
-                        <DialogDescription>Update the contact details for this agent.</DialogDescription>
+                        <DialogTitle>Edit Employee: {editingEmployee?.name}</DialogTitle>
+                        <DialogDescription>Update the contact details for this employee.</DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                         <div className="space-y-2">
