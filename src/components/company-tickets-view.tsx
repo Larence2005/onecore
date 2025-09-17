@@ -34,6 +34,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
+type StatusFilter = 'all' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
 type ActiveTab = 'tickets' | 'employees';
 
 
@@ -47,6 +48,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [activity, setActivity] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortOption, setSortOption] = useState<SortOption>('newest');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [ticketsPerPage, setTicketsPerPage] = useState(10);
     const [activeTab, setActiveTab] = useState<ActiveTab>('tickets');
@@ -131,31 +133,36 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     }, [fetchCompanyData]);
     
     const sortedTickets = useMemo(() => {
-        let sorted = [...tickets];
+        let processedTickets = [...tickets];
+
+        if (sortOption === 'status' && statusFilter !== 'all') {
+            processedTickets = processedTickets.filter(t => t.status === statusFilter);
+        }
+
         switch (sortOption) {
             case 'newest':
-                sorted.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+                processedTickets.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
                 break;
             case 'oldest':
-                sorted.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
+                processedTickets.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
                 break;
             case 'upcoming':
-                sorted = sorted
+                processedTickets = processedTickets
                     .filter(t => t.deadline && isFuture(parseISO(t.deadline)))
                     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
                 break;
             case 'overdue':
-                 sorted = sorted
+                 processedTickets = processedTickets
                     .filter(t => t.deadline && isPast(parseISO(t.deadline)) && !['Resolved', 'Closed'].includes(t.status))
                     .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
                 break;
             case 'status':
                 const statusOrder = { 'Open': 1, 'Pending': 2, 'Resolved': 3, 'Closed': 4, 'Archived': 5 };
-                sorted.sort((a, b) => (statusOrder[a.status as keyof typeof statusOrder] || 99) - (statusOrder[b.status as keyof typeof statusOrder] || 99));
+                processedTickets.sort((a, b) => (statusOrder[a.status as keyof typeof statusOrder] || 99) - (statusOrder[b.status as keyof typeof statusOrder] || 99));
                 break;
         }
-        return sorted;
-    }, [tickets, sortOption]);
+        return processedTickets;
+    }, [tickets, sortOption, statusFilter]);
 
     const paginatedTickets = useMemo(() => {
         const startIndex = (currentPage - 1) * ticketsPerPage;
@@ -512,14 +519,14 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                     <>
                                         <TabsContent value="tickets">
                                             <div className="space-y-4">
-                                                <div className="flex flex-row items-center justify-between">
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                                     <div>
                                                         <h2 className="text-xl font-bold">Tickets for {company?.name}</h2>
                                                         <p className="text-muted-foreground">A list of all tickets associated with this company.</p>
                                                     </div>
-                                                    <div className="w-[180px]">
+                                                    <div className="flex items-center gap-2">
                                                         <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                                                            <SelectTrigger>
+                                                            <SelectTrigger className="w-full sm:w-[180px]">
                                                                 <SelectValue placeholder="Sort by" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -530,6 +537,20 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                 <SelectItem value="status">Status</SelectItem>
                                                             </SelectContent>
                                                         </Select>
+                                                        {sortOption === 'status' && (
+                                                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                                                                <SelectTrigger className="w-full sm:w-[120px]">
+                                                                    <SelectValue placeholder="Filter status" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="all">All</SelectItem>
+                                                                    <SelectItem value="Open">Open</SelectItem>
+                                                                    <SelectItem value="Pending">Pending</SelectItem>
+                                                                    <SelectItem value="Resolved">Resolved</SelectItem>
+                                                                    <SelectItem value="Closed">Closed</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div>
