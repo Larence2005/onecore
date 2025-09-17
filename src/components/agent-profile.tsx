@@ -323,12 +323,12 @@ export function AgentProfile({ email }: { email: string }) {
                                     </div>
                                 </div>
                             </div>
-                             <Tabs defaultValue="assigned" className="w-full">
+                            <Tabs defaultValue="assigned" className="w-full">
                                 <TabsList className="mb-4">
-                                    <TabsTrigger value="assigned">Assigned</TabsTrigger>
-                                    <TabsTrigger value="cc">Cc'd On</TabsTrigger>
-                                    <TabsTrigger value="bcc">Bcc'd On</TabsTrigger>
-                                    <TabsTrigger value="forwarded">Forwarded To</TabsTrigger>
+                                    <TabsTrigger value="assigned">Assigned ({assignedTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="assigned">
                                     <div className="space-y-2">
@@ -488,5 +488,3 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
-
-    
