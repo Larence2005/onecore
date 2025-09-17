@@ -342,7 +342,7 @@ export function OrganizationView() {
                     )}
                 </div>
                 
-                <div className="border rounded-md">
+                <div>
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -570,5 +570,7 @@ export function OrganizationView() {
         </div>
     );
 }
+
+    
 
     
