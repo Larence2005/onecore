@@ -52,7 +52,7 @@ export function TimelineItem({ type, date, children, user }: TimelineItemProps) 
                 {getIcon(type)}
             </div>
             <div className="flex-1 space-y-1 min-w-0">
-                <div className="text-sm text-foreground">
+                <div className="text-sm text-foreground break-words">
                     <span className="font-semibold">{displayUser}</span>
                     <span className="text-muted-foreground"> {type === "Create" ? 'created a ticket' : 'updated the ticket'}</span>
                 </div>
