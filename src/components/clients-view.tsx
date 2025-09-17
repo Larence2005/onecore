@@ -156,7 +156,8 @@ export function ClientsView() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Company Name</TableHead>
-                                        <TableHead className="text-right">Tickets</TableHead>
+                                        <TableHead className="text-right">Total Tickets</TableHead>
+                                        <TableHead className="text-right">Unresolved Tickets</TableHead>
                                         <TableHead className="text-right">Employees</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -165,6 +166,7 @@ export function ClientsView() {
                                          <TableRow key={company.id} className="cursor-pointer" onClick={() => router.push(`/clients/${company.id}`)}>
                                             <TableCell className="font-medium">{company.name}</TableCell>
                                             <TableCell className="text-right">{company.ticketCount}</TableCell>
+                                            <TableCell className="text-right">{company.unresolvedTicketCount}</TableCell>
                                             <TableCell className="text-right">{company.employeeCount}</TableCell>
                                         </TableRow>
                                     ))}

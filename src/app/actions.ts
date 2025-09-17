@@ -108,6 +108,7 @@ export interface Company {
     id: string;
     name: string;
     ticketCount?: number;
+    unresolvedTicketCount?: number;
     employeeCount?: number;
     address?: string;
     mobile?: string;
@@ -1441,10 +1442,18 @@ export async function getCompanyWithTicketAndEmployeeCount(organizationId: strin
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     const ticketsSnapshot = await getDocs(ticketsCollectionRef);
     const ticketCounts = new Map<string, number>();
+    const unresolvedTicketCounts = new Map<string, number>();
+
     ticketsSnapshot.docs.forEach(doc => {
-        const companyId = doc.data().companyId;
+        const data = doc.data();
+        const companyId = data.companyId;
+        const status = data.status;
+
         if (companyId) {
             ticketCounts.set(companyId, (ticketCounts.get(companyId) || 0) + 1);
+            if (status === 'Open' || status === 'Pending') {
+                unresolvedTicketCounts.set(companyId, (unresolvedTicketCounts.get(companyId) || 0) + 1);
+            }
         }
     });
 
@@ -1455,6 +1464,7 @@ export async function getCompanyWithTicketAndEmployeeCount(organizationId: strin
         return {
             ...company,
             ticketCount: ticketCounts.get(company.id) || 0,
+            unresolvedTicketCount: unresolvedTicketCounts.get(company.id) || 0,
             employeeCount: employeesSnapshot.size,
         };
     }));
