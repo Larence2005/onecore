@@ -189,7 +189,8 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
     if (isLoading) {
         return (
             <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    <Skeleton className="h-[108px] w-full" />
                     <Skeleton className="h-[108px] w-full" />
                     <Skeleton className="h-[108px] w-full" />
                     <Skeleton className="h-[108px] w-full" />
@@ -221,11 +222,12 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <StatCard title="Total Tickets" value={stats.totalTickets} icon={Ticket} />
+                <StatCard title="Unresolved" value={stats.unresolvedTickets} icon={HelpCircle} />
                 <StatCard title="Pending" value={stats.pendingTickets} icon={Clock} />
                 <StatCard title="Resolved Today" value={stats.resolvedToday} icon={CheckCircle} />
-                <StatCard title="Unresolved" value={stats.unresolvedTickets} icon={HelpCircle} />
+                <StatCard title="Overdue" value={stats.overdueTickets} icon={AlertTriangle} />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
