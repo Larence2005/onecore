@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity, Building, Calendar as CalendarIcon } from 'lucide-react';
+import { Terminal, Ticket, Clock, CheckCircle, AlertTriangle, CalendarClock, Activity, Building, Calendar as CalendarIcon, ListChecks, HelpCircle } from 'lucide-react';
 import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays, subDays, isAfter, format, isBefore } from 'date-fns';
 import { Badge } from './ui/badge';
@@ -108,7 +108,8 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         const filteredTickets = dateFilteredTickets;
 
         const totalTickets = filteredTickets.length;
-        const openTickets = filteredTickets.filter(t => t.status === 'Open' || t.status === 'Pending').length;
+        const unresolvedTickets = filteredTickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length;
+        const pendingTickets = filteredTickets.filter(t => t.status === 'Pending').length;
         const resolvedToday = filteredTickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
         const overdueTickets = filteredTickets.filter(t => t.deadline && isPast(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
 
@@ -150,7 +151,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
             .slice(0, 5);
         
-        return { totalTickets, openTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
+        return { totalTickets, unresolvedTickets, pendingTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
     }, [tickets, selectedCompanyId, dateRangeOption, customDateRange]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
@@ -222,9 +223,9 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="Total Tickets" value={stats.totalTickets} icon={Ticket} />
-                <StatCard title="Open Tickets" value={stats.openTickets} icon={Clock} />
+                <StatCard title="Pending" value={stats.pendingTickets} icon={Clock} />
                 <StatCard title="Resolved Today" value={stats.resolvedToday} icon={CheckCircle} />
-                <StatCard title="Overdue" value={stats.overdueTickets} icon={AlertTriangle} />
+                <StatCard title="Unresolved" value={stats.unresolvedTickets} icon={HelpCircle} />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -367,3 +368,5 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         </div>
     );
 }
+
+    
