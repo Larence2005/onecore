@@ -492,7 +492,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                             )}
                         </div>
                     </Header>
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                    <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-3 lg:p-8 xl:grid-cols-4">
                          <div className="lg:col-span-2 xl:col-span-3">
                             {isLoading ? (
                                 <div className="space-y-4">
@@ -641,14 +641,12 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                         </div>
                                     </TabsContent>
                                     <TabsContent value="employees">
-                                        <Card>
-                                            <CardHeader>
-                                                 <div>
-                                                    <CardTitle>Employees at {company?.name}</CardTitle>
-                                                    <CardDescription>A list of employees associated with this company.</CardDescription>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent>
+                                        <div>
+                                            <div className="mb-4">
+                                                <h2 className="text-xl font-bold">Employees at {company?.name}</h2>
+                                                <p className="text-sm text-muted-foreground">A list of employees associated with this company.</p>
+                                            </div>
+                                            <div className="border-t">
                                                 {employees.length > 0 ? (
                                                     <Table>
                                                         <TableHeader>
@@ -724,13 +722,13 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                         </AlertDescription>
                                                     </Alert>
                                                 )}
-                                            </CardContent>
-                                        </Card>
+                                            </div>
+                                        </div>
                                     </TabsContent>
                                 </Tabs>
                             )}
                         </div>
-                        <aside className="space-y-6 lg:col-span-1 xl:col-span-1 sticky top-0 h-screen overflow-y-auto">
+                        <aside className="h-screen overflow-y-auto sticky top-0 lg:col-span-1">
                             {isLoading ? (
                                  <Card>
                                     <CardHeader>
