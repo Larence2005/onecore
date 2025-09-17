@@ -10,7 +10,7 @@ import { Checkbox } from "./ui/checkbox";
 import { TicketItem } from "./ticket-item";
 import { FilterState } from "./tickets-filter";
 import { useMemo, useState } from "react";
-import { isAfter, subDays, parseISO } from "date-fns";
+import { isAfter, subDays, parseISO, isPast } from "date-fns";
 import { archiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -45,11 +45,17 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
             if (tagSearchTerms.length > 0) {
                 const emailTags = (email.tags || []).map(t => t.toLowerCase());
                 const companyName = (email.companyName || '').toLowerCase();
+                const isResolvedLate = emailTags.includes('resolved late');
+                const isOverdue = !isResolvedLate && email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
 
-                const hasMatch = tagSearchTerms.every(searchTerm => 
-                    emailTags.some(emailTag => emailTag.includes(searchTerm)) ||
-                    companyName.includes(searchTerm)
-                );
+                const hasMatch = tagSearchTerms.every(searchTerm => {
+                    if (searchTerm === 'overdue') {
+                        return isOverdue;
+                    }
+                    return emailTags.some(emailTag => emailTag.includes(searchTerm)) ||
+                           companyName.includes(searchTerm);
+                });
+
                 if (!hasMatch) {
                     return false;
                 }
