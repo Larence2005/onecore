@@ -108,6 +108,7 @@ export interface Company {
     id: string;
     name: string;
     ticketCount?: number;
+    employeeCount?: number;
     address?: string;
     mobile?: string;
     landline?: string;
@@ -1427,7 +1428,7 @@ export async function getCompanies(organizationId: string): Promise<Company[]> {
     return companies;
 }
 
-export async function getCompanyWithTicketCount(organizationId: string): Promise<Company[]> {
+export async function getCompanyWithTicketAndEmployeeCount(organizationId: string): Promise<Company[]> {
     if (!organizationId) return [];
 
     const cacheKey = `companies_with_counts:${organizationId}`;
@@ -1436,9 +1437,9 @@ export async function getCompanyWithTicketCount(organizationId: string): Promise
     
     const companies = await getCompanies(organizationId);
     
+    // Get ticket counts
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     const ticketsSnapshot = await getDocs(ticketsCollectionRef);
-    
     const ticketCounts = new Map<string, number>();
     ticketsSnapshot.docs.forEach(doc => {
         const companyId = doc.data().companyId;
@@ -1447,9 +1448,15 @@ export async function getCompanyWithTicketCount(organizationId: string): Promise
         }
     });
 
-    const companiesWithCounts = companies.map(company => ({
-        ...company,
-        ticketCount: ticketCounts.get(company.id) || 0,
+    // Get employee counts
+    const companiesWithCounts = await Promise.all(companies.map(async (company) => {
+        const employeesCollectionRef = collection(db, 'organizations', organizationId, 'companies', company.id, 'employees');
+        const employeesSnapshot = await getDocs(employeesCollectionRef);
+        return {
+            ...company,
+            ticketCount: ticketCounts.get(company.id) || 0,
+            employeeCount: employeesSnapshot.size,
+        };
     }));
 
     companiesCache.set(cacheKey, companiesWithCounts);
@@ -1604,6 +1611,8 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
 
       
 
+
+    
 
     
 

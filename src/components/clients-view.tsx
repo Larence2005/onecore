@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { addCompany, getCompanyWithTicketCount } from "@/app/actions";
+import { addCompany, getCompanyWithTicketAndEmployeeCount } from "@/app/actions";
 import type { Company } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "./ui/card";
@@ -11,7 +11,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { PlusCircle, RefreshCw, Building, ChevronLeft, ChevronRight, Ticket } from "lucide-react";
+import { PlusCircle, RefreshCw, Building, ChevronLeft, ChevronRight, Ticket, Users } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import Link from "next/link";
@@ -36,7 +36,7 @@ export function ClientsView() {
         if (!userProfile?.organizationId) return;
         setIsLoading(true);
         try {
-            const fetchedCompanies = await getCompanyWithTicketCount(userProfile.organizationId);
+            const fetchedCompanies = await getCompanyWithTicketAndEmployeeCount(userProfile.organizationId);
             setCompanies(fetchedCompanies);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error fetching companies' });
@@ -157,6 +157,7 @@ export function ClientsView() {
                                     <TableRow>
                                         <TableHead>Company Name</TableHead>
                                         <TableHead className="text-right">Tickets</TableHead>
+                                        <TableHead className="text-right">Employees</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -164,6 +165,7 @@ export function ClientsView() {
                                          <TableRow key={company.id} className="cursor-pointer" onClick={() => router.push(`/clients/${company.id}`)}>
                                             <TableCell className="font-medium">{company.name}</TableCell>
                                             <TableCell className="text-right">{company.ticketCount}</TableCell>
+                                            <TableCell className="text-right">{company.employeeCount}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -216,3 +218,5 @@ export function ClientsView() {
         </div>
     );
 }
+
+    
