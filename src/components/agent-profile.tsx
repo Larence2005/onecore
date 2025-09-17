@@ -28,7 +28,10 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import Image from "next/image";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { isPast, isFuture, parseISO } from 'date-fns';
 
+type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 
 export function AgentProfile({ email }: { email: string }) {
   const { user, userProfile, loading, logout, fetchUserProfile } = useAuth();
@@ -40,6 +43,13 @@ export function AgentProfile({ email }: { email: string }) {
   const [forwardedActivities, setForwardedActivities] = useState<ActivityLog[]>([]);
   const [responseCount, setResponseCount] = useState(0);
   const [latestActivity, setLatestActivity] = useState<ActivityLog | null>(null);
+  
+  const [sortOptions, setSortOptions] = useState<{ assigned: SortOption, cc: SortOption, bcc: SortOption }>({
+    assigned: 'newest',
+    cc: 'newest',
+    bcc: 'newest'
+  });
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -201,6 +211,41 @@ export function AgentProfile({ email }: { email: string }) {
             router.push(`/?view=${view}`); 
         }
     };
+    
+    const sortTickets = (tickets: Email[], sortOption: SortOption): Email[] => {
+        let sorted = [...tickets];
+        switch (sortOption) {
+            case 'newest':
+                sorted.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
+                break;
+            case 'oldest':
+                sorted.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
+                break;
+            case 'upcoming':
+                sorted = sorted
+                    .filter(t => t.deadline && isFuture(parseISO(t.deadline)))
+                    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+                break;
+            case 'overdue':
+                sorted = sorted
+                    .filter(t => t.deadline && isPast(parseISO(t.deadline)) && !['Resolved', 'Closed'].includes(t.status))
+                    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+                break;
+            case 'status':
+                const statusOrder = { 'Open': 1, 'Pending': 2, 'Resolved': 3, 'Closed': 4, 'Archived': 5 };
+                sorted.sort((a, b) => (statusOrder[a.status as keyof typeof statusOrder] || 99) - (statusOrder[b.status as keyof typeof statusOrder] || 99));
+                break;
+        }
+        return sorted;
+    };
+
+    const sortedAssignedTickets = useMemo(() => sortTickets(assignedTickets, sortOptions.assigned), [assignedTickets, sortOptions.assigned]);
+    const sortedCcTickets = useMemo(() => sortTickets(ccTickets, sortOptions.cc), [ccTickets, sortOptions.cc]);
+    const sortedBccTickets = useMemo(() => sortTickets(bccTickets, sortOptions.bcc), [bccTickets, sortOptions.bcc]);
+    
+    const handleSortChange = (list: 'assigned' | 'cc' | 'bcc', value: SortOption) => {
+        setSortOptions(prev => ({ ...prev, [list]: value }));
+    };
 
     if (loading || !user) {
         return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
@@ -332,12 +377,28 @@ export function AgentProfile({ email }: { email: string }) {
                                 </TabsList>
                                 <TabsContent value="assigned">
                                     <div className="space-y-2">
-                                        <h3 className="text-xl font-bold">Assigned Tickets</h3>
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-xl font-bold">Assigned Tickets</h3>
+                                            <div className="w-[180px]">
+                                                <Select value={sortOptions.assigned} onValueChange={(value) => handleSortChange('assigned', value as SortOption)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Sort by" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="newest">Newest</SelectItem>
+                                                        <SelectItem value="oldest">Oldest</SelectItem>
+                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                        <SelectItem value="overdue">Overdue</SelectItem>
+                                                        <SelectItem value="status">Status</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
                                         <p className="text-muted-foreground">Tickets directly assigned to {profileData.name}.</p>
                                         <div className="border-t">
-                                            {assignedTickets.length > 0 ? (
+                                            {sortedAssignedTickets.length > 0 ? (
                                                 <ul className="space-y-0">
-                                                    {assignedTickets.map((ticket) => (
+                                                    {sortedAssignedTickets.map((ticket) => (
                                                         <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
                                                     ))}
                                                 </ul>
@@ -349,12 +410,28 @@ export function AgentProfile({ email }: { email: string }) {
                                 </TabsContent>
                                 <TabsContent value="cc">
                                     <div className="space-y-2">
-                                        <h3 className="text-xl font-bold">Tickets (Cc)</h3>
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-xl font-bold">Tickets (Cc)</h3>
+                                             <div className="w-[180px]">
+                                                <Select value={sortOptions.cc} onValueChange={(value) => handleSortChange('cc', value as SortOption)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Sort by" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="newest">Newest</SelectItem>
+                                                        <SelectItem value="oldest">Oldest</SelectItem>
+                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                        <SelectItem value="overdue">Overdue</SelectItem>
+                                                        <SelectItem value="status">Status</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
                                         <p className="text-muted-foreground">Tickets where {profileData.name} was in the Cc field.</p>
                                         <div className="border-t">
-                                            {ccTickets.length > 0 ? (
+                                            {sortedCcTickets.length > 0 ? (
                                                 <ul className="space-y-0">
-                                                    {ccTickets.map((ticket) => (
+                                                    {sortedCcTickets.map((ticket) => (
                                                         <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
                                                     ))}
                                                 </ul>
@@ -366,12 +443,28 @@ export function AgentProfile({ email }: { email: string }) {
                                 </TabsContent>
                                 <TabsContent value="bcc">
                                     <div className="space-y-2">
-                                        <h3 className="text-xl font-bold">Tickets (Bcc)</h3>
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-xl font-bold">Tickets (Bcc)</h3>
+                                            <div className="w-[180px]">
+                                                <Select value={sortOptions.bcc} onValueChange={(value) => handleSortChange('bcc', value as SortOption)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Sort by" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="newest">Newest</SelectItem>
+                                                        <SelectItem value="oldest">Oldest</SelectItem>
+                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                        <SelectItem value="overdue">Overdue</SelectItem>
+                                                        <SelectItem value="status">Status</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
                                         <p className="text-muted-foreground">Tickets where {profileData.name} was in the Bcc field.</p>
                                         <div className="border-t">
-                                            {bccTickets.length > 0 ? (
+                                            {sortedBccTickets.length > 0 ? (
                                                 <ul className="space-y-0">
-                                                    {bccTickets.map((ticket) => (
+                                                    {sortedBccTickets.map((ticket) => (
                                                         <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
                                                     ))}
                                                 </ul>
