@@ -8,11 +8,15 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search } from 'lucide-react';
+import { Search, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { getOrganizationMembers } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
 import { cn } from '@/lib/utils';
+import { DateRange } from 'react-day-picker';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
 
 export interface FilterState {
   search: string;
@@ -23,6 +27,7 @@ export interface FilterState {
   types: string[];
   tags: string;
   created: string;
+  dateRange?: DateRange;
 }
 
 interface TicketsFilterProps {
@@ -44,6 +49,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const [types, setTypes] = useState<string[]>([]);
   const [tags, setTags] = useState('');
   const [created, setCreated] = useState('any');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [agentOptions, setAgentOptions] = useState<OrganizationMember[]>([]);
 
   const isOwner = user?.uid === userProfile?.organizationOwnerUid;
@@ -59,8 +65,8 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   };
 
   const handleApply = useCallback(() => {
-    onApplyFilters({ search, agents, groups, statuses, priorities, types, tags, created });
-  }, [search, agents, groups, statuses, priorities, types, tags, created, onApplyFilters]);
+    onApplyFilters({ search, agents, groups, statuses, priorities, types, tags, created, dateRange });
+  }, [search, agents, groups, statuses, priorities, types, tags, created, dateRange, onApplyFilters]);
 
 
   const clearFilters = () => {
@@ -72,6 +78,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
     setTypes([]);
     setTags('');
     setCreated('any');
+    setDateRange(undefined);
   };
   
   useEffect(() => {
@@ -79,7 +86,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   }, [handleApply]);
 
 
-  const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null].filter(Boolean).length;
+  const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null, dateRange].filter(Boolean).length;
 
   return (
     <aside className="hidden lg:block w-72 border-l">
@@ -204,8 +211,13 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
             </AccordionItem>
             <AccordionItem value="created">
               <AccordionTrigger className="px-4 text-base font-semibold">Date Created</AccordionTrigger>
-              <AccordionContent className="px-4">
-                <Select value={created} onValueChange={setCreated}>
+              <AccordionContent className="px-4 space-y-2">
+                <Select value={created} onValueChange={(value) => {
+                    setCreated(value);
+                    if (value !== 'custom') {
+                        setDateRange(undefined);
+                    }
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a date range" />
                   </SelectTrigger>
@@ -215,8 +227,49 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                     <SelectItem value="7d">Last 7 days</SelectItem>
                     <SelectItem value="30d">Last 30 days</SelectItem>
                     <SelectItem value="90d">Last 90 days</SelectItem>
+                    <SelectItem value="custom">Custom range</SelectItem>
                   </SelectContent>
                 </Select>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !dateRange && "text-muted-foreground",
+                            created !== 'custom' && "hidden"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from ? (
+                            dateRange.to ? (
+                            <>
+                                {format(dateRange.from, "LLL dd, y")} -{" "}
+                                {format(dateRange.to, "LLL dd, y")}
+                            </>
+                            ) : (
+                            format(dateRange.from, "LLL dd, y")
+                            )
+                        ) : (
+                            <span>Pick a date</span>
+                        )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={(range) => {
+                            setDateRange(range);
+                            if (range) setCreated('custom');
+                        }}
+                        numberOfMonths={1}
+                        />
+                    </PopoverContent>
+                </Popover>
               </AccordionContent>
             </AccordionItem>
           </Accordion>

@@ -10,7 +10,7 @@ import { Checkbox } from "./ui/checkbox";
 import { TicketItem } from "./ticket-item";
 import { FilterState } from "./tickets-filter";
 import { useMemo, useState } from "react";
-import { isAfter, subDays, parseISO, isPast } from "date-fns";
+import { isAfter, subDays, parseISO, isPast, isBefore } from "date-fns";
 import { archiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -102,12 +102,12 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
                 startDate = subDays(new Date(), 30);
             } else if (filters.created === '90d') {
                 startDate = subDays(new Date(), 90);
-            } else {
-                startDate = new Date(0); // Should not happen with 'any' check
-            }
-
-            if (!isAfter(emailDate, startDate)) {
-                return false;
+            } else if (filters.created === 'custom' && filters.dateRange?.from) {
+                const fromDate = filters.dateRange.from;
+                const toDate = filters.dateRange.to || fromDate;
+                if (!isAfter(emailDate, fromDate) || !isBefore(emailDate, toDate)) {
+                    return false;
+                }
             }
         }
 
