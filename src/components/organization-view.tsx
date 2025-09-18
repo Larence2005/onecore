@@ -373,7 +373,7 @@ export function OrganizationView() {
                                 <TableHead>Email</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Status</TableHead>
-                                {isOwner && <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>}
+                                {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -409,7 +409,27 @@ export function OrganizationView() {
                                             )}
                                         </TableCell>
                                         {isOwner && (
-                                            <TableCell>
+                                            <TableCell className="flex items-center gap-2">
+                                                {!isVerified && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="icon" 
+                                                                    className="h-8 w-8"
+                                                                    onClick={() => handleSendVerification(member.email, member.name)} 
+                                                                    disabled={isSendingVerification === member.email}
+                                                                >
+                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Send verification email</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                )}
                                                 <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
                                                     <AlertDialog open={deletingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingMember(null); }}>
                                                         <DropdownMenu>
@@ -419,12 +439,6 @@ export function OrganizationView() {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                {!isVerified && (
-                                                                     <DropdownMenuItem onSelect={() => handleSendVerification(member.email, member.name)} disabled={isSendingVerification === member.email}>
-                                                                        {isSendingVerification === member.email ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                                                                        Send Verification
-                                                                    </DropdownMenuItem>
-                                                                )}
                                                                 <DropdownMenuItem onClick={() => handleEditClick(member)}>
                                                                     <Pencil className="mr-2 h-4 w-4" />
                                                                     Edit
@@ -610,6 +624,3 @@ export function OrganizationView() {
 }
 
     
-
-    
-
