@@ -612,15 +612,20 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setNoteContent('');
             setIsAddingNote(false);
             setReplyContent('');
+
+            const ccRecipients = new Set<string>();
             // Only add current user to CC if they are not the admin
             if (user.uid !== userProfile.organizationOwnerUid) {
-                setReplyBcc(user.email);
-            } else {
-                setReplyBcc('');
+                ccRecipients.add(user.email);
             }
-            setReplyCc('');
-            setShowReplyCc(false);
-            setShowReplyBcc(!!(user.uid !== userProfile.organizationOwnerUid));
+            if (settings.userId) {
+                ccRecipients.delete(settings.userId.toLowerCase());
+            }
+
+            setReplyCc(Array.from(ccRecipients).join(', '));
+            setReplyBcc('');
+            setShowReplyCc(ccRecipients.size > 0);
+            setShowReplyBcc(false);
         }
     };
     
@@ -635,6 +640,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
+            // Add current agent to CC if they are not the owner
+            if (user.uid !== userProfile.organizationOwnerUid) {
+                allRecipients.add(user.email.toLowerCase());
+            }
+
             // Remove the original sender from the CC list as they are already in 'To'
             if (message.senderEmail) {
                 allRecipients.delete(message.senderEmail.toLowerCase());
@@ -644,20 +654,15 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (settings.userId) {
                 allRecipients.delete(settings.userId.toLowerCase());
             }
-            
-            if (user.uid !== userProfile.organizationOwnerUid) {
-                setReplyBcc(user.email);
-            } else {
-                setReplyBcc('');
-            }
 
             setReplyCc(Array.from(allRecipients).join(', '));
+            setReplyBcc('');
             setForwardingMessageId(null);
             setNoteContent('');
             setIsAddingNote(false);
             setReplyContent('');
             setShowReplyCc(allRecipients.size > 0);
-            setShowReplyBcc(!!(user.uid !== userProfile.organizationOwnerUid));
+            setShowReplyBcc(false);
         }
     };
     
@@ -1489,8 +1494,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
-    
-
-  
-
