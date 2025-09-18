@@ -92,50 +92,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const organizationsRef = collection(db, "organizations");
-    // Check if user is an owner
-    let q = query(organizationsRef, where("owner", "==", user.uid));
+    let q = query(organizationsRef, where("members", "array-contains", { email: user.email, uid: user.uid }));
     let orgSnapshot = await getDocs(q);
 
-    if (orgSnapshot.empty) {
-      // If not an owner, check if they are a member by uid
-      const allOrgsSnapshot = await getDocs(organizationsRef);
-      for (const orgDoc of allOrgsSnapshot.docs) {
-          const members = (orgDoc.data().members || []) as {email: string, uid: string}[];
-          if(members.some(m => m.uid === user.uid)) {
-              q = query(organizationsRef, where("__name__", "==", orgDoc.id));
-              orgSnapshot = await getDocs(q);
-              break;
-          }
-      }
-    }
-    
-    // Fallback for invited members who just signed up
+    // Fallback for just-registered users where UID might not be in array-contains index yet
     if (orgSnapshot.empty) {
         const allOrgsSnapshot = await getDocs(organizationsRef);
         for (const orgDoc of allOrgsSnapshot.docs) {
-            const members = (orgDoc.data().members || []) as {email: string, uid?: string, verificationSent?: boolean}[];
-            const memberInvite = members.find(m => m.email === user.email && !m.uid);
-            if(memberInvite) {
-                 q = query(organizationsRef, where("__name__", "==", orgDoc.id));
-                 orgSnapshot = await getDocs(q);
-                 
-                 // Add the UID to the member record
-                 if (!orgSnapshot.empty) {
-                    const orgToUpdateRef = orgDoc.ref;
-                    const updatedMembers = members.map(m => m.email === user.email ? { ...m, uid: user.uid } : m);
-                    await updateDoc(orgToUpdateRef, { members: updatedMembers });
-                 }
-
-                 break;
+            const members = (orgDoc.data().members || []) as {email: string, uid?: string}[];
+            if(members.some(m => m.uid === user.uid)) {
+                q = query(organizationsRef, where("__name__", "==", orgDoc.id));
+                orgSnapshot = await getDocs(q);
+                break;
             }
         }
     }
 
-
     if (!orgSnapshot.empty) {
       const orgDoc = orgSnapshot.docs[0];
       const orgData = orgDoc.data();
-      const memberData = (orgData.members || []).find((m: any) => m.uid === user.uid || m.email === user.email);
+      const memberData = (orgData.members || []).find((m: any) => m.uid === user.uid);
 
       setUserProfile({
         uid: user.uid,
@@ -150,17 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         website: orgData.website,
       });
     } else {
-      // User is authenticated but doesn't belong to any organization
-      const userSettingsDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userSettingsDoc.exists()) {
-           setUserProfile({
-                uid: user.uid,
-                email: user.email!,
-                name: user.displayName || user.email!,
-           });
-      } else {
+        // Not found in any organization, maybe an admin that hasn't created an org yet
         setUserProfile(null);
-      }
     }
   }, []);
 
@@ -206,16 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Create the organization in Firestore
     await createOrganization(data.organizationName, data.domain, userCredential.user.uid, data.name, data.email);
     
-    // Create the user-specific settings document
-    await setDoc(doc(db, "users", userCredential.user.uid), {
-        name: data.name,
-        email: data.email,
-        // Default empty settings
-        clientId: "",
-        tenantId: "",
-        clientSecret: "",
-    });
-    
     await fetchUserProfile(userCredential.user);
     handleLoginSuccess();
   };
@@ -223,16 +180,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const memberSignup = async (data: MemberSignUpFormData) => {
     let orgId: string | null = null;
     let memberName: string | null = null;
+    let targetMember: any = null;
     const orgsSnapshot = await getDocs(collection(db, "organizations"));
 
     for (const orgDoc of orgsSnapshot.docs) {
-        const members = (orgDoc.data().members || []) as { email: string, name: string, verificationSent?: boolean }[];
+        const members = (orgDoc.data().members || []) as { email: string, name: string, verificationSent?: boolean, uid?: string }[];
         const foundMember = members.find(m => m.email.toLowerCase() === data.email.toLowerCase());
         
         if (foundMember) {
+            if (foundMember.uid) {
+                throw new Error("This email address has already been registered.");
+            }
             if (foundMember.verificationSent) {
                 orgId = orgDoc.id;
-                memberName = foundMember.name;
+                targetMember = foundMember;
                 break;
             } else {
                 throw new Error("Your account has not been verified by an administrator. Please contact them to send a verification email.");
@@ -240,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    if (!orgId) {
+    if (!orgId || !targetMember) {
         throw new Error("You have not been invited to any organization, or your invitation has not been verified. Please contact your administrator.");
     }
     
@@ -251,15 +212,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const orgDoc = await getDoc(orgRef);
     if(orgDoc.exists()){
         const members = orgDoc.data().members as {name: string, email: string, uid?: string}[];
-        const updatedMembers = members.map(m => m.email.toLowerCase() === data.email.toLowerCase() ? { ...m, uid: userCredential.user.uid } : m);
+        const updatedMembers = members.map(m => 
+            m.email.toLowerCase() === data.email.toLowerCase() 
+            ? { ...m, uid: userCredential.user.uid } 
+            : m
+        );
         await updateDoc(orgRef, { members: updatedMembers });
     }
-
-    // Create user settings doc
-    await setDoc(doc(db, "users", userCredential.user.uid), {
-        name: memberName,
-        email: data.email,
-    });
     
     await fetchUserProfile(userCredential.user);
     handleLoginSuccess();
@@ -305,23 +264,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     try {
         const result = await signInWithPopup(auth, provider);
-        // This gives you a Google Access Token. You can use it to access the Google API.
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        const token = credential?.accessToken;
-        
         const user = result.user;
-
-        // Check if user exists in Firestore
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-             // New user, create a document. For now, we assume they are not part of an org.
-             await setDoc(userDocRef, {
-                name: user.displayName,
-                email: user.email,
-             });
-        }
         
         await fetchUserProfile(user);
         handleLoginSuccess();
@@ -355,4 +298,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

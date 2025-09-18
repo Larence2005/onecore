@@ -1212,7 +1212,10 @@ export async function createOrganization(name: string, domain: string, uid: stri
         address: '',
         mobile: '',
         landline: '',
-        website: ''
+        website: '',
+        clientId: '',
+        tenantId: '',
+        clientSecret: ''
     });
     
     // Invalidate member cache for this new org
@@ -1718,4 +1721,3 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
     
 
   
-

@@ -129,10 +129,6 @@ export function SettingsForm() {
             await deleteOrganization(userProfile.organizationId);
         }
 
-        // Delete user's settings document
-        const userSettingsRef = doc(db, 'users', user.uid);
-        await deleteDoc(userSettingsRef);
-
         // Finally, delete the user from Firebase Authentication
         await deleteUser(user);
 

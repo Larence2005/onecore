@@ -42,26 +42,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function loadSettings() {
-      if (userProfile && userProfile.organizationOwnerUid) {
+      if (userProfile && userProfile.organizationId) {
         try {
-          const ownerUid = userProfile.organizationOwnerUid;
-          const settingsDocRef = doc(db, 'users', ownerUid);
-          const docSnap = await getDoc(settingsDocRef);
-
-          // Get owner's user record to find their email
-          const ownerUserDocRef = doc(db, 'organizations', userProfile.organizationId!);
-          const ownerOrgDoc = await getDoc(ownerUserDocRef);
-          const ownerEmail = ownerOrgDoc.data()?.members.find((m: any) => m.uid === ownerUid)?.email || '';
-
+          const orgDocRef = doc(db, 'organizations', userProfile.organizationId);
+          const docSnap = await getDoc(orgDocRef);
+          
           if (docSnap.exists()) {
-            const storedData = docSnap.data() as StoredSettings;
-            setSettings({ ...storedData, userId: ownerEmail });
+            const orgData = docSnap.data();
+            const ownerUid = orgData.owner;
+            const owner = orgData.members.find((m: any) => m.uid === ownerUid);
+
+            const storedSettings: StoredSettings = {
+              clientId: orgData.clientId || '',
+              tenantId: orgData.tenantId || '',
+              clientSecret: orgData.clientSecret || ''
+            };
+            
+            setSettings({
+              ...storedSettings,
+              userId: owner?.email || ''
+            });
+
           } else {
-            setSettings({ ...defaultSettings, userId: ownerEmail });
+             setSettings(defaultSettings);
           }
         } catch (error) {
           console.error("Failed to load settings from Firestore", error);
-          setSettings({ ...defaultSettings, userId: '' });
+          setSettings(defaultSettings);
         }
       } else {
         setSettings(defaultSettings);
@@ -72,17 +79,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [userProfile]);
 
   const saveSettings = useCallback(async (newSettings: Omit<Settings, 'userId'>) => {
-    if (!user || user.uid !== userProfile?.organizationOwnerUid) {
-      console.error("Cannot save settings, not the organization owner.");
+    if (!user || user.uid !== userProfile?.organizationOwnerUid || !userProfile.organizationId) {
+      console.error("Cannot save settings, user is not the organization owner or org ID is missing.");
       return;
     }
     try {
-      const settingsToStore: StoredSettings = {
+      const orgDocRef = doc(db, "organizations", userProfile.organizationId);
+      const settingsToStore = {
         clientId: newSettings.clientId,
         tenantId: newSettings.tenantId,
         clientSecret: newSettings.clientSecret,
       };
-      await setDoc(doc(db, "users", user.uid), settingsToStore, { merge: true });
+      await setDoc(orgDocRef, settingsToStore, { merge: true });
       setSettings({ ...newSettings, userId: user.email || '' });
     } catch (error) {
       console.error("Failed to save settings to Firestore", error);
