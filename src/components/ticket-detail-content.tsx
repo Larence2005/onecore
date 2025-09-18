@@ -871,7 +871,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             <Label htmlFor="reply-cc" className="py-2.5">Cc</Label>
                                             <AutocompleteInput 
                                                 id="reply-cc"
-                                                suggestions={members}
+                                                suggestions={members.filter(m => m.uid)}
                                                 value={replyCc}
                                                 onChange={setReplyCc}
                                                 placeholder="cc@example.com" 
@@ -884,7 +884,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             <Label htmlFor="reply-bcc" className="py-2.5">Bcc</Label>
                                             <AutocompleteInput
                                                 id="reply-bcc"
-                                                suggestions={members}
+                                                suggestions={members.filter(m => m.uid)}
                                                 value={replyBcc}
                                                 onChange={setReplyBcc}
                                                 placeholder="bcc@example.com"
@@ -967,7 +967,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                         <Label htmlFor="forward-to" className="py-2.5">To</Label>
                                         <AutocompleteInput 
                                             id="forward-to"
-                                            suggestions={members}
+                                            suggestions={members.filter(m => m.uid)}
                                             value={forwardTo}
                                             onChange={setForwardTo}
                                             placeholder="recipient@example.com"
@@ -987,7 +987,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             <Label htmlFor="forward-cc" className="py-2.5">Cc</Label>
                                             <AutocompleteInput
                                                 id="forward-cc"
-                                                suggestions={members}
+                                                suggestions={members.filter(m => m.uid)}
                                                 value={forwardCc}
                                                 onChange={setForwardCc}
                                                 placeholder="cc@example.com"
@@ -1000,7 +1000,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             <Label htmlFor="forward-bcc" className="py-2.5">Bcc</Label>
                                             <AutocompleteInput
                                                 id="forward-bcc"
-                                                suggestions={members}
+                                                suggestions={members.filter(m => m.uid)}
                                                 value={forwardBcc}
                                                 onChange={setForwardBcc}
                                                 placeholder="bcc@example.com"
@@ -1185,9 +1185,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 overflow-y-auto">
-                        <div className="lg:grid lg:grid-cols-3 lg:gap-6 p-4 sm:p-6 lg:p-8">
-                            <div className="lg:col-span-2 space-y-4">
+                    <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto">
+                        <div className="p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                                 {isLoading && (
                                     <div className="space-y-4">
                                         {[...Array(2)].map((_, i) => (
@@ -1257,7 +1256,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 )}
                             </div>
                             
-                            <aside className="lg:col-span-1 space-y-4 mt-6 lg:mt-0">
+                            <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                                 {isLoading && (
                                     <>
                                     <Card>
@@ -1318,7 +1317,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                                {members.map(m => (
+                                                                {members.filter(m => m.uid).map(m => (
                                                                     <SelectItem key={m.uid} value={m.uid!}>
                                                                         {m.name}
                                                                     </SelectItem>
@@ -1482,7 +1481,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 )}
                             </aside>
                         </div>
-                    </div>
                 </main>
             </div>
         </SidebarProvider>

@@ -8,9 +8,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization } from '@/app/actions';
+import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, sendVerificationEmail } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, Mail } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -46,10 +46,12 @@ import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { PropertyItem } from './property-item';
 import { Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
+import { useSettings } from '@/providers/settings-provider';
 
 
 export function OrganizationView() {
     const { user, userProfile, loading, fetchUserProfile, logout } = useAuth();
+    const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
     const [organizationName, setOrganizationName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -72,6 +74,7 @@ export function OrganizationView() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [deletingMember, setDeletingMember] = useState<OrganizationMember | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSendingVerification, setIsSendingVerification] = useState<string | null>(null);
     
     const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -216,6 +219,23 @@ export function OrganizationView() {
             setIsCreating(false);
         }
     };
+    
+    const handleSendVerification = async (email: string, name: string) => {
+        if (!isConfigured) {
+            toast({ variant: 'destructive', title: 'Cannot Send Email', description: 'Please configure API settings first.'});
+            return;
+        }
+        setIsSendingVerification(email);
+        try {
+            await sendVerificationEmail(settings, email, name);
+            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${email}.` });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Failed to Send', description: errorMessage });
+        } finally {
+            setIsSendingVerification(null);
+        }
+    };
 
     const handleUpdateOrganization = async () => {
         if (!userProfile?.organizationId || !updatedOrganizationName.trim()) {
@@ -349,12 +369,14 @@ export function OrganizationView() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Type</TableHead>
+                                <TableHead>Status</TableHead>
                                 {isOwner && <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
                                 const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
+                                const isVerified = !!member.uid;
                                 return (
                                     <TableRow key={member.email}>
                                         <TableCell className="font-medium">
@@ -376,6 +398,13 @@ export function OrganizationView() {
                                                 </Badge>
                                             )}
                                         </TableCell>
+                                        <TableCell>
+                                             {isVerified ? (
+                                                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>
+                                            ) : (
+                                                <Badge variant="destructive">Unverified</Badge>
+                                            )}
+                                        </TableCell>
                                         {isOwner && (
                                             <TableCell>
                                                 <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
@@ -387,6 +416,12 @@ export function OrganizationView() {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
+                                                                {!isVerified && (
+                                                                     <DropdownMenuItem onSelect={() => handleSendVerification(member.email, member.name)} disabled={isSendingVerification === member.email}>
+                                                                        {isSendingVerification === member.email ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                                                                        Send Verification
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                                 <DropdownMenuItem onClick={() => handleEditClick(member)}>
                                                                     <Pencil className="mr-2 h-4 w-4" />
                                                                     Edit
@@ -460,7 +495,7 @@ export function OrganizationView() {
                                 );
                             }) : (
                                 <TableRow>
-                                    <TableCell colSpan={isOwner ? 4 : 3} className="h-24 text-center">
+                                    <TableCell colSpan={isOwner ? 5 : 4} className="h-24 text-center">
                                         No agents found.
                                     </TableCell>
                                 </TableRow>

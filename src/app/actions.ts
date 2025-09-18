@@ -208,7 +208,9 @@ export async function getLatestEmails(settings: Settings, organizationId: string
         // Fetch all allowed email senders once
         const allowedSenders = new Set<string>();
         const orgMembers = await getOrganizationMembers(organizationId);
-        orgMembers.forEach(member => allowedSenders.add(member.email.toLowerCase()));
+        orgMembers.forEach(member => {
+            if (member.uid) allowedSenders.add(member.email.toLowerCase())
+        });
 
         const clientCompanies = await getCompanies(organizationId);
         for (const company of clientCompanies) {
@@ -1259,7 +1261,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
     
     const members = (orgDoc.data().members || []).map((m: any) => ({
         ...m,
-        uid: m.uid || m.email, // Use email as a fallback key if uid is missing
+        uid: m.uid || null, // Explicitly handle missing UID
     })) as OrganizationMember[];
     
     membersCache.set(cacheKey, members);
@@ -1605,6 +1607,34 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
     } catch (error) {
         console.error("Failed to check ticket deadlines:", error);
     }
+}
+    
+export async function sendVerificationEmail(settings: Settings, recipientEmail: string, recipientName: string) {
+    if (!settings.clientId) {
+        throw new Error("API settings are not configured to send emails.");
+    }
+    
+    const headersList = headers();
+    const host = headersList.get('host') || '';
+    const protocol = headersList.get('x-forwarded-proto') || 'http';
+    const signupUrl = `${protocol}://${host}/member-signup`;
+
+    const subject = "You've been invited to join your team's ticketing system";
+    const body = `
+        <p>Hello ${recipientName},</p>
+        <p>You have been invited to join your organization's support ticketing system.</p>
+        <p>Please complete your registration by visiting the following link:</p>
+        <p><a href="${signupUrl}">${signupUrl}</a></p>
+        <p>Once registered, you will be able to access and manage support tickets.</p>
+    `;
+
+    await sendEmailAction(settings, {
+        recipient: recipientEmail,
+        subject: subject,
+        body: body,
+    });
+
+    return { success: true };
 }
     
 
