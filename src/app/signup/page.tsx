@@ -35,6 +35,7 @@ export default function SignupPage() {
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       organizationName: "",
+      domain: "",
       name: "",
       email: "",
       password: "",
@@ -78,19 +79,34 @@ export default function SignupPage() {
             </div>
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                 <FormField
-                  control={form.control}
-                  name="organizationName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-semibold">Organization Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your Company, Inc." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                    control={form.control}
+                    name="organizationName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="font-semibold">Organization Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Your Company, Inc." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="domain"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="font-semibold">Domain</FormLabel>
+                        <FormControl>
+                            <Input placeholder="your-company" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
                  <FormField
                   control={form.control}
                   name="name"

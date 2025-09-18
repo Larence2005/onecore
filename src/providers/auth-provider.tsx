@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     
     // Create the organization in Firestore
-    await createOrganization(data.organizationName, userCredential.user.uid, data.name, data.email);
+    await createOrganization(data.organizationName, data.domain, userCredential.user.uid, data.name, data.email);
     
     // Create the user-specific settings document
     await setDoc(doc(db, "users", userCredential.user.uid), {

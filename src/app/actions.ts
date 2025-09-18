@@ -1183,10 +1183,11 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
 
 // --- Organization Actions ---
 
-export async function createOrganization(name: string, uid: string, userName: string, email: string) {
+export async function createOrganization(name: string, domain: string, uid: string, userName: string, email: string) {
     const organizationRef = doc(collection(db, "organizations"));
     await setDoc(organizationRef, {
         name: name,
+        domain: domain,
         owner: uid,
         members: [{ name: userName, email: email, uid: uid, address: '', mobile: '', landline: '' }],
         address: '',
@@ -1642,4 +1643,5 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
     
 
     
+
 
