@@ -1167,8 +1167,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 lg:grid lg:grid-cols-5 xl:grid-cols-5 lg:gap-6 overflow-hidden">
-                        <div className="lg:col-span-3 xl:col-span-3 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                    <div className="flex-1 lg:grid lg:grid-cols-3 lg:gap-6 overflow-hidden">
+                        <div className="lg:col-span-2 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <div className="space-y-4">
                                     {[...Array(2)].map((_, i) => (
@@ -1238,7 +1238,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             )}
                         </div>
                         
-                        <aside className="lg:col-span-2 xl:col-span-2 border-l p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                        <aside className="lg:col-span-1 border-l p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <>
                                 <Card>
