@@ -124,6 +124,13 @@ export interface Employee {
     landline?: string;
 }
 
+export interface Note {
+    id: string;
+    content: string;
+    date: string;
+    user: string;
+}
+
 
 const getMsalConfig = (settings: Settings): Configuration => ({
     auth: {
@@ -1062,6 +1069,49 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
     }
 }
 
+export async function addNoteToTicket(organizationId: string, ticketId: string, noteData: Omit<Note, 'id'>) {
+    if (!organizationId || !ticketId) {
+        throw new Error("Organization ID and Ticket ID are required.");
+    }
+    try {
+        const notesCollectionRef = collection(db, 'organizations', organizationId, 'tickets', ticketId, 'notes');
+        await addDoc(notesCollectionRef, noteData);
+        
+        // Log the action without the content
+        await addActivityLog(organizationId, ticketId, {
+            type: 'Note',
+            details: 'created a note',
+            date: noteData.date,
+            user: noteData.user
+        });
+
+        // Invalidate note-related caches if any
+        // For now, timeline is re-fetched on the client, so no server cache invalidation needed for notes.
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to add note:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getTicketNotes(organizationId: string, ticketId: string): Promise<Note[]> {
+    if (!organizationId || !ticketId) {
+        return [];
+    }
+    // Caching for notes can be added here if needed in the future
+    try {
+        const notesCollectionRef = collection(db, 'organizations', organizationId, 'tickets', ticketId, 'notes');
+        const q = query(notesCollectionRef, orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note));
+    } catch (error) {
+        console.error("Failed to get ticket notes:", error);
+        return [];
+    }
+}
+
 export async function getAllActivityLogs(organizationId: string): Promise<ActivityLog[]> {
     if (!organizationId) {
         return [];
@@ -1610,5 +1660,4 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
 
     
 
-
-
+  

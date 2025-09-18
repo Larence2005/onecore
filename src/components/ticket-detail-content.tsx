@@ -4,8 +4,8 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSettings } from '@/providers/settings-provider';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -38,7 +38,7 @@ import { AutocompleteInput } from './autocomplete-input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import Image from 'next/image';
 
-type TimelineItemType = (DetailedEmail & { itemType: 'email' }) | (ActivityLog & { itemType: 'note' });
+type TimelineItemType = (DetailedEmail & { itemType: 'email' }) | (Note & { itemType: 'note' });
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
@@ -194,6 +194,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [activityLog, setActivityLog] = useState<ActivityLog[]>([]);
+    const [notes, setNotes] = useState<Note[]>([]);
     const previousEmailRef = useRef<DetailedEmail | null>(null);
 
     const [currentPriority, setCurrentPriority] = useState('');
@@ -358,6 +359,20 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
             const fetchedLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
             setActivityLog(fetchedLogs);
+        });
+
+        return () => unsubscribe();
+    }, [email?.id, userProfile?.organizationId]);
+
+    useEffect(() => {
+        if (!email?.id || !userProfile?.organizationId) return;
+
+        const notesCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', email.id, 'notes');
+        const q = query(notesCollectionRef, orderBy('date', 'asc'));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedNotes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note));
+            setNotes(fetchedNotes);
         });
 
         return () => unsubscribe();
@@ -685,9 +700,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         
         setIsSavingNote(true);
         try {
-            await addActivityLog(userProfile.organizationId, email.id, {
-                type: 'Note',
-                details: noteContent,
+            await addNoteToTicket(userProfile.organizationId, email.id, {
+                content: noteContent,
                 date: new Date().toISOString(),
                 user: user.email || 'Unknown User'
             });
@@ -720,18 +734,22 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     
     const timeline: TimelineItemType[] = useMemo(() => {
         if (!email) return [];
-        
-        const emailItems: TimelineItemType[] = (email.conversation || [email]).map(e => ({...e, itemType: 'email'}));
-        const noteItems: TimelineItemType[] = activityLog
-            .filter(log => log.type === 'Note')
-            .map(log => ({...log, itemType: 'note', receivedDateTime: log.date, subject: 'Internal Note'}));
-            
+
+        const emailItems: TimelineItemType[] = (email.conversation || [email]).map(e => ({
+            ...e,
+            itemType: 'email',
+            date: e.receivedDateTime, // Normalize date property for sorting
+        }));
+
+        const noteItems: TimelineItemType[] = notes.map(note => ({
+            ...note,
+            itemType: 'note',
+        }));
+
         return [...emailItems, ...noteItems].sort((a, b) => {
-            const dateA = a.itemType === 'email' ? a.receivedDateTime : a.date;
-            const dateB = b.itemType === 'email' ? b.receivedDateTime : b.date;
-            return parseISO(dateA).getTime() - parseISO(dateB).getTime();
+            return parseISO(a.date).getTime() - parseISO(b.date).getTime();
         });
-    }, [email, activityLog]);
+    }, [email, notes]);
 
     const isReplyCcVisible = showReplyCc || !!replyCc;
     const isReplyBccVisible = showReplyBcc || !!replyBcc;
@@ -1023,7 +1041,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         );
     }
     
-     const renderNoteCard = (note: ActivityLog) => {
+    const renderNoteCard = (note: Note) => {
         const member = members.find(m => m.email === note.user);
         return (
             <Card key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
@@ -1040,7 +1058,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                        {parse(note.details)}
+                        {parse(note.content)}
                     </div>
                 </CardContent>
             </Card>
@@ -1472,3 +1490,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 }
 
     
+
+  
