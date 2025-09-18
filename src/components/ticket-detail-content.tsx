@@ -694,7 +694,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         return (
             <div key={message.id}>
                 <Card className="overflow-hidden">
-                    <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted/20 border-b">
+                    <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted border-b">
                         <Avatar className="h-10 w-10">
                             <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
                         </Avatar>
