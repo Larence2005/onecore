@@ -171,6 +171,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const [error, setError] = useState<string | null>(null);
     
     const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
+    const [replyType, setReplyType] = useState<'reply' | 'reply-all' | null>(null);
     const [replyContent, setReplyContent] = useState('');
     const [replyTo, setReplyTo] = useState('');
     const [replyCc, setReplyCc] = useState('');
@@ -504,6 +505,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyContent('');
             setAttachments([]);
             setReplyingToMessageId(null);
+            setReplyType(null);
             setReplyTo('');
             setReplyCc('');
             setReplyBcc('');
@@ -580,6 +582,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const message = email?.conversation?.find(m => m.id === messageId);
         if (message && user?.email && userProfile) {
             setReplyingToMessageId(messageId);
+            setReplyType('reply');
             setReplyTo(message.senderEmail || '');
             setForwardingMessageId(null);
             setReplyContent('');
@@ -599,6 +602,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const message = email?.conversation?.find(m => m.id === messageId);
         if (message && user?.email && userProfile) {
             setReplyingToMessageId(messageId);
+            setReplyType('reply-all');
             setReplyTo(message.senderEmail || '');
     
             const allRecipients = new Set<string>();
@@ -632,6 +636,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleCancelReply = () => {
         setReplyingToMessageId(null);
+        setReplyType(null);
         setReplyContent('');
         setAttachments([]);
         setReplyTo('');
@@ -763,6 +768,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
                  {isReplyingToThis && (
                     <Card className="mt-4">
+                        <CardHeader>
+                            <h3 className="text-lg font-semibold">
+                                {replyType === 'reply-all' ? 'Reply All Email' : 'Reply Email'}
+                            </h3>
+                        </CardHeader>
                         <CardContent className="p-4 space-y-4">
                             {!isConfigured ? (
                                     <Alert>
@@ -780,8 +790,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             id="reply-to"
                                             value={replyTo}
                                             readOnly
-                                            className="flex-1 h-auto px-0"
-                                        />
+                                            className="flex-1 h-auto px-0"/>
                                         <div className="flex-shrink-0">
                                             {!isReplyCcVisible && (
                                                 <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyCc(true)}>Cc</Button>
