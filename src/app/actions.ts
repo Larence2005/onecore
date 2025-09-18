@@ -600,6 +600,7 @@ export async function replyToEmailAction(
     conversationId: string | undefined,
     attachments: NewAttachment[],
     currentUser: { name: string; email: string },
+    to: string,
     cc: string | undefined,
     bcc: string | undefined
 ): Promise<{ success: boolean }> {
@@ -607,10 +608,11 @@ export async function replyToEmailAction(
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
-    
+
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
+            toRecipients: parseRecipients(to), // 'to' is now part of the payload
             ccRecipients: parseRecipients(cc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
@@ -621,9 +623,9 @@ export async function replyToEmailAction(
             })),
         }
     };
-
-
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`, {
+    
+    // Use replyAll endpoint to handle 'to', 'cc', and 'bcc' properly.
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
@@ -631,8 +633,8 @@ export async function replyToEmailAction(
         },
         body: JSON.stringify(finalPayload),
     });
-    
-    if (response.status !== 202) {
+
+    if (response.status !== 202) { // Graph API returns 202 Accepted on success
         const errorText = await response.text();
         console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
         try {
@@ -643,15 +645,39 @@ export async function replyToEmailAction(
         }
     }
 
-    // Invalidate caches after a successful reply
     if (conversationId) {
-        ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
-        ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
-        // Use a small delay to give Graph API time to process the reply before re-fetching
+        // Optimistically add the sent message to the Firestore conversation
+        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
+        const optimisticReply: Partial<DetailedEmail> = {
+            id: `optimistic-${Date.now()}`,
+            sender: currentUser.name,
+            senderEmail: currentUser.email,
+            body: { contentType: 'html', content: comment },
+            receivedDateTime: new Date().toISOString(),
+            bodyPreview: comment.substring(0, 255),
+            toRecipients: parseRecipients(to),
+            ccRecipients: parseRecipients(cc),
+            bccRecipients: parseRecipients(bcc),
+            attachments: attachments.map(a => ({...a, id: `optimistic-att-${Date.now()}`, size: 0 })),
+        };
+
+        try {
+            await updateDoc(conversationDocRef, {
+                messages: arrayUnion(optimisticReply)
+            });
+        } catch (e) {
+            console.error("Failed to add optimistic reply to conversation:", e);
+        }
+
+        // Schedule a background sync to get the real data from the mail server
         setTimeout(() => {
             fetchAndStoreFullConversation(settings, organizationId, conversationId).catch(console.error);
-        }, 5000); // 5-second delay
+        }, 10000); // 10-second delay to allow Graph API to process
     }
+    
+    // Invalidate caches to ensure next hard-refresh gets new data
+    ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
+    ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
 
     return { success: true };
 }

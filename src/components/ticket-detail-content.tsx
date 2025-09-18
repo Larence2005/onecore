@@ -508,6 +508,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                     contentBytes: await convertFileToBase64(file),
                 }))
             );
+            
+            // Immediately hide reply form and show toast
+            setReplyingToMessageId(null);
+            toast({ title: "Sending Reply...", description: "Your reply is being sent." });
 
             await replyToEmailAction(
                 settings, 
@@ -518,14 +522,14 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 email?.conversationId, 
                 attachmentPayloads,
                 { name: userProfile.name || user.email, email: user.email },
+                replyTo,
                 replyCc, 
                 replyBcc
             );
 
-            toast({ title: "Reply Sent!", description: "Your reply has been sent successfully." });
+            // Clear state after action
             setReplyContent('');
             setAttachments([]);
-            setReplyingToMessageId(null);
             setReplyType(null);
             setReplyTo('');
             setReplyCc('');
@@ -533,8 +537,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setShowReplyCc(false);
             setShowReplyBcc(false);
 
-        } catch (err)
-            {
+        } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             toast({
                 variant: "destructive",
@@ -835,9 +838,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                  {isReplyingToThis && (
                     <Card className="mt-4">
                         <CardHeader>
-                            <h3 className="text-lg font-semibold">
+                            <CardTitle>
                                 {replyType === 'reply-all' ? 'Reply All Email' : 'Reply Email'}
-                            </h3>
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
                             {!isConfigured ? (
@@ -950,7 +953,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                  {isForwardingThis && (
                     <Card className="mt-4">
                         <CardHeader>
-                            <h3 className="text-lg font-semibold">Forward Email</h3>
+                            <CardTitle>Forward Email</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
                                 {!isConfigured ? (
@@ -1490,3 +1493,4 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     
 
   
+
