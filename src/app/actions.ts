@@ -705,40 +705,6 @@ export async function forwardEmailAction(
         user: currentUser.email,
     });
     
-    // Send a notification email to the primary recipients
-    const orgMembers = await getOrganizationMembers(organizationId);
-    
-    for (const recipient of toRecipients) {
-        const recipientMember = orgMembers.find(m => m.email.toLowerCase() === recipient.emailAddress.address.toLowerCase());
-        const recipientName = recipient.emailAddress.name || recipientMember?.name || 'there';
-        
-        const headersList = headers();
-        const host = headersList.get('host') || '';
-        const protocol = headersList.get('x-forwarded-proto') || 'http';
-        const ticketUrl = `${protocol}://${host}/tickets/${ticketId}`;
-
-        const notificationSubject = `Notification: A message was forwarded to you regarding Ticket #${ticketNumber}`;
-        const notificationBody = `
-            <p>Hello ${recipientName},</p>
-            <p>${currentUser.name} has forwarded a message to you:</p>
-            <p><b>Ticket #${ticketNumber}: ${ticketSubject}</b></p>
-            <p>To view the full ticket, kindly visit the website: <a href="${ticketUrl}">View Ticket</a></p>
-            <br>
-            <p>This is a notification-only. Please do not reply directly to this message.</p>
-        `;
-
-        try {
-            await sendEmailAction(settings, {
-                recipient: recipient.emailAddress.address,
-                subject: notificationSubject,
-                body: notificationBody,
-            });
-        } catch (notificationError) {
-            console.error(`Failed to send forward notification email to ${recipient.emailAddress.address}:`, notificationError);
-            // Do not throw an error here, as the primary action (forwarding) was successful.
-        }
-    }
-
     return { success: true };
 }
 
@@ -1643,5 +1609,6 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
     
 
     
+
 
 
