@@ -596,13 +596,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyContent('');
             // Only add current user to CC if they are not the admin
             if (user.uid !== userProfile.organizationOwnerUid) {
-                setReplyCc(user.email);
+                setReplyBcc(user.email);
             } else {
-                setReplyCc('');
+                setReplyBcc('');
             }
-            setReplyBcc('');
+            setReplyCc('');
             setShowReplyCc(false);
-            setShowReplyBcc(false);
+            setShowReplyBcc(!!(user.uid !== userProfile.organizationOwnerUid));
         }
     };
     
@@ -622,24 +622,24 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
     
-            // Only add current user to CC if they are not the admin
-            if (user.uid !== userProfile.organizationOwnerUid) {
-                 allRecipients.add(user.email.toLowerCase());
-            }
-            
             // Explicitly remove the admin email (sender email from settings) from the CC list
             if (settings.userId) {
                 allRecipients.delete(settings.userId.toLowerCase());
             }
-    
+            
+            if (user.uid !== userProfile.organizationOwnerUid) {
+                setReplyBcc(user.email);
+            } else {
+                setReplyBcc('');
+            }
+
             setReplyCc(Array.from(allRecipients).join(', '));
-            setReplyBcc('');
             setForwardingMessageId(null);
             setNoteContent('');
             setIsAddingNote(false);
             setReplyContent('');
-            setShowReplyCc(false);
-            setShowReplyBcc(false);
+            setShowReplyCc(allRecipients.size > 0);
+            setShowReplyBcc(!!(user.uid !== userProfile.organizationOwnerUid));
         }
     };
     
@@ -1167,8 +1167,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 lg:grid lg:grid-cols-3 xl:grid-cols-4 lg:gap-6 overflow-hidden">
-                        <div className="lg:col-span-2 xl:col-span-3 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                    <div className="flex-1 lg:grid lg:grid-cols-5 xl:grid-cols-5 lg:gap-6 overflow-hidden">
+                        <div className="lg:col-span-3 xl:col-span-3 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <div className="space-y-4">
                                     {[...Array(2)].map((_, i) => (
@@ -1238,7 +1238,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             )}
                         </div>
                         
-                        <aside className="w-full lg:w-auto lg:col-span-1 xl:col-span-1 border-l p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                        <aside className="lg:col-span-2 xl:col-span-2 border-l p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <>
                                 <Card>
