@@ -578,12 +578,17 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (message && user?.email) {
+        if (message && user?.email && userProfile) {
             setReplyingToMessageId(messageId);
             setReplyTo(message.senderEmail || '');
             setForwardingMessageId(null);
             setReplyContent('');
-            setReplyCc(user.email);
+            // Only add current user to CC if they are not the admin
+            if (user.uid !== userProfile.organizationOwnerUid) {
+                setReplyCc(user.email);
+            } else {
+                setReplyCc('');
+            }
             setReplyBcc('');
             setShowReplyCc(false);
             setShowReplyBcc(false);
@@ -592,7 +597,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     
     const handleReplyAllClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (message && user?.email) {
+        if (message && user?.email && userProfile) {
             setReplyingToMessageId(messageId);
             setReplyTo(message.senderEmail || '');
     
@@ -605,8 +610,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
     
-            // Add the current user's email to the CC list
-            allRecipients.add(user.email.toLowerCase());
+            // Only add current user to CC if they are not the admin
+            if (user.uid !== userProfile.organizationOwnerUid) {
+                 allRecipients.add(user.email.toLowerCase());
+            }
             
             // Explicitly remove the admin email (sender email from settings) from the CC list
             if (settings.userId) {
@@ -635,11 +642,15 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     };
 
     const handleForwardClick = (messageId: string) => {
-        if(user?.email){
+        if(user?.email && userProfile){
             setReplyingToMessageId(null);
             setForwardTo('');
             const ccRecipients = new Set<string>();
-            ccRecipients.add(user.email);
+
+            // Only add current user to CC if they are not the admin
+            if (user.uid !== userProfile.organizationOwnerUid) {
+                ccRecipients.add(user.email);
+            }
             if (settings.userId) {
                 ccRecipients.delete(settings.userId.toLowerCase());
             }
@@ -1355,3 +1366,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    
