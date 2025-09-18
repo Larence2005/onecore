@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply, ReplyAll, MessageSquare } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -1167,8 +1167,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 lg:grid lg:grid-cols-3 lg:gap-6 overflow-hidden">
-                        <div className="lg:col-span-2 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                    <div className="flex-1 lg:grid lg:grid-cols-4 lg:gap-6 overflow-hidden">
+                        <div className="lg:col-span-3 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <div className="space-y-4">
                                     {[...Array(2)].map((_, i) => (
