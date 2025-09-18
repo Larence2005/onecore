@@ -100,7 +100,7 @@ export default function SignupPage() {
                         <FormItem>
                         <FormLabel className="font-semibold">Domain</FormLabel>
                         <FormControl>
-                            <Input placeholder="your-company" {...field} />
+                            <Input placeholder="your-company.com" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
