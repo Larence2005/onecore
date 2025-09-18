@@ -721,29 +721,19 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                         </div>
                         <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
                             <span>{format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}</span>
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                     <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleReplyClick(message.id)}>
-                                        <Reply className="mr-2 h-4 w-4" />
-                                        <span>Reply</span>
-                                    </DropdownMenuItem>
-                                     {showReplyAll && (
-                                        <DropdownMenuItem onClick={() => handleReplyAllClick(message.id)}>
-                                            <ReplyAll className="mr-2 h-4 w-4" />
-                                            <span>Reply All</span>
-                                        </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem onClick={() => handleForwardClick(message.id)}>
-                                        <Share className="mr-2 h-4 w-4" />
-                                        <span>Forward</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                             <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyClick(message.id)}>
+                                    <Reply className="h-4 w-4" />
+                                </Button>
+                                {showReplyAll && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyAllClick(message.id)}>
+                                        <ReplyAll className="h-4 w-4" />
+                                    </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleForwardClick(message.id)}>
+                                    <Share className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
