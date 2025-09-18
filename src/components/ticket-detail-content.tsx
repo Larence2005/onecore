@@ -1167,304 +1167,308 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 lg:grid lg:grid-cols-4 lg:gap-6 overflow-hidden">
-                        <div className="lg:col-span-3 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                            {isLoading && (
-                                <div className="space-y-4">
-                                    {[...Array(2)].map((_, i) => (
-                                        <Card key={i}>
-                                            <CardHeader className="flex flex-row items-center gap-4 p-4">
-                                                <Skeleton className="h-10 w-10 rounded-full" />
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-4 w-1/4" />
-                                                    <Skeleton className="h-3 w-1/3" />
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="p-4">
-                                                <Skeleton className="h-24 w-full" />
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-
-                            {error && (
-                                <Alert variant="destructive">
-                                    <Terminal className="h-4 w-4" />
-                                    <AlertTitle>Error</AlertTitle>
-                                    <AlertDescription>{error}</AlertDescription>
-                                </Alert>
-                            )}
-
-                            {!isLoading && !error && email && (
-                                <>
+                    <div className="flex-1 overflow-y-auto">
+                        <div className="lg:grid lg:grid-cols-3 lg:gap-6 p-4 sm:p-6 lg:p-8">
+                            <div className="lg:col-span-2 space-y-4">
+                                {isLoading && (
                                     <div className="space-y-4">
-                                        {timeline.map((item) => {
-                                            if (item.itemType === 'email') {
-                                                return renderMessageCard(item, timeline.indexOf(item) === 0);
-                                            }
-                                            if (item.itemType === 'note') {
-                                                return renderNoteCard(item);
-                                            }
-                                            return null;
-                                        })}
-                                    </div>
-                                    <div className="mt-4">
-                                        {!isAddingNote && !replyingToMessageId && !forwardingMessageId && (
-                                            <Button variant="outline" onClick={() => setIsAddingNote(true)}>
-                                                <MessageSquare className="mr-2 h-4 w-4" />
-                                                Add Note
-                                            </Button>
-                                        )}
-                                        {isAddingNote && (
-                                            <Card>
-                                                <CardHeader>
-                                                    <CardTitle>Add Internal Note</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="space-y-4">
-                                                    <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} />
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
-                                                        <Button onClick={handleSaveNote} disabled={isSavingNote}>
-                                                            {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                            Save Note
-                                                        </Button>
+                                        {[...Array(2)].map((_, i) => (
+                                            <Card key={i}>
+                                                <CardHeader className="flex flex-row items-center gap-4 p-4">
+                                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                                    <div className="flex-1 space-y-2">
+                                                        <Skeleton className="h-4 w-1/4" />
+                                                        <Skeleton className="h-3 w-1/3" />
                                                     </div>
+                                                </CardHeader>
+                                                <CardContent className="p-4">
+                                                    <Skeleton className="h-24 w-full" />
                                                 </CardContent>
                                             </Card>
-                                        )}
+                                        ))}
                                     </div>
-                                </>
-                            )}
-                        </div>
-                        
-                        <aside className="lg:col-span-1 border-l p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                            {isLoading && (
-                                <>
-                                <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                                </>
-                            )}
-                            {!isLoading && email && (
-                                <>
-                                <Card>
-                                    <CardHeader>
-                                        <h2 className="text-lg font-bold">Properties</h2>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 text-sm">
-                                        <div className="grid grid-cols-1 gap-y-4">
-                                            <div className="space-y-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
-                                                <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
-                                                <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
-                                            </div>
-                                             <div className="space-y-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
-                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
-                                            </div>
-                                        </div>
+                                )}
 
-                                        <Separator />
-                                        
-                                        <div className="grid grid-cols-1 gap-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                {isOwner ? (
-                                                    <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
+                                {error && (
+                                    <Alert variant="destructive">
+                                        <Terminal className="h-4 w-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>{error}</AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {!isLoading && !error && email && (
+                                    <>
+                                        <div className="space-y-4">
+                                            {timeline.map((item) => {
+                                                if (item.itemType === 'email') {
+                                                    return renderMessageCard(item, timeline.indexOf(item) === 0);
+                                                }
+                                                if (item.itemType === 'note') {
+                                                    return renderNoteCard(item);
+                                                }
+                                                return null;
+                                            })}
+                                        </div>
+                                        <div className="mt-4">
+                                            {!isAddingNote && !replyingToMessageId && !forwardingMessageId && (
+                                                <Button variant="outline" onClick={() => setIsAddingNote(true)}>
+                                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                                    Add Note
+                                                </Button>
+                                            )}
+                                            {isAddingNote && (
+                                                <Card>
+                                                    <CardHeader>
+                                                        <CardTitle>Add Internal Note</CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4">
+                                                        <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} />
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
+                                                            <Button onClick={handleSaveNote} disabled={isSavingNote}>
+                                                                {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Save Note
+                                                            </Button>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            
+                            <aside className="lg:col-span-1 space-y-4 mt-6 lg:mt-0">
+                                {isLoading && (
+                                    <>
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-1/2" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-1/2" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                    </>
+                                )}
+                                {!isLoading && email && (
+                                    <>
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-lg font-bold">Properties</h2>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4 text-sm">
+                                            <div className="grid grid-cols-1 gap-y-4">
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
+                                                    <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
+                                                    <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
+                                                    <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
+                                                </div>
+                                            </div>
+
+                                            <Separator />
+                                            
+                                            <div className="grid grid-cols-1 gap-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                    {isOwner ? (
+                                                        <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
+                                                            <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                                <SelectValue>
+                                                                    <span className="flex items-center gap-2">
+                                                                        {assigneeName}
+                                                                    </span>
+                                                                </SelectValue>
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                                {members.map(m => (
+                                                                    <SelectItem key={m.uid} value={m.uid!}>
+                                                                        {m.name}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="font-medium text-sm">{assigneeName}</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
+                                                    <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
                                                                 <span className="flex items-center gap-2">
-                                                                    {assigneeName}
+                                                                    <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
+                                                                    {priorityDetails.label}
                                                                 </span>
                                                             </SelectValue>
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {members.map(m => (
-                                                                <SelectItem key={m.uid} value={m.uid!}>
-                                                                    {m.name}
+                                                            {priorities.map(p => (
+                                                                <SelectItem key={p.value} value={p.value}>
+                                                                    <span className="flex items-center gap-2">
+                                                                        <span className={cn("h-2 w-2 rounded-full",p.color)} />
+                                                                        {p.label}
+                                                                    </span>
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-                                                ) : (
-                                                    <span className="font-medium text-sm">{assigneeName}</span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
-                                                                {priorityDetails.label}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {priorities.map(p => (
-                                                            <SelectItem key={p.value} value={p.value}>
-                                                                 <span className="flex items-center gap-2">
-                                                                    <span className={cn("h-2 w-2 rounded-full",p.color)} />
-                                                                    {p.label}
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
-                                                                {statusDetails?.label}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {statuses.map(s => (
-                                                            <SelectItem key={s.value} value={s.value}>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
+                                                    <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
                                                                 <span className="flex items-center gap-2">
-                                                                    <s.icon className={cn("h-4 w-4", s.color)} />
-                                                                    {s.label}
+                                                                    {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
+                                                                    {statusDetails?.label}
                                                                 </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                           <span className="flex items-center gap-2">
-                                                                {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
-                                                                {typeDetails?.label}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {types.map(t => (
-                                                            <SelectItem key={t.value} value={t.value}>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {statuses.map(s => (
+                                                                <SelectItem key={s.value} value={s.value}>
+                                                                    <span className="flex items-center gap-2">
+                                                                        <s.icon className={cn("h-4 w-4", s.color)} />
+                                                                        {s.label}
+                                                                    </span>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
+                                                    <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
                                                                 <span className="flex items-center gap-2">
-                                                                    <t.icon className={cn("h-4 w-4", t.color)} />
-                                                                    {t.label}
+                                                                    {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
+                                                                    {typeDetails?.label}
                                                                 </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {types.map(t => (
+                                                                <SelectItem key={t.value} value={t.value}>
+                                                                    <span className="flex items-center gap-2">
+                                                                        <t.icon className={cn("h-4 w-4", t.color)} />
+                                                                        {t.label}
+                                                                    </span>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
+                                                                {currentDeadline ? format(currentDeadline, 'MMMM d, yyyy') : 'Set deadline'}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="end">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={currentDeadline}
+                                                                onSelect={handleDeadlineChange}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
+                                                    <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
+                                                                <span className="flex items-center gap-2">
+                                                                    {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
+                                                                </span>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">None</SelectItem>
+                                                            {companies.map(c => (
+                                                                <SelectItem key={c.id} value={c.id}>
+                                                                    {c.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
-                                                            {currentDeadline ? format(currentDeadline, 'MMMM d, yyyy') : 'Set deadline'}
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="end">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={currentDeadline}
-                                                            onSelect={handleDeadlineChange}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
-                                                <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">None</SelectItem>
-                                                        {companies.map(c => (
-                                                            <SelectItem key={c.id} value={c.id}>
-                                                                {c.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        
-                                        <Separator />
+                                            
+                                            <Separator />
 
-                                        <div className="space-y-2 col-span-2">
-                                            <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
-                                            <div className="flex flex-wrap gap-2">
-                                                {currentTags.filter(tag => tag !== 'Resolved Late').map(tag => (
-                                                    <Badge key={tag} variant="secondary">
-                                                        {tag}
-                                                        <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
-                                                            <X className="h-3 w-3" />
-                                                        </button>
-                                                    </Badge>
-                                                ))}
+                                            <div className="space-y-2 col-span-2">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {currentTags.filter(tag => tag !== 'Resolved Late').map(tag => (
+                                                        <Badge key={tag} variant="secondary">
+                                                            {tag}
+                                                            <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                                <Input
+                                                    value={tagInput}
+                                                    onChange={(e) => setTagInput(e.target.value)}
+                                                    onKeyDown={handleTagKeyDown}
+                                                    placeholder="Add a tag..."
+                                                    className="h-8 text-sm"
+                                                />
                                             </div>
-                                            <Input
-                                                value={tagInput}
-                                                onChange={(e) => setTagInput(e.target.value)}
-                                                onKeyDown={handleTagKeyDown}
-                                                placeholder="Add a tag..."
-                                                className="h-8 text-sm"
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                     <CardHeader>
-                                        <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        {activityLog.filter(log => log.type !== 'Note').length > 0 ? (
-                                            activityLog.filter(log => log.type !== 'Note').map((log) => (
-                                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
-                                                    {log.details}
-                                                </TimelineItem>
-                                            ))
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No recent activity.</p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                                </>
-                            )}
-                        </aside>
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            {activityLog.filter(log => log.type !== 'Note').length > 0 ? (
+                                                activityLog.filter(log => log.type !== 'Note').map((log) => (
+                                                    <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                                        {log.details}
+                                                    </TimelineItem>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">No recent activity.</p>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                    </>
+                                )}
+                            </aside>
+                        </div>
                     </div>
                 </main>
             </div>
         </SidebarProvider>
     );
 }
+
+    
