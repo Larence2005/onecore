@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData, MemberSignUpFormData } from '@/lib/types';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, or } from 'firebase/firestore';
 import { createOrganization } from '@/app/actions';
 
 
@@ -183,6 +183,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signup = async (data: SignUpFormData) => {
+    const organizationsRef = collection(db, "organizations");
+    const q = query(organizationsRef, or(
+      where("name", "==", data.organizationName),
+      where("domain", "==", data.domain)
+    ));
+
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const existingOrg = querySnapshot.docs[0].data();
+      if (existingOrg.name === data.organizationName) {
+        throw new Error("An organization with this name already exists.");
+      }
+      if (existingOrg.domain === data.domain) {
+        throw new Error("An organization with this domain already exists.");
+      }
+    }
+
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     
     // Create the organization in Firestore
