@@ -102,6 +102,7 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
+    verificationSent?: boolean;
 }
 
 export interface Company {
@@ -1207,7 +1208,7 @@ export async function createOrganization(name: string, domain: string, uid: stri
         name: name,
         domain: domain,
         owner: uid,
-        members: [{ name: userName, email: email, uid: uid, address: '', mobile: '', landline: '' }],
+        members: [{ name: userName, email: email, uid: uid, address: '', mobile: '', landline: '', verificationSent: true }],
         address: '',
         mobile: '',
         landline: '',
@@ -1236,7 +1237,7 @@ export async function addMemberToOrganization(organizationId: string, name: stri
     }
     
     await updateDoc(organizationRef, {
-        members: arrayUnion({ name, email, address, mobile, landline })
+        members: arrayUnion({ name, email, address, mobile, landline, verificationSent: false })
     });
     
     // Invalidate members cache
@@ -1609,11 +1610,37 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
     }
 }
     
-export async function sendVerificationEmail(settings: Settings, recipientEmail: string, recipientName: string) {
+export async function sendVerificationEmail(settings: Settings, organizationId: string, recipientEmail: string, recipientName: string) {
     if (!settings.clientId) {
         throw new Error("API settings are not configured to send emails.");
     }
     
+    // --- Update the member's verificationSent status ---
+    const organizationRef = doc(db, "organizations", organizationId);
+    await runTransaction(db, async (transaction) => {
+        const orgDoc = await transaction.get(organizationRef);
+        if (!orgDoc.exists()) {
+            throw new Error("Organization not found.");
+        }
+
+        const members = (orgDoc.data().members || []) as OrganizationMember[];
+        const memberIndex = members.findIndex(m => m.email.toLowerCase() === recipientEmail.toLowerCase());
+
+        if (memberIndex === -1) {
+            throw new Error("Member not found in the organization.");
+        }
+        
+        // Update the flag for the specific member
+        members[memberIndex].verificationSent = true;
+
+        transaction.update(organizationRef, { members: members });
+    });
+
+    // Invalidate cache to reflect the change immediately in the UI
+    membersCache.invalidate(`members:${organizationId}`);
+    // --- End of update logic ---
+
+
     const headersList = headers();
     const host = headersList.get('host') || '';
     const protocol = headersList.get('x-forwarded-proto') || 'http';
@@ -1691,3 +1718,4 @@ export async function sendVerificationEmail(settings: Settings, recipientEmail: 
     
 
   
+

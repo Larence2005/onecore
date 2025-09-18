@@ -225,10 +225,13 @@ export function OrganizationView() {
             toast({ variant: 'destructive', title: 'Cannot Send Email', description: 'Please configure API settings first.'});
             return;
         }
+        if (!userProfile?.organizationId) return;
+
         setIsSendingVerification(email);
         try {
-            await sendVerificationEmail(settings, email, name);
+            await sendVerificationEmail(settings, userProfile.organizationId, email, name);
             toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${email}.` });
+            await fetchMembers(); // Re-fetch to get updated verificationSent status
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
             toast({ variant: 'destructive', title: 'Failed to Send', description: errorMessage });
@@ -609,3 +612,4 @@ export function OrganizationView() {
     
 
     
+

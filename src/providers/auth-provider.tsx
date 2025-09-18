@@ -113,8 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (orgSnapshot.empty) {
         const allOrgsSnapshot = await getDocs(organizationsRef);
         for (const orgDoc of allOrgsSnapshot.docs) {
-            const members = (orgDoc.data().members || []) as {email: string, uid?: string}[];
-            if(members.some(m => m.email === user.email && !m.uid)) {
+            const members = (orgDoc.data().members || []) as {email: string, uid?: string, verificationSent?: boolean}[];
+            const memberInvite = members.find(m => m.email === user.email && !m.uid);
+            if(memberInvite) {
                  q = query(organizationsRef, where("__name__", "==", orgDoc.id));
                  orgSnapshot = await getDocs(q);
                  
@@ -220,25 +221,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const memberSignup = async (data: MemberSignUpFormData) => {
-    const organizationsRef = collection(db, "organizations");
-    const q = query(organizationsRef, where("members", "array-contains", { email: data.email, name: '' })); // This is a limitation, we can't query partial objects easily.
-    
     let orgId: string | null = null;
     let memberName: string | null = null;
     const orgsSnapshot = await getDocs(collection(db, "organizations"));
 
-    for(const orgDoc of orgsSnapshot.docs) {
-      const members = orgDoc.data().members as {email: string, name: string}[];
-      const foundMember = members.find(m => m.email.toLowerCase() === data.email.toLowerCase());
-      if (foundMember) {
-        orgId = orgDoc.id;
-        memberName = foundMember.name;
-        break;
-      }
+    for (const orgDoc of orgsSnapshot.docs) {
+        const members = (orgDoc.data().members || []) as { email: string, name: string, verificationSent?: boolean }[];
+        const foundMember = members.find(m => m.email.toLowerCase() === data.email.toLowerCase());
+        
+        if (foundMember) {
+            if (foundMember.verificationSent) {
+                orgId = orgDoc.id;
+                memberName = foundMember.name;
+                break;
+            } else {
+                throw new Error("Your account has not been verified by an administrator. Please contact them to send a verification email.");
+            }
+        }
     }
 
     if (!orgId) {
-      throw new Error("You have not been invited to any organization. Please contact your administrator.");
+        throw new Error("You have not been invited to any organization, or your invitation has not been verified. Please contact your administrator.");
     }
     
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -260,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     await fetchUserProfile(userCredential.user);
     handleLoginSuccess();
-  }
+}
   
   const recordFailedLogin = () => {
     const now = Date.now();
@@ -352,3 +355,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
