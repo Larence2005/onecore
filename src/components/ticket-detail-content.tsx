@@ -9,7 +9,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply, ReplyAll } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply, ReplyAll, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,8 @@ import { TableIcon } from './ui/table-icon';
 import { AutocompleteInput } from './autocomplete-input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import Image from 'next/image';
+
+type TimelineItemType = (DetailedEmail & { itemType: 'email' }) | (ActivityLog & { itemType: 'note' });
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
@@ -202,6 +204,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const [tagInput, setTagInput] = useState('');
     const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
     const [currentAssignee, setCurrentAssignee] = useState<string | null>(null);
+
+    const [isAddingNote, setIsAddingNote] = useState(false);
+    const [noteContent, setNoteContent] = useState('');
+    const [isSavingNote, setIsSavingNote] = useState(false);
 
 
     const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -585,6 +591,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyType('reply');
             setReplyTo(message.senderEmail || '');
             setForwardingMessageId(null);
+            setNoteContent('');
+            setIsAddingNote(false);
             setReplyContent('');
             // Only add current user to CC if they are not the admin
             if (user.uid !== userProfile.organizationOwnerUid) {
@@ -627,6 +635,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyCc(Array.from(allRecipients).join(', '));
             setReplyBcc('');
             setForwardingMessageId(null);
+            setNoteContent('');
+            setIsAddingNote(false);
             setReplyContent('');
             setShowReplyCc(false);
             setShowReplyBcc(false);
@@ -649,6 +659,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleForwardClick = (messageId: string) => {
         if(user?.email && userProfile){
             setReplyingToMessageId(null);
+            setNoteContent('');
+            setIsAddingNote(false);
             setForwardTo('');
             const ccRecipients = new Set<string>();
 
@@ -668,6 +680,28 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         }
     };
     
+    const handleSaveNote = async () => {
+        if (!noteContent.trim() || !user || !userProfile?.organizationId || !email) return;
+        
+        setIsSavingNote(true);
+        try {
+            await addActivityLog(userProfile.organizationId, email.id, {
+                type: 'Note',
+                details: noteContent,
+                date: new Date().toISOString(),
+                user: user.email || 'Unknown User'
+            });
+            toast({ title: 'Note added successfully' });
+            setNoteContent('');
+            setIsAddingNote(false);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+            toast({ variant: 'destructive', title: 'Failed to add note', description: errorMessage });
+        } finally {
+            setIsSavingNote(false);
+        }
+    };
+
 
     const handleCancelForward = () => {
         setForwardingMessageId(null);
@@ -683,6 +717,21 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if (!recipients || recipients.length === 0) return null;
         return recipients.map(r => r.emailAddress.address).join(', ');
     }
+    
+    const timeline: TimelineItemType[] = useMemo(() => {
+        if (!email) return [];
+        
+        const emailItems: TimelineItemType[] = (email.conversation || [email]).map(e => ({...e, itemType: 'email'}));
+        const noteItems: TimelineItemType[] = activityLog
+            .filter(log => log.type === 'Note')
+            .map(log => ({...log, itemType: 'note', receivedDateTime: log.date, subject: 'Internal Note'}));
+            
+        return [...emailItems, ...noteItems].sort((a, b) => {
+            const dateA = a.itemType === 'email' ? a.receivedDateTime : a.date;
+            const dateB = b.itemType === 'email' ? b.receivedDateTime : b.date;
+            return parseISO(dateA).getTime() - parseISO(dateB).getTime();
+        });
+    }, [email, activityLog]);
 
     const isReplyCcVisible = showReplyCc || !!replyCc;
     const isReplyBccVisible = showReplyBcc || !!replyBcc;
@@ -693,8 +742,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
         const isReplyingToThis = replyingToMessageId === message.id;
         const isForwardingThis = forwardingMessageId === message.id;
-        const hasCC = message.ccRecipients && message.ccRecipients.length > 0;
-        const showReplyAll = hasCC || (message.toRecipients && message.toRecipients.length > 1);
+        const showReplyAll = (message.ccRecipients && message.ccRecipients.length > 0) || (message.toRecipients && message.toRecipients.length > 1);
 
         return (
             <div key={message.id}>
@@ -974,6 +1022,30 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             </div>
         );
     }
+    
+     const renderNoteCard = (note: ActivityLog) => {
+        const member = members.find(m => m.email === note.user);
+        return (
+            <Card key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+                <CardHeader className="flex flex-row items-center gap-4 p-4">
+                    <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-yellow-100 dark:bg-yellow-800">{member?.name?.[0]?.toUpperCase() || 'N'}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 grid gap-1 text-sm">
+                        <div className="font-semibold">{member?.name || note.user} <span className="text-muted-foreground font-normal">added a note</span></div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        {format(parseISO(note.date), 'eee, MMM d, yyyy h:mm a')}
+                    </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                        {parse(note.details)}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    };
 
 
     const handleLogout = async () => {
@@ -1095,8 +1167,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto">
-                        <div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-4">
+                    <div className="flex-1 lg:grid lg:grid-cols-3 xl:grid-cols-4 lg:gap-6 overflow-hidden">
+                        <div className="lg:col-span-2 xl:col-span-3 p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <div className="space-y-4">
                                     {[...Array(2)].map((_, i) => (
@@ -1125,17 +1197,48 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             )}
 
                             {!isLoading && !error && email && (
-                                <div className="space-y-4">
-                                    {email.conversation && email.conversation.length > 0 ? (
-                                        email.conversation.map((msg, index) => renderMessageCard(msg, index === 0))
-                                    ) : (
-                                        renderMessageCard(email, true)
-                                    )}
-                                </div>
+                                <>
+                                    <div className="space-y-4">
+                                        {timeline.map((item) => {
+                                            if (item.itemType === 'email') {
+                                                return renderMessageCard(item, timeline.indexOf(item) === 0);
+                                            }
+                                            if (item.itemType === 'note') {
+                                                return renderNoteCard(item);
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+                                    <div className="mt-4">
+                                        {!isAddingNote && !replyingToMessageId && !forwardingMessageId && (
+                                            <Button variant="outline" onClick={() => setIsAddingNote(true)}>
+                                                <MessageSquare className="mr-2 h-4 w-4" />
+                                                Add Note
+                                            </Button>
+                                        )}
+                                        {isAddingNote && (
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Add Internal Note</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} />
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
+                                                        <Button onClick={handleSaveNote} disabled={isSavingNote}>
+                                                            {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                            Save Note
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
                         
-                        <aside className="w-full lg:w-[400px] lg:border-l p-4 sm:p-6 lg:p-8 space-y-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto flex-shrink-0">
+                        <aside className="w-full lg:w-auto lg:col-span-1 xl:col-span-1 border-l p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <>
                                 <Card>
@@ -1345,8 +1448,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                         <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
-                                        {activityLog.length > 0 ? (
-                                            activityLog.map((log) => (
+                                        {activityLog.filter(log => log.type !== 'Note').length > 0 ? (
+                                            activityLog.filter(log => log.type !== 'Note').map((log) => (
                                                 <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
                                                     {log.details}
                                                 </TimelineItem>
@@ -1365,5 +1468,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
-    
