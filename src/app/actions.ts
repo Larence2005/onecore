@@ -219,6 +219,13 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             if (!allowedSenders.has(senderEmail)) {
                 continue; // Skip this email entirely if the sender is unknown.
             }
+            
+            // Check for notification keywords in the subject
+            const subjectLower = email.subject.toLowerCase();
+            if (subjectLower.includes("notification:") || subjectLower.includes("update on ticket") || subjectLower.includes("you've been assigned")) {
+                continue; // Skip notification emails
+            }
+
 
             const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
             const q = query(ticketsCollectionRef, where('conversationId', '==', email.conversationId));
@@ -1635,3 +1642,4 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
     
 
     
+
