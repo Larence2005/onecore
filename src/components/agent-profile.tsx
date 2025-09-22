@@ -76,7 +76,7 @@ export function AgentProfile({ email }: { email: string }) {
 
   useEffect(() => {
     if (!loading && !user) {
-        router.push('/login');
+        router.push('/');
     }
   }, [user, loading, router]);
 
@@ -206,7 +206,7 @@ export function AgentProfile({ email }: { email: string }) {
     const handleLogout = async () => {
         try {
             await logout();
-            router.push('/login');
+            router.push('/');
         } catch (error) {
             console.error("Failed to log out", error);
         }
@@ -214,11 +214,11 @@ export function AgentProfile({ email }: { email: string }) {
     
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
-            router.push('/');
+            router.push('/dashboard');
         } else if (view === 'archive') {
             router.push('/archive');
         } else {
-            router.push(`/?view=${view}`); 
+            router.push(`/dashboard?view=${view}`); 
         }
     };
     
@@ -641,7 +641,3 @@ export function AgentProfile({ email }: { email: string }) {
     </SidebarProvider>
   );
 }
-
-    
-
-    

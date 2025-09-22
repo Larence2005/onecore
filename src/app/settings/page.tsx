@@ -13,7 +13,7 @@ import { Header } from '@/components/header';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function ArchivePage() {
+export default function SettingsPage() {
     const { user, userProfile, loading, logout } = useAuth();
     const router = useRouter();
 
@@ -88,7 +88,7 @@ export default function ArchivePage() {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('archive')} isActive>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
                                         <Archive className="text-orange-500" />
                                         <span>Archive</span>
                                     </SidebarMenuButton>
@@ -106,7 +106,7 @@ export default function ArchivePage() {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('settings')} isActive>
                                     <Settings className="text-gray-500" />
                                     <span>Settings</span>
                                     </SidebarMenuButton>
@@ -130,10 +130,10 @@ export default function ArchivePage() {
                                     <ArrowLeft className="h-4 w-4" />
                                 </Link>
                             </Button>
-                            <h1 className="text-xl font-bold">Archived Tickets</h1>
+                            <h1 className="text-xl font-bold">Settings</h1>
                         </div>
                     </Header>
-                    <MainView activeView="archive" />
+                    <MainView activeView="settings" />
                 </main>
             </div>
         </SidebarProvider>

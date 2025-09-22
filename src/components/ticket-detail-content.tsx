@@ -238,7 +238,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     
     useEffect(() => {
         if (!loading && !user) {
-        router.push('/login');
+        router.push('/');
         }
     }, [user, loading, router]);
     
@@ -853,7 +853,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                     <SettingsIcon className="h-4 w-4" />
                                     <AlertTitle>API Configuration Needed</AlertTitle>
                                     <AlertDescription>
-                                        Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to send replies.
+                                        Please <Link href="/dashboard?view=settings" className="font-bold underline">configure your API settings</Link> to send replies.
                                     </AlertDescription>
                                 </Alert>
                             ) : (
@@ -966,7 +966,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                     <SettingsIcon className="h-4 w-4" />
                                     <AlertTitle>API Configuration Needed</AlertTitle>
                                     <AlertDescription>
-                                        Please <Link href="/?view=settings" className="font-bold underline">configure your API settings</Link> to forward emails.
+                                        Please <Link href="/dashboard?view=settings" className="font-bold underline">configure your API settings</Link> to forward emails.
                                     </AlertDescription>
                                 </Alert>
                             ) : (
@@ -1077,7 +1077,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleLogout = async () => {
         try {
         await logout();
-        router.push('/login');
+        router.push('/');
         } catch (error) {
         console.error("Failed to log out", error);
         }
@@ -1095,11 +1095,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
-            router.push('/');
+            router.push('/dashboard');
         } else if (view === 'archive') {
             router.push('/archive');
         } else {
-            router.push(`/?view=${view}`); 
+            router.push(`/dashboard?view=${view}`); 
         }
     };
     
@@ -1184,7 +1184,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                      <Header>
                         <div className="flex items-center gap-4">
                             <Button variant="outline" size="icon" asChild>
-                                <Link href="/?view=tickets">
+                                <Link href="/dashboard?view=tickets">
                                     <ArrowLeft className="h-4 w-4" />
                                 </Link>
                             </Button>

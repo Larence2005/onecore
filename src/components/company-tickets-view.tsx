@@ -85,7 +85,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
     useEffect(() => {
         if (!loading && !user) {
-            router.push('/login');
+            router.push('/');
         }
     }, [user, loading, router]);
     
@@ -106,7 +106,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             
             if (!companyDetails) {
                 toast({ variant: 'destructive', title: 'Company not found' });
-                router.push('/?view=clients');
+                router.push('/dashboard?view=clients');
                 return;
             }
 
@@ -175,7 +175,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const handleLogout = async () => {
         try {
             await logout();
-            router.push('/login');
+            router.push('/');
         } catch (error) {
             console.error("Failed to log out", error);
         }
@@ -183,11 +183,11 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
-            router.push('/');
+            router.push('/dashboard');
         } else if (view === 'archive') {
             router.push('/archive');
         } else {
-            router.push(`/?view=${view}`); 
+            router.push(`/dashboard?view=${view}`); 
         }
     };
     
@@ -491,7 +491,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                         <Header>
                             <div className="flex items-center gap-4">
                                 <Button variant="outline" size="icon" asChild>
-                                    <Link href="/?view=clients">
+                                    <Link href="/dashboard?view=clients">
                                         <ArrowLeft className="h-4 w-4" />
                                     </Link>
                                 </Button>
