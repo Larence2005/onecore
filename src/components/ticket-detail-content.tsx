@@ -8,7 +8,7 @@ import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, Acti
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply, ReplyAll, MessageSquare } from 'lucide-react';
+import { Terminal, ArrowLeft, User, Shield, CheckCircle, UserCheck, Send, RefreshCw, Pencil, MoreHorizontal, Paperclip, LayoutDashboard, List, Users, Building2, X, Tag, CalendarClock, Activity, FileType, HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle2, Archive, LogOut, Share, Settings as SettingsIcon, CalendarDays, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting, Building, Reply, ReplyAll, MessageSquare, PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -1091,12 +1091,15 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     }
     
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+    const isClient = userProfile?.isClient === true;
 
     const handleMenuClick = (view: string) => {
         if(view === 'tickets' || view === '/') {
             router.push('/dashboard');
         } else if (view === 'archive') {
             router.push('/archive');
+        } else if (view === 'create-ticket') {
+            router.push('/create-ticket');
         } else {
             router.push(`/dashboard?view=${view}`); 
         }
@@ -1128,43 +1131,62 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </div>
                         </SidebarHeader>
                         <SidebarContent className="flex-grow">
-                            <SidebarMenu className="flex flex-col gap-2 px-4">
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                    <LayoutDashboard className="text-purple-500" />
-                                    <span>Dashboard</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
-                                    <List className="text-green-500" />
-                                    <span>Tickets</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                    <Pencil className="text-blue-500" />
-                                    <span>Compose</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                        <Archive className="text-orange-500" />
-                                        <span>Archive</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                                    <Users className="text-pink-500" />
-                                    <span>Clients</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                                    <Building2 className="text-yellow-500" />
-                                    <span>Organization</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
+                             <SidebarMenu className="flex flex-col gap-2 px-4">
+                                {isClient ? (
+                                    <>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                                                <List className="text-green-500" />
+                                                <span>Tickets</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('create-ticket')}>
+                                                <PlusCircle className="text-blue-500" />
+                                                <span>Create Ticket</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
+                                            <LayoutDashboard className="text-purple-500" />
+                                            <span>Dashboard</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                                            <List className="text-green-500" />
+                                            <span>Tickets</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                                            <Pencil className="text-blue-500" />
+                                            <span>Compose</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                                                <Archive className="text-orange-500" />
+                                                <span>Archive</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
+                                            <Users className="text-pink-500" />
+                                            <span>Clients</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
+                                            <Building2 className="text-yellow-500" />
+                                            <span>Organization</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </>
+                                )}
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
                                     <SettingsIcon className="text-gray-500" />
@@ -1232,7 +1254,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             })}
                                         </div>
                                         <div className="mt-4">
-                                            {!isAddingNote && !replyingToMessageId && !forwardingMessageId && (
+                                            {!isAddingNote && !replyingToMessageId && !forwardingMessageId && !isClient && (
                                                 <Button variant="outline" onClick={() => setIsAddingNote(true)}>
                                                     <MessageSquare className="mr-2 h-4 w-4" />
                                                     Add Note
@@ -1334,7 +1356,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                    <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}}>
+                                                    <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}} disabled={isClient}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
                                                                 <span className="flex items-center gap-2">
@@ -1357,7 +1379,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                    <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}}>
+                                                    <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}} disabled={isClient}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
                                                                 <span className="flex items-center gap-2">
@@ -1380,7 +1402,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                    <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}}>
+                                                    <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}} disabled={isClient}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
                                                                 <span className="flex items-center gap-2">
@@ -1404,7 +1426,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
                                                     <Popover>
-                                                        <PopoverTrigger asChild>
+                                                        <PopoverTrigger asChild disabled={isClient}>
                                                             <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
                                                                 {currentDeadline ? format(currentDeadline, 'MMMM d, yyyy') : 'Set deadline'}
                                                             </Button>
@@ -1421,7 +1443,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
-                                                    <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}}>
+                                                    <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}} disabled={isClient}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
                                                                 <span className="flex items-center gap-2">
@@ -1449,38 +1471,44 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                     {currentTags.filter(tag => tag !== 'Resolved Late').map(tag => (
                                                         <Badge key={tag} variant="secondary">
                                                             {tag}
-                                                            <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
-                                                                <X className="h-3 w-3" />
-                                                            </button>
+                                                            {!isClient && (
+                                                                <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
+                                                                    <X className="h-3 w-3" />
+                                                                </button>
+                                                            )}
                                                         </Badge>
                                                     ))}
                                                 </div>
-                                                <Input
-                                                    value={tagInput}
-                                                    onChange={(e) => setTagInput(e.target.value)}
-                                                    onKeyDown={handleTagKeyDown}
-                                                    placeholder="Add a tag..."
-                                                    className="h-8 text-sm"
-                                                />
+                                                {!isClient && (
+                                                    <Input
+                                                        value={tagInput}
+                                                        onChange={(e) => setTagInput(e.target.value)}
+                                                        onKeyDown={handleTagKeyDown}
+                                                        placeholder="Add a tag..."
+                                                        className="h-8 text-sm"
+                                                    />
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
-                                    <Card>
-                                        <CardHeader>
-                                            <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            {activityLog.filter(log => log.type !== 'Note').length > 0 ? (
-                                                activityLog.filter(log => log.type !== 'Note').map((log) => (
-                                                    <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
-                                                        {log.details}
-                                                    </TimelineItem>
-                                                ))
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground">No recent activity.</p>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                    {!isClient && (
+                                        <Card>
+                                            <CardHeader>
+                                                <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                {activityLog.filter(log => log.type !== 'Note').length > 0 ? (
+                                                    activityLog.filter(log => log.type !== 'Note').map((log) => (
+                                                        <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                                            {log.details}
+                                                        </TimelineItem>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">No recent activity.</p>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    )}
                                     </>
                                 )}
                             </aside>
