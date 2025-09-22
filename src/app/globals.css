@@ -122,6 +122,6 @@ body {
     scrollbar-width: none;  /* Firefox */
   }
   .auth-bg-gradient {
-    background: linear-gradient(135deg, #1e3a8a, #3b82f6, #60a5fa);
+    background: linear-gradient(135deg, #3b82f6, #93c5fd);
   }
 }
