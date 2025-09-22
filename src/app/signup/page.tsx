@@ -63,11 +63,8 @@ export default function SignupPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12 bg-white dark:bg-zinc-800">
+        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12 bg-gray-100 dark:bg-zinc-900">
             <Image src={`/quickdesk_logowithtext_nobg.png?t=${new Date().getTime()}`} alt="Quickdesk Logo" width={250} height={250} />
-        </div>
-        <div className="hidden md:flex items-center">
-            <Separator orientation="vertical" />
         </div>
         <div className="w-full md:w-1/2 p-8 sm:p-12">
             <div className="mb-8 text-left">
