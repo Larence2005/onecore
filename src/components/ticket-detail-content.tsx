@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -1114,7 +1113,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
                 <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                     <div className="flex-grow flex flex-col">
-                        <SidebarFooter className="p-4">
+                        <SidebarHeader className="p-4 flex flex-col gap-4">
+                            <div className="flex items-center justify-center">
+                                <Image src={`/navlogo.jpg?t=${new Date().getTime()}`} alt="Onecore Logo" width="120" height="60" />
+                            </div>
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-9 w-9">
                                 <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
@@ -1124,7 +1126,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                     <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
                                 </div>
                             </div>
-                        </SidebarFooter>
+                        </SidebarHeader>
                         <SidebarContent className="flex-grow">
                             <SidebarMenu className="flex flex-col gap-2 px-4">
                                 <SidebarMenuItem>
@@ -1171,12 +1173,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarContent>
-                        <SidebarHeader className="mt-auto p-4">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                                <span className="text-xs text-muted-foreground">Product of</span>
-                                <Image src={`/navlogo.jpg?t=${new Date().getTime()}`} alt="Onecore Logo" width="120" height="60" />
-                            </div>
-                        </SidebarHeader>
                     </div>
                 </Sidebar>
 

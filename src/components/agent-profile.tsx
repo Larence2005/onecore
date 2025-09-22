@@ -260,7 +260,7 @@ export function AgentProfile({ email }: { email: string }) {
 
     const sortedAssignedTickets = useMemo(() => sortAndFilterTickets(assignedTickets, sortOptions.assigned, statusFilters.assigned), [assignedTickets, sortOptions.assigned, statusFilters.assigned]);
     const sortedCcTickets = useMemo(() => sortAndFilterTickets(ccTickets, sortOptions.cc, statusFilters.cc), [ccTickets, sortOptions.cc, statusFilters.cc]);
-    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.bcc), [bccTickets, sortOptions.bcc, statusFilters.cc]);
+    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.cc), [bccTickets, sortOptions.bcc, statusFilters.cc]);
     
     const handleSortChange = (list: 'assigned' | 'cc' | 'bcc', value: SortOption) => {
         setSortOptions(prev => ({ ...prev, [list]: value }));
@@ -370,18 +370,21 @@ export function AgentProfile({ email }: { email: string }) {
         <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
             <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                 <div className="flex-grow flex flex-col">
-                <SidebarFooter className="p-4">
-                    <div className="flex items-center gap-4">
-                        <Avatar className="h-9 w-9">
-                        <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                            <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                            <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                    <SidebarHeader className="p-4 flex flex-col gap-4">
+                        <div className="flex items-center justify-center">
+                            <Image src={`/navlogo.jpg?t=${new Date().getTime()}`} alt="Onecore Logo" width="120" height="60" />
                         </div>
-                    </div>
-                </SidebarFooter>
-                <SidebarContent className="flex-grow">
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-9 w-9">
+                            <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                                <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                            </div>
+                        </div>
+                    </SidebarHeader>
+                    <SidebarContent className="flex-grow">
                     <SidebarMenu className="flex flex-col gap-2 px-4">
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
@@ -427,12 +430,6 @@ export function AgentProfile({ email }: { email: string }) {
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarContent>
-                 <SidebarHeader className="mt-auto p-4">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="text-xs text-muted-foreground">Product of</span>
-                        <Image src={`/navlogo.jpg?t=${new Date().getTime()}`} alt="Onecore Logo" width="120" height="60" />
-                    </div>
-                </SidebarHeader>
                 </div>
             </Sidebar>
 
