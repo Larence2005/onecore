@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:flex w-1/2 auth-bg-gradient flex-col items-center justify-center p-12 text-white">
+        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12">
             <Image src={`/quickdesk_logowithtext_nobg.png?t=${new Date().getTime()}`} alt="Quickdesk Logo" width={250} height={250} />
         </div>
         <div className="w-full md:w/1/2 p-8 sm:p-12">
