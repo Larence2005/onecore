@@ -183,7 +183,13 @@ async function getNextTicketNumber(organizationId: string): Promise<number> {
     return getAndIncrementTicketCounter(organizationId);
 }
 
-export async function createTicket(organizationId: string, author: { uid: string, name: string, email: string }, title: string, body: string): Promise<{ success: boolean, id?: string, error?: string }> {
+export async function createTicket(
+    organizationId: string, 
+    author: { uid: string, name: string, email: string }, 
+    title: string, 
+    body: string,
+    settings: Settings | null
+): Promise<{ success: boolean, id?: string, error?: string }> {
     if (!organizationId || !author.uid || !title.trim()) {
         return { success: false, error: 'Missing required fields to create a ticket.' };
     }
@@ -253,6 +259,35 @@ export async function createTicket(organizationId: string, author: { uid: string
             date: newTicketData.receivedDateTime,
             user: author.email || 'System',
         });
+        
+        // Send notification email
+        if (settings) {
+            try {
+                const headersList = headers();
+                const host = headersList.get('host') || '';
+                const protocol = headersList.get('x-forwarded-proto') || 'http';
+                const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
+
+                const notificationSubject = `Ticket Created: #${ticketNumber} - ${title}`;
+                const notificationBody = `
+                    <p>Hello ${author.name},</p>
+                    <p>Your ticket with the subject "${title}" has been created successfully.</p>
+                    <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
+                    <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                    <br>
+                    <p>You can also reply to this email thread to add comments to your ticket.</p>
+                `;
+                await sendEmailAction(settings, {
+                    recipient: author.email,
+                    subject: notificationSubject,
+                    body: notificationBody,
+                });
+            } catch(e) {
+                console.error("Failed to send ticket creation notification for manually created ticket:", e);
+                // Don't fail the whole operation if email fails
+            }
+        }
+
 
         // Invalidate caches
         ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
@@ -315,7 +350,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             
             // Check for notification keywords in the subject
             const subjectLower = email.subject.toLowerCase();
-            if (subjectLower.includes("notification:") || subjectLower.includes("update on ticket") || subjectLower.includes("you've been assigned")) {
+            if (subjectLower.includes("notification:") || subjectLower.includes("update on ticket") || subjectLower.includes("you've been assigned") || subjectLower.includes("ticket created:")) {
                 continue; // Skip notification emails
             }
 
@@ -358,6 +393,33 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                         date: email.receivedDateTime,
                         user: email.from.emailAddress.address || 'System',
                     });
+
+                    // Send notification for email-based tickets
+                    try {
+                        const headersList = headers();
+                        const host = headersList.get('host') || '';
+                        const protocol = headersList.get('x-forwarded-proto') || 'http';
+                        const ticketUrl = `${protocol}://${host}/tickets/${ticketId}`;
+                        
+                        const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
+                        const notificationBody = `
+                            <p>Hello ${preliminaryTicketData.sender},</p>
+                            <p>Your ticket with the subject "${preliminaryTicketData.title}" has been created successfully.</p>
+                            <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
+                            <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                            <br>
+                            <p>You can also reply to this email thread to add comments to your ticket.</p>
+                        `;
+
+                        await sendEmailAction(settings, {
+                            recipient: preliminaryTicketData.senderEmail,
+                            subject: notificationSubject,
+                            body: notificationBody,
+                        });
+                    } catch (e) {
+                        console.error("Failed to send ticket creation notification for email-based ticket:", e);
+                    }
+
 
                     await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
 

@@ -22,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Send, RefreshCw } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
 import { useAuth } from "@/providers/auth-provider";
+import { useSettings } from "@/providers/settings-provider";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required."),
@@ -30,6 +31,7 @@ const formSchema = z.object({
 
 export function CreateTicketForm() {
   const { user, userProfile } = useAuth();
+  const { settings, isConfigured } = useSettings();
   const { toast } = useToast();
   const router = useRouter();
   const [isSending, setIsSending] = useState(false);
@@ -55,7 +57,7 @@ export function CreateTicketForm() {
     setIsSending(true);
     try {
       const author = { uid: user.uid, name: userProfile.name || user.email!, email: user.email! };
-      const result = await createTicket(userProfile.organizationId, author, values.title, values.body);
+      const result = await createTicket(userProfile.organizationId, author, values.title, values.body, isConfigured ? settings : null);
       
       if (result.success && result.id) {
         toast({
