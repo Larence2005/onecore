@@ -12,9 +12,10 @@ import { OrganizationView } from './organization-view';
 import { useAuth } from '@/providers/auth-provider';
 import { ClientsView } from './clients-view';
 import { DateRange } from 'react-day-picker';
+import { CreateTicketForm } from './create-ticket-form';
 
 type MainViewProps = {
-    activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
+    activeView: 'analytics' | 'tickets' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive' | 'create-ticket';
     emails?: Email[];
     isLoading?: boolean;
     error?: string | null;
@@ -49,6 +50,8 @@ export function MainView({ activeView, emails, isLoading, error, onRefresh, filt
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SettingsForm /></div>;
             case 'compose':
                 return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><SendEmailForm /></div>;
+            case 'create-ticket':
+                return <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8"><CreateTicketForm /></div>;
             case 'archive':
                 return <ArchiveView />;
             default:

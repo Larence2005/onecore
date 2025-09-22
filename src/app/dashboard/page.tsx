@@ -6,7 +6,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive, Building, Calendar as CalendarIcon } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive, Building, Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 
 
-type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive';
+type View = 'tickets' | 'analytics' | 'clients' | 'organization' | 'settings' | 'compose' | 'archive' | 'create-ticket';
 
 function HomePageContent() {
   const { user, userProfile, loading, logout } = useAuth();
@@ -87,12 +87,15 @@ function HomePageContent() {
     setIsLoading(true);
 
     const isOwner = user.uid === userProfile.organizationOwnerUid;
+    const isClient = userProfile.isClient;
     
-    // This listener reads tickets from the database for ALL members of the organization.
     const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
     let q;
 
-    if (isOwner) {
+    if (isClient) {
+        // Client sees only tickets they created
+        q = query(ticketsCollectionRef, where('senderEmail', '==', user.email), where('status', '!=', 'Archived'));
+    } else if (isOwner) {
         // Owner sees all non-archived tickets
         q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
     } else {
@@ -114,7 +117,7 @@ function HomePageContent() {
             companyMap = new Map(fetchedCompanies.map(c => [c.id, c.name]));
             setCompanies(fetchedCompanies); // Set companies for the dashboard filter
             memberMap = new Map(members.map(m => [m.uid!, m.name]));
-            memberEmails = new Set(members.map(m => m.email.toLowerCase()));
+            memberEmails = new Set(members.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
 
         } catch(e) {
             console.error("Could not fetch companies or members for ticket list", e);
@@ -238,10 +241,13 @@ function HomePageContent() {
 
   useEffect(() => {
     const view = searchParams.get('view') as View;
-    if (view && ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose', 'archive'].includes(view)) {
+    const validViews: View[] = ['tickets', 'analytics', 'clients', 'organization', 'settings', 'compose', 'archive', 'create-ticket'];
+    if (view && validViews.includes(view)) {
       setActiveView(view);
+    } else {
+      setActiveView(userProfile?.isClient ? 'tickets' : 'analytics');
     }
-  }, [searchParams]);
+  }, [searchParams, userProfile]);
 
   const handleLogout = async () => {
     try {
@@ -256,8 +262,8 @@ function HomePageContent() {
     setActiveView(view);
     if (view === 'archive') {
       router.push('/archive');
-    } else if (view === 'clients') {
-      router.push(`/dashboard?view=clients`);
+    } else if (view === 'create-ticket') {
+        router.push('/create-ticket');
     } else {
       router.push(`/dashboard?view=${view}`, { scroll: false });
     }
@@ -275,6 +281,8 @@ function HomePageContent() {
     );
   }
   
+  const isClient = userProfile?.isClient === true;
+
   return (
     <SidebarProvider>
       <div className={cn(
@@ -299,42 +307,57 @@ function HomePageContent() {
                 </SidebarHeader>
                 <SidebarContent className="flex-grow">
                 <SidebarMenu className="flex flex-col gap-2 px-4">
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
-                      <LayoutDashboard className="text-purple-500" />
-                      <span>Dashboard</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {!isClient && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleViewChange('analytics')} isActive={activeView === 'analytics'}>
+                        <LayoutDashboard className="text-purple-500" />
+                        <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton onClick={() => handleViewChange('tickets')} isActive={activeView === 'tickets'}>
                       <List className="text-green-500" />
                       <span>Tickets</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
-                      <Pencil className="text-blue-500" />
-                      <span>Compose</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                      <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
-                          <Archive className="text-orange-500" />
-                          <span>Archive</span>
-                      </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
-                      <Users className="text-pink-500" />
-                      <span>Clients</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
-                      <Building2 className="text-yellow-500" />
-                      <span>Organization</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {isClient ? (
+                     <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleViewChange('create-ticket')} isActive={activeView === 'create-ticket'}>
+                            <PlusCircle className="text-blue-500" />
+                            <span>Create Ticket</span>
+                        </SidebarMenuButton>
+                     </SidebarMenuItem>
+                  ) : (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleViewChange('compose')} isActive={activeView === 'compose'}>
+                        <Pencil className="text-blue-500" />
+                        <span>Compose</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {!isClient && (
+                    <>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => handleViewChange('archive')} isActive={activeView === 'archive'}>
+                                <Archive className="text-orange-500" />
+                                <span>Archive</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => handleViewChange('clients')} isActive={activeView === 'clients'}>
+                            <Users className="text-pink-500" />
+                            <span>Clients</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton onClick={() => handleViewChange('organization')} isActive={activeView === 'organization'}>
+                            <Building2 className="text-yellow-500" />
+                            <span>Organization</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton onClick={() => handleViewChange('settings')} isActive={activeView === 'settings'}>
                       <Settings className="text-gray-500" />
@@ -451,6 +474,7 @@ function HomePageContent() {
                     {activeView === 'organization' && <h1 className="text-xl font-bold">Organization</h1>}
                     {activeView === 'settings' && <h1 className="text-xl font-bold">Settings</h1>}
                     {activeView === 'archive' && <h1 className="text-xl font-bold">Archive</h1>}
+                    {activeView === 'create-ticket' && <h1 className="text-xl font-bold">Create a New Ticket</h1>}
                 </div>
             )}
           </Header>

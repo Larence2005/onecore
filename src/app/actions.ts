@@ -103,6 +103,7 @@ export interface OrganizationMember {
     mobile?: string;
     landline?: string;
     verificationSent?: boolean;
+    isClient?: boolean;
 }
 
 export interface Company {
@@ -180,6 +181,88 @@ async function getAndIncrementTicketCounter(organizationId: string): Promise<num
 
 async function getNextTicketNumber(organizationId: string): Promise<number> {
     return getAndIncrementTicketCounter(organizationId);
+}
+
+export async function createTicket(organizationId: string, author: { uid: string, name: string, email: string }, title: string, body: string): Promise<{ success: boolean, id?: string, error?: string }> {
+    if (!organizationId || !author.uid || !title.trim()) {
+        return { success: false, error: 'Missing required fields to create a ticket.' };
+    }
+    
+    // Find which company this employee belongs to
+    const allCompanies = await getCompanies(organizationId);
+    let companyId: string | undefined = undefined;
+    for (const company of allCompanies) {
+        const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', author.email);
+        const employeeDoc = await getDoc(employeeDocRef);
+        if (employeeDoc.exists()) {
+            companyId = company.id;
+            break;
+        }
+    }
+
+
+    try {
+        const ticketNumber = await getNextTicketNumber(organizationId);
+        const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
+        const newTicketRef = doc(ticketsCollectionRef);
+        
+        const newTicketData = {
+            id: newTicketRef.id,
+            title: title,
+            sender: author.name,
+            senderEmail: author.email,
+            bodyPreview: body.substring(0, 255), // Use body as preview
+            receivedDateTime: new Date().toISOString(),
+            priority: 'Low',
+            status: 'Open',
+            type: 'Incident',
+            tags: [],
+            deadline: null,
+            closedAt: null,
+            ticketNumber: ticketNumber,
+            assignee: null,
+            companyId: companyId,
+        };
+
+        await setDoc(newTicketRef, newTicketData);
+
+        // Store the body content in a conversation document, similar to how emails work
+        const conversationId = `manual-${newTicketRef.id}`;
+        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
+        const conversationMessage: DetailedEmail = {
+            id: `msg-${Date.now()}`,
+            subject: title,
+            sender: author.name,
+            senderEmail: author.email,
+            body: { contentType: 'html', content: body }, // Assuming body is HTML from a rich text editor
+            receivedDateTime: newTicketData.receivedDateTime,
+            bodyPreview: newTicketData.bodyPreview,
+            priority: 'Low',
+            status: 'Open',
+            type: 'Incident',
+            conversationId: conversationId
+        };
+        await setDoc(conversationDocRef, { messages: [conversationMessage] });
+
+        // Update ticket with conversation ID
+        await updateDoc(newTicketRef, { conversationId: conversationId });
+
+        await addActivityLog(organizationId, newTicketRef.id, {
+            type: 'Create',
+            details: 'Ticket created',
+            date: newTicketData.receivedDateTime,
+            user: author.email || 'System',
+        });
+
+        // Invalidate caches
+        ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
+        activityCache.invalidatePrefix(`activity:${organizationId}`);
+
+        return { success: true, id: newTicketRef.id };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
 }
 
 

@@ -16,6 +16,7 @@ export interface UserProfile {
   organizationId?: string;
   organizationName?: string;
   organizationOwnerUid?: string;
+  isClient?: boolean;
   address?: string;
   mobile?: string;
   landline?: string;
@@ -93,43 +94,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const organizationsRef = collection(db, "organizations");
-    let q = query(organizationsRef, where("members", "array-contains", { email: user.email, uid: user.uid }));
-    let orgSnapshot = await getDocs(q);
+    const allOrgsSnapshot = await getDocs(organizationsRef);
+    
+    for (const orgDoc of allOrgsSnapshot.docs) {
+        const orgData = orgDoc.data();
+        const members = (orgData.members || []) as { email: string; uid?: string }[];
+        
+        // Check if user is an organization member (agent/admin)
+        const memberData = members.find(m => m.uid === user.uid);
+        if (memberData) {
+            setUserProfile({
+                uid: user.uid,
+                email: user.email,
+                name: (memberData as any)?.name || user.displayName || user.email,
+                organizationId: orgDoc.id,
+                organizationName: orgData.name,
+                organizationOwnerUid: orgData.owner,
+                isClient: false,
+                address: orgData.address,
+                mobile: orgData.mobile,
+                landline: orgData.landline,
+                website: orgData.website,
+            });
+            return;
+        }
 
-    // Fallback for just-registered users where UID might not be in array-contains index yet
-    if (orgSnapshot.empty) {
-        const allOrgsSnapshot = await getDocs(organizationsRef);
-        for (const orgDoc of allOrgsSnapshot.docs) {
-            const members = (orgDoc.data().members || []) as {email: string, uid?: string}[];
-            if(members.some(m => m.uid === user.uid)) {
-                q = query(organizationsRef, where("__name__", "==", orgDoc.id));
-                orgSnapshot = await getDocs(q);
-                break;
+        // Check if user is a client employee
+        const companiesRef = collection(orgDoc.ref, 'companies');
+        const companiesSnapshot = await getDocs(companiesRef);
+        for (const companyDoc of companiesSnapshot.docs) {
+            const employeeDocRef = doc(companyDoc.ref, 'employees', user.email);
+            const employeeDoc = await getDoc(employeeDocRef);
+            if (employeeDoc.exists()) {
+                const employeeData = employeeDoc.data();
+                setUserProfile({
+                    uid: user.uid,
+                    email: user.email,
+                    name: employeeData.name || user.email,
+                    organizationId: orgDoc.id,
+                    organizationName: orgData.name,
+                    organizationOwnerUid: orgData.owner,
+                    isClient: true,
+                });
+                return;
             }
         }
     }
 
-    if (!orgSnapshot.empty) {
-      const orgDoc = orgSnapshot.docs[0];
-      const orgData = orgDoc.data();
-      const memberData = (orgData.members || []).find((m: any) => m.uid === user.uid);
+    // User not found in any org members or client employees list
+    setUserProfile(null);
 
-      setUserProfile({
-        uid: user.uid,
-        email: user.email,
-        name: memberData?.name || user.displayName || user.email,
-        organizationId: orgDoc.id,
-        organizationName: orgData.name,
-        organizationOwnerUid: orgData.owner,
-        address: orgData.address,
-        mobile: orgData.mobile,
-        landline: orgData.landline,
-        website: orgData.website,
-      });
-    } else {
-        // Not found in any organization, maybe an admin that hasn't created an org yet
-        setUserProfile(null);
-    }
   }, []);
 
   useEffect(() => {
@@ -180,46 +194,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const memberSignup = async (data: MemberSignUpFormData) => {
     let orgId: string | null = null;
-    let memberName: string | null = null;
-    let targetMember: any = null;
+    let isAgent = false;
+    let isClientEmployee = false;
+    
     const orgsSnapshot = await getDocs(collection(db, "organizations"));
 
     for (const orgDoc of orgsSnapshot.docs) {
-        const members = (orgDoc.data().members || []) as { email: string, name: string, verificationSent?: boolean, uid?: string }[];
-        const foundMember = members.find(m => m.email.toLowerCase() === data.email.toLowerCase());
-        
-        if (foundMember) {
-            if (foundMember.uid) {
-                throw new Error("This email address has already been registered.");
-            }
-            if (foundMember.verificationSent) {
+        const orgData = orgDoc.data();
+        // Check if they are an agent invited to the org
+        const agentMembers = (orgData.members || []) as { email: string, verificationSent?: boolean, uid?: string }[];
+        const agentMatch = agentMembers.find(m => m.email.toLowerCase() === data.email.toLowerCase());
+        if (agentMatch) {
+            if (agentMatch.uid) throw new Error("This email address has already been registered as an agent.");
+            if (agentMatch.verificationSent) {
                 orgId = orgDoc.id;
-                targetMember = foundMember;
+                isAgent = true;
                 break;
             } else {
-                throw new Error("Your account has not been verified by an administrator. Please contact them to send a verification email.");
+                 throw new Error("Your account has not been verified by an administrator. Please contact them to send a verification email.");
             }
         }
+        
+        // Check if they are an employee of a client company
+        const companiesRef = collection(orgDoc.ref, "companies");
+        const companiesSnapshot = await getDocs(companiesRef);
+        for(const companyDoc of companiesSnapshot.docs) {
+            const employeeDocRef = doc(companyDoc.ref, 'employees', data.email);
+            const employeeDoc = await getDoc(employeeDocRef);
+            if (employeeDoc.exists()) {
+                orgId = orgDoc.id;
+                isClientEmployee = true;
+                break;
+            }
+        }
+        if (isClientEmployee) break;
     }
 
-    if (!orgId || !targetMember) {
-        throw new Error("You have not been invited to any organization, or your invitation has not been verified. Please contact your administrator.");
+    if (!orgId || (!isAgent && !isClientEmployee)) {
+        throw new Error("You have not been invited to an organization or client company. Please contact an administrator.");
     }
     
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     
-    // Add the UID to the member in the organization
-    const orgRef = doc(db, 'organizations', orgId);
-    const orgDoc = await getDoc(orgRef);
-    if(orgDoc.exists()){
-        const members = orgDoc.data().members as {name: string, email: string, uid?: string}[];
-        const updatedMembers = members.map(m => 
-            m.email.toLowerCase() === data.email.toLowerCase() 
-            ? { ...m, uid: userCredential.user.uid } 
-            : m
-        );
-        await updateDoc(orgRef, { members: updatedMembers });
+    if(isAgent) {
+        // Add the UID to the member in the organization
+        const orgRef = doc(db, 'organizations', orgId);
+        const orgDoc = await getDoc(orgRef);
+        if(orgDoc.exists()){
+            const members = orgDoc.data().members as {name: string, email: string, uid?: string}[];
+            const updatedMembers = members.map(m => 
+                m.email.toLowerCase() === data.email.toLowerCase() 
+                ? { ...m, uid: userCredential.user.uid } 
+                : m
+            );
+            await updateDoc(orgRef, { members: updatedMembers });
+        }
     }
+    // If it's a client employee, we don't need to update any document on signup,
+    // as their authorization is based on their email existing in a company's employee list.
     
     await fetchUserProfile(userCredential.user);
     handleLoginSuccess();
