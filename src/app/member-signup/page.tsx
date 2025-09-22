@@ -63,7 +63,7 @@ export default function MemberSignupPage() {
             <Image src={`/quickdesk_logowithtext_nobg.png?t=${new Date().getTime()}`} alt="Quickdesk Logo" width={250} height={250} />
         </div>
         <div className="hidden md:flex items-center">
-            <Separator orientation="vertical" className="h-2/3" />
+            <Separator orientation="vertical" />
         </div>
         <div className="w-full md:w-1/2 p-8 sm:p-12">
             <div className="mb-8 text-left">
