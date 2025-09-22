@@ -59,8 +59,9 @@ export default function MemberSignupPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12 bg-gray-100 dark:bg-zinc-900">
+        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12 bg-gray-100 dark:bg-zinc-900 relative">
             <Image src={`/quickdesk_logowithtext_nobg.png?t=${new Date().getTime()}`} alt="Quickdesk Logo" width={250} height={250} />
+            <p className="absolute bottom-4 text-xs text-muted-foreground">All rights reserved 2025</p>
         </div>
         <div className="w-full md:w-1/2 p-8 sm:p-12">
             <div className="mb-8 text-left">
