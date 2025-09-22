@@ -214,7 +214,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                              </SelectTrigger>
                              <SelectContent>
                                 <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {members.map(m => (
+                                {members.filter(m => m.uid).map(m => (
                                     <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
                                 ))}
                              </SelectContent>
