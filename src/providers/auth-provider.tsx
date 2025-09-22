@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData, MemberSignUpFormData } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, or } from 'firebase/firestore';
@@ -33,6 +33,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   fetchUserProfile: (user: User) => Promise<void>;
   signInWithGoogle: () => Promise<any>;
+  sendPasswordReset: (email: string) => Promise<void>;
   getLockoutEndTime: () => number | null;
 }
 
@@ -274,6 +275,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendPasswordReset = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
 
   const value = {
     user,
@@ -285,6 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     fetchUserProfile,
     signInWithGoogle,
+    sendPasswordReset,
     getLockoutEndTime,
   };
 
