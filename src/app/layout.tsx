@@ -6,7 +6,7 @@ import { Providers } from './providers';
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: 'Onecore',
+  title: 'Quickdesk',
   description: 'Manage your email workflows with ease.',
 };
 
