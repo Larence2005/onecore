@@ -62,7 +62,7 @@ export default function SignupPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:block w-1/2 bg-gradient-to-br from-blue-500 to-blue-700" />
+        <div className="hidden md:block w-1/2 auth-bg-gradient" />
 
         <div className="w-full md:w-1/2 p-8 sm:p-12">
             <div className="mb-8 text-left">
