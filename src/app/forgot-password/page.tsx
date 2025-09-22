@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { RefreshCw } from "lucide-react";
 import Image from "next/image";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address."),
@@ -57,10 +58,13 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12">
+        <div className="hidden md:flex w-1/2 flex-col items-center justify-center p-12 bg-white dark:bg-zinc-800">
             <Image src={`/quickdesk_logowithtext_nobg.png?t=${new Date().getTime()}`} alt="Quickdesk Logo" width={250} height={250} />
         </div>
-        <div className="w-full md:w/1/2 p-8 sm:p-12">
+        <div className="hidden md:flex items-center">
+            <Separator orientation="vertical" className="h-2/3" />
+        </div>
+        <div className="w-full md:w-1/2 p-8 sm:p-12">
             <div className="mb-8 text-left">
                 <h2 className="text-2xl font-bold text-primary">Forgot Password</h2>
                 <p className="text-muted-foreground">
