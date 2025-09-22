@@ -122,12 +122,6 @@ body {
     scrollbar-width: none;  /* Firefox */
   }
   .auth-bg-gradient {
-    background-color: #007cf0;
-    background-image:
-        radial-gradient(at 10% 20%, hsla(210,90%,60%,1) 0px, transparent 50%),
-        radial-gradient(at 80% 20%, hsla(280,90%,70%,1) 0px, transparent 50%),
-        radial-gradient(at 10% 90%, hsla(190,90%,65%,1) 0px, transparent 50%),
-        radial-gradient(at 80% 90%, hsla(340,90%,70%,1) 0px, transparent 50%),
-        linear-gradient(45deg, #243949 0%, #517fa4 100%);
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6, #60a5fa);
   }
 }
