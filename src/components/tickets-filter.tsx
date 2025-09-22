@@ -117,7 +117,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                 <AccordionTrigger className="px-4 text-base font-semibold">Agents</AccordionTrigger>
                 <AccordionContent className="px-4">
                   <div className="space-y-2">
-                    {agentOptions.map(agent => (
+                    {agentOptions.filter(agent => agent.uid).map(agent => (
                       <div key={agent.uid} className="flex items-center space-x-2">
                         <Checkbox 
                           id={`agent-${agent.uid}`} 
