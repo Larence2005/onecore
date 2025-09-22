@@ -90,7 +90,9 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="flex w-full max-w-4xl rounded-lg shadow-lg overflow-hidden bg-card">
-        <div className="hidden md:block w-1/2 auth-bg-gradient" />
+        <div className="hidden md:flex w-1/2 auth-bg-gradient flex-col items-center justify-center p-12 text-white">
+          <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width={250} height={250} />
+        </div>
 
         <div className="w-full md:w-1/2 p-8 sm:p-12">
           <div className="mb-8 text-left">
