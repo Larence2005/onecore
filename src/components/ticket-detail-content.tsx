@@ -1115,7 +1115,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="p-4 flex flex-col gap-4">
                             <div className="flex items-center justify-center">
-                                <Image src={`/navlogo.jpg?t=${new Date().getTime()}`} alt="Onecore Logo" width="120" height="60" />
+                                <Image src={`/quickdesk_logowithtext_nobg.png?t=${new Date().getTime()}`} alt="Quickdesk Logo" width="120" height="60" />
                             </div>
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-9 w-9">
