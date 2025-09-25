@@ -502,6 +502,8 @@ function HomePageContent() {
 
 export default function DashboardPage() {
   return (
-      <HomePageContent />
+      <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>Loading page...</p></div>}>
+        <HomePageContent />
+      </React.Suspense>
   )
 }

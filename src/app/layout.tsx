@@ -23,12 +23,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>}>
-          <Providers>
-            {children}
-            <Toaster />
-          </Providers>
-        </React.Suspense>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );
