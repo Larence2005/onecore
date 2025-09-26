@@ -862,7 +862,7 @@ export async function forwardEmailAction(
         bccRecipients: parseRecipients(bcc),
     };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/forward`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${messageId}/forward`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
@@ -1931,16 +1931,16 @@ async function assignLicenseToUser(client: Client, userId: string): Promise<any>
 
     // First, find an available SKU (license plan)
     const subscribedSkus = await client.api('/subscribedSkus').get();
-    const developerSku = subscribedSkus.value.find((sku: any) => sku.skuPartNumber === 'DEVELOPERPACK_E5');
+    const businessBasicSku = subscribedSkus.value.find((sku: any) => sku.skuPartNumber === 'O365_BUSINESS_ESSENTIALS');
     
-    if (!developerSku || !developerSku.skuId) {
-        throw new Error("Could not find a suitable developer license (SKU) to assign.");
+    if (!businessBasicSku || !businessBasicSku.skuId) {
+        throw new Error("Could not find a suitable Microsoft 365 Business Basic license (SKU) to assign.");
     }
     
     const license = {
         addLicenses: [
             {
-                skuId: developerSku.skuId,
+                skuId: businessBasicSku.skuId,
                 disabledPlans: [],
             },
         ],
@@ -2232,6 +2232,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
