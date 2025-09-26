@@ -1862,9 +1862,9 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
 // 1. Authenticate Graph Client
 function getGraphClient() {
     const credential = new ClientSecretCredential(
-        process.env.NEXT_PUBLIC_AZURE_TENANT_ID!,
-        process.env.NEXT_PUBLIC_AZURE_CLIENT_ID!,
-        process.env.NEXT_PUBLIC_AZURE_CLIENT_SECRET!
+        process.env.AZURE_TENANT_ID!,
+        process.env.AZURE_CLIENT_ID!,
+        process.env.AZURE_CLIENT_SECRET!
     );
 
     return Client.initWithMiddleware({
@@ -2232,5 +2232,7 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
