@@ -163,33 +163,6 @@ export function SettingsForm() {
 
   return (
     <div className="w-full max-w-2xl space-y-6">
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline">API Settings</CardTitle>
-                <CardDescription>
-                Your Microsoft Graph API credentials are now managed via environment variables. Your sending email is automatically set to your login email.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isConfigured ? (
-                    <Alert>
-                        <CheckCircle className="h-4 w-4" />
-                        <AlertTitle>API Configured</AlertTitle>
-                        <AlertDescription>
-                           Your API credentials have been successfully loaded from the environment variables.
-                        </AlertDescription>
-                    </Alert>
-                ) : (
-                    <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>API Not Configured</AlertTitle>
-                        <AlertDescription>
-                           Please set the NEXT_PUBLIC_AZURE_CLIENT_ID, NEXT_PUBLIC_AZURE_TENANT_ID, and NEXT_PUBLIC_AZURE_CLIENT_SECRET environment variables.
-                        </AlertDescription>
-                    </Alert>
-                )}
-            </CardContent>
-        </Card>
         <Card className="border-destructive">
             <CardHeader className="flex flex-row items-start justify-between">
                 <div className="space-y-1.5">
