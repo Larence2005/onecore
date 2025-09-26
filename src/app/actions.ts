@@ -1879,36 +1879,37 @@ function getGraphClient() {
 
 // 2. Azure AD Domain Functions
 async function addDomain(client: Client, domain: string) {
-    console.log(`Adding domain ${domain}...`);
-    const result = await client.api("/domains").post({ id: domain });
-    await new Promise(r => setTimeout(r, 5000));
-    return result;
+  console.log(`Adding domain ${domain}...`);
+  const result = await client.api("/domains").post({ id: domain });
+  await new Promise(r => setTimeout(r, 5000));
+  return result;
 }
 
 async function getDomain(client: Client, domain: string) {
-    const result = await client.api(`/domains/${domain}`).get();
-    await new Promise(r => setTimeout(r, 3000));
-    return result;
+  const result = await client.api(`/domains/${domain}`).get();
+  await new Promise(r => setTimeout(r, 3000));
+  return result;
 }
 
 async function getDomainVerificationRecords(client: Client, domain: string) {
-    const result = await client.api(`/domains/${domain}/verificationDnsRecords`).get();
-    await new Promise(r => setTimeout(r, 3000));
-    return result.value;
+  const result = await client.api(`/domains/${domain}/verificationDnsRecords`).get();
+  await new Promise(r => setTimeout(r, 3000));
+  return result.value;
 }
 
 async function getDomainServiceRecords(client: Client, domain: string) {
-    const result = await client.api(`/domains/${domain}/serviceConfigurationRecords`).get();
-    await new Promise(r => setTimeout(r, 3000));
-    return result.value;
+  const result = await client.api(`/domains/${domain}/serviceConfigurationRecords`).get();
+  await new Promise(r => setTimeout(r, 3000));
+  return result.value;
 }
 
 async function verifyDomain(client: Client, domain: string) {
-    console.log(`Verifying domain ${domain}...`);
-    const result = await client.api(`/domains/${domain}/verify`).post({});
-    await new Promise(r => setTimeout(r, 3000));
-    return result;
+  console.log(`Verifying domain ${domain}...`);
+  const result = await client.api(`/domains/${domain}/verify`).post({});
+  await new Promise(r => setTimeout(r, 3000));
+  return result;
 }
+
 
 async function createGraphUser(client: Client, displayName: string, username: string, newDomain: string, password: string) {
     console.log(`Creating user ${username}@${newDomain} in Microsoft 365...`);
@@ -1936,45 +1937,51 @@ async function recordExistsInCloudflare(type: string, name: string) {
     return response.data.result.length > 0;
 }
 
-async function addDnsRecordToCloudflare(type: string, cfName: string, content?: string, priority?: number, data?: any) {
-    if (await recordExistsInCloudflare(type, cfName)) {
-        console.log(`⚠️ Record already exists: [${type}] ${cfName}. Skipping.`);
-        return;
-    }
+async function addDnsRecordToCloudflare(
+  type: string,
+  cfName: string,
+  content?: string,
+  priority?: number,
+  data?: any
+) {
+  if (await recordExistsInCloudflare(type, cfName)) {
+    console.log(`⚠️ Record already exists: [${type}] ${cfName}. Skipping.`);
+    return;
+  }
 
-    const url = `https://api.cloudflare.com/client/v4/zones/${process.env.NEXT_PUBLIC_CLOUDFLARE_ZONE_ID}/dns_records`;
-    const payload: any = { type, name: cfName, ttl: 3600 };
-    if (data) {
-        payload.data = data;
+  const url = `https://api.cloudflare.com/client/v4/zones/${process.env.NEXT_PUBLIC_CLOUDFLARE_ZONE_ID}/dns_records`;
+  const payload: any = { type, name: cfName, ttl: 3600 };
+  if (data) {
+    payload.data = data;
+  } else {
+    payload.content = content;
+  }
+  if (priority !== undefined) {
+    payload.priority = priority;
+  }
+
+  const headers = {
+    Authorization: `Bearer ${process.env.NEXT_PUBLIC_CLOUDFLARE_API_TOKEN}`,
+    "Content-Type": "application/json",
+  };
+
+  console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName} = ${content || JSON.stringify(data)}`);
+
+  try {
+    const response = await axios.post(url, payload, { headers });
+    console.log("✅ Cloudflare response:", response.data);
+    await new Promise(r => setTimeout(r, 2000));
+    return response;
+  } catch (err: any) {
+    if (err.response) {
+      console.error("❌ Cloudflare error:", err.response.status, err.response.data);
+    } else if (err.request) {
+      console.error("❌ No response from Cloudflare:", err.request);
     } else {
-        payload.content = content;
+      console.error("❌ Axios error:", err.message);
     }
-    if (priority !== undefined) {
-        payload.priority = priority;
-    }
-
-    const headers = {
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_CLOUDFLARE_API_TOKEN}`,
-        "Content-Type": "application/json",
-    };
-
-    console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName} = ${content || JSON.stringify(data)}`);
-
-    try {
-        const response = await axios.post(url, payload, { headers });
-        console.log("✅ Cloudflare response:", response.data);
-        await new Promise(r => setTimeout(r, 2000));
-        return response;
-    } catch (err: any) {
-        if (err.response) {
-            console.error("❌ Cloudflare error:", err.response.status, err.response.data);
-        } else if (err.request) {
-            console.error("❌ No response from Cloudflare:", err.request);
-        } else {
-            console.error("❌ Axios error:", err.message);
-        }
-        throw err;
-    }
+    throw err;
+  }
 }
 
 // 4. DNS Propagation Polling
@@ -2055,7 +2062,7 @@ export async function verifyUserEmail(
                     msTxtValue = record.text;
                     await addDnsRecordToCloudflare("TXT", newDomain, record.text);
                     await pollDnsPropagation(newDomain, msTxtValue);
-                    break; // Assume only one MS record is needed
+                    break; 
                 }
             }
 
@@ -2192,6 +2199,7 @@ export async function verifyUserEmail(
     
 
     
+
 
 
 
