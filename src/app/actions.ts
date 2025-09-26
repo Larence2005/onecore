@@ -2017,9 +2017,17 @@ export async function verifyUserEmail(
     userId: string,
     username: string,
     displayName: string,
-    password: string
+    password: string,
+    idToken: string
 ) {
-    // 1. Get organization details and check permissions
+    // 1. Verify the ID token to ensure the user is authenticated.
+    try {
+        await adminAuth.verifyIdToken(idToken);
+    } catch (e) {
+        throw new Error("Invalid authentication token. Please sign in again.");
+    }
+    
+    // 2. Get organization details and check permissions
     const orgRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(orgRef);
     if (!orgDoc.exists()) {
@@ -2027,22 +2035,6 @@ export async function verifyUserEmail(
     }
     const orgData = orgDoc.data();
     const isOwner = orgData.owner === userId;
-
-    // 2. Authenticate with current password (security check)
-    const members = orgData.members as OrganizationMember[];
-    const member = members.find(m => m.uid === userId);
-    if (!member || !member.email) {
-        throw new Error("User not found in organization.");
-    }
-    // This is tricky in server actions. We re-authenticate using the admin SDK.
-    try {
-        const userRecord = await adminAuth.getUserByEmail(member.email);
-        // This doesn't actually verify the password. A proper way is to have the client
-        // get an ID token with re-authentication and pass it here. For simplicity, we proceed.
-        // A compromised client could bypass this, but the form asks for the password.
-    } catch (e) {
-        throw new Error("Could not re-authenticate. Please check your password.");
-    }
 
     // 3. Initialize Graph Client
     const client = getGraphClient();
@@ -2137,6 +2129,7 @@ export async function verifyUserEmail(
     await createGraphUser(client, displayName, username, newDomain, password);
     
     // 6. Update user status in Firestore
+    const members = orgData.members as OrganizationMember[];
     const memberIndex = members.findIndex(m => m.uid === userId);
     if (memberIndex === -1) {
         throw new Error("User not found in organization members list.");
@@ -2206,5 +2199,4 @@ export async function verifyUserEmail(
     
 
     
-
 

@@ -55,7 +55,7 @@ const verificationFormSchema = z.object({
 
 export function SettingsForm() {
   const { settings, isConfigured } = useSettings();
-  const { user, userProfile, logout, fetchUserProfile } = useAuth();
+  const { user, userProfile, logout, fetchUserProfile, reauthenticateUser } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -80,12 +80,17 @@ export function SettingsForm() {
 
     setIsVerifying(true);
     try {
+        // Step 1: Re-authenticate the user on the client to get a fresh ID token.
+        const idToken = await reauthenticateUser(values.password);
+
+        // Step 2: Call the server action with the ID token.
         await verifyUserEmail(
             userProfile.organizationId,
             user.uid,
             values.username,
             values.displayName,
-            values.password
+            values.password, // Still needed for Graph API user creation
+            idToken
         );
         toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
         await fetchUserProfile(user); // Re-fetch profile to get new status

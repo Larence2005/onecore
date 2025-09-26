@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData, MemberSignUpFormData, OrganizationMember } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, or } from 'firebase/firestore';
@@ -37,6 +37,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<any>;
   sendPasswordReset: (email: string) => Promise<void>;
   getLockoutEndTime: () => number | null;
+  reauthenticateUser: (password: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -313,6 +314,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendPasswordReset = async (email: string) => {
     await sendPasswordResetEmail(auth, email);
   };
+  
+  const reauthenticateUser = async (password: string): Promise<string> => {
+    if (!user || !user.email) {
+      throw new Error("No user is currently signed in to re-authenticate.");
+    }
+    const credential = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, credential);
+    // After successful re-authentication, get a fresh ID token.
+    return user.getIdToken(true);
+  };
 
 
   const value = {
@@ -327,6 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     sendPasswordReset,
     getLockoutEndTime,
+    reauthenticateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -341,3 +353,4 @@ export const useAuth = () => {
 };
 
     
+
