@@ -2017,17 +2017,9 @@ export async function verifyUserEmail(
     userId: string,
     username: string,
     displayName: string,
-    password: string,
-    idToken: string
+    password: string
 ) {
-    // 1. Verify the ID token to ensure the user is authenticated.
-    try {
-        await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
-        throw new Error("Invalid authentication token. Please sign in again.");
-    }
-    
-    // 2. Get organization details and check permissions
+    // 1. Get organization details and check permissions
     const orgRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(orgRef);
     if (!orgDoc.exists()) {
@@ -2036,11 +2028,11 @@ export async function verifyUserEmail(
     const orgData = orgDoc.data();
     const isOwner = orgData.owner === userId;
 
-    // 3. Initialize Graph Client
+    // 2. Initialize Graph Client
     const client = getGraphClient();
     let newDomain = orgData.newDomain;
 
-    // 4. Create and verify domain (if owner and not already created)
+    // 3. Create and verify domain (if owner and not already created)
     if (isOwner && !newDomain) {
         newDomain = `${orgData.domain}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
         
@@ -2125,10 +2117,10 @@ export async function verifyUserEmail(
         throw new Error("Organization domain has not been created by the admin yet.");
     }
     
-    // 5. Create user in Microsoft 365
+    // 4. Create user in Microsoft 365
     await createGraphUser(client, displayName, username, newDomain, password);
     
-    // 6. Update user status in Firestore
+    // 5. Update user status in Firestore
     const members = orgData.members as OrganizationMember[];
     const memberIndex = members.findIndex(m => m.uid === userId);
     if (memberIndex === -1) {
@@ -2199,4 +2191,5 @@ export async function verifyUserEmail(
     
 
     
+
 

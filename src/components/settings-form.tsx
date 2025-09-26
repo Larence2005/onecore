@@ -50,12 +50,12 @@ const formSchema = z.object({
 const verificationFormSchema = z.object({
     username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
     displayName: z.string().min(1, "Display name is required."),
-    password: z.string().min(1, "Password is required to confirm."),
+    password: z.string().min(1, "Password is required to create the M365 account."),
 });
 
 export function SettingsForm() {
   const { settings, isConfigured } = useSettings();
-  const { user, userProfile, logout, fetchUserProfile, reauthenticateUser } = useAuth();
+  const { user, userProfile, logout, fetchUserProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -80,17 +80,12 @@ export function SettingsForm() {
 
     setIsVerifying(true);
     try {
-        // Step 1: Re-authenticate the user on the client to get a fresh ID token.
-        const idToken = await reauthenticateUser(values.password);
-
-        // Step 2: Call the server action with the ID token.
         await verifyUserEmail(
             userProfile.organizationId,
             user.uid,
             values.username,
             values.displayName,
-            values.password, // Still needed for Graph API user creation
-            idToken
+            values.password,
         );
         toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
         await fetchUserProfile(user); // Re-fetch profile to get new status
@@ -217,7 +212,7 @@ export function SettingsForm() {
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Confirm Your Current Password</FormLabel>
+                                    <FormLabel>New Microsoft 365 Password</FormLabel>
                                     <FormControl>
                                         <Input type="password" placeholder="********" {...field} />
                                     </FormControl>

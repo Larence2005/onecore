@@ -37,7 +37,6 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<any>;
   sendPasswordReset: (email: string) => Promise<void>;
   getLockoutEndTime: () => number | null;
-  reauthenticateUser: (password: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -314,17 +313,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendPasswordReset = async (email: string) => {
     await sendPasswordResetEmail(auth, email);
   };
-  
-  const reauthenticateUser = async (password: string): Promise<string> => {
-    if (!user || !user.email) {
-      throw new Error("No user is currently signed in to re-authenticate.");
-    }
-    const credential = EmailAuthProvider.credential(user.email, password);
-    await reauthenticateWithCredential(user, credential);
-    // After successful re-authentication, get a fresh ID token.
-    return user.getIdToken(true);
-  };
-
 
   const value = {
     user,
@@ -338,7 +326,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     sendPasswordReset,
     getLockoutEndTime,
-    reauthenticateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -353,4 +340,5 @@ export const useAuth = () => {
 };
 
     
+
 
