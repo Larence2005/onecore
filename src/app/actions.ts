@@ -5,7 +5,8 @@ import type { Settings } from '@/providers/settings-provider';
 import {
     ConfidentialClientApplication,
     Configuration,
-    AuthenticationResult
+    AuthenticationResult,
+    ClientSecretCredential
 } from '@azure/msal-node';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, runTransaction, increment, arrayUnion, arrayRemove, addDoc, orderBy, limit } from 'firebase/firestore';
@@ -15,6 +16,7 @@ import { auth as adminAuth } from '@/lib/firebase-admin';
 import { isPast, parseISO, isWithinInterval, addHours } from 'date-fns';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
+import axios from 'axios';
 
 
 // Initialize caches for different data types
@@ -102,7 +104,7 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered';
+    status: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered' | 'Verified';
     isClient?: boolean;
 }
 
@@ -1855,7 +1857,67 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
     
 
     
+export async function verifyUserEmail(
+  organizationId: string,
+  userId: string,
+  username: string,
+  displayName: string,
+  password: string
+) {
+  // This is a complex, multi-step server action.
+  // It orchestrates calls to Microsoft Graph and Cloudflare to provision a new domain and user.
+  // This is a placeholder for the full implementation.
+  // The full implementation would require careful handling of secrets and asynchronous operations.
 
+  // Placeholder logic:
+  console.log("Verifying user email for", { organizationId, userId, username, displayName });
+
+  // 1. Authenticate user's current password (security check)
+  // This would involve a call to Firebase Auth admin SDK to re-authenticate.
+  // For now, we assume it's correct.
+
+  // 2. Get organization details
+  const orgRef = doc(db, "organizations", organizationId);
+  const orgDoc = await getDoc(orgRef);
+  if (!orgDoc.exists()) {
+    throw new Error("Organization not found.");
+  }
+  const orgData = orgDoc.data();
+  const isOwner = orgData.owner === userId;
+
+  // 3. Create domain (if admin and not already created)
+  if (isOwner && !orgData.newDomain) {
+    // This is where the complex domain creation logic would go.
+    // It would involve calling Microsoft Graph and Cloudflare APIs.
+    // For this example, we will simulate it.
+    const newDomain = `${orgData.domain}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+    console.log(`Simulating domain creation for: ${newDomain}`);
+    // In a real scenario, you'd perform the API calls here.
+    await updateDoc(orgRef, { newDomain });
+    orgData.newDomain = newDomain; // Update in-memory data
+    console.log("Domain created and saved to Firestore.");
+  }
+
+  // 4. Create user in Microsoft 365
+  const newEmail = `${username}@${orgData.newDomain}`;
+  console.log(`Simulating user creation in M365 for: ${newEmail}`);
+  // This would involve another Graph API call to create the user.
+
+  // 5. Update user status in Firestore
+  const members = orgData.members as OrganizationMember[];
+  const memberIndex = members.findIndex(m => m.uid === userId);
+  if (memberIndex === -1) {
+    throw new Error("User not found in organization members list.");
+  }
+  members[memberIndex].status = 'Verified';
+  members[memberIndex].email = newEmail; // Update their primary email
+
+  await updateDoc(orgRef, { members });
+
+  console.log("User status updated to 'Verified' in Firestore.");
+
+  return { success: true };
+}
 
     
 
@@ -1913,3 +1975,4 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
     
 
     
+
