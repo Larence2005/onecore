@@ -102,7 +102,7 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered';
+    status: 'Uninvited' | 'Invited' | 'Unverified' | 'Registered';
     isClient?: boolean;
 }
 
@@ -1386,7 +1386,7 @@ export async function createOrganization(name: string, domain: string, uid: stri
             address: '', 
             mobile: '', 
             landline: '', 
-            status: 'Registered' 
+            status: 'Unverified' 
         }],
         address: '',
         mobile: '',
@@ -1907,6 +1907,8 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
     
 
   
+
+    
 
     
 
