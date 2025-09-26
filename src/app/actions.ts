@@ -2034,7 +2034,8 @@ export async function verifyUserEmail(
 
     // 3. Create and verify domain (if owner and not already created)
     if (isOwner && !newDomain) {
-        newDomain = `${orgData.domain}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+        const orgDomainName = orgData.domain.split('.')[0];
+        newDomain = `${orgDomainName}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
         
         // Step 1: Add domain in Azure AD
         await addDomain(client, newDomain);
@@ -2191,5 +2192,6 @@ export async function verifyUserEmail(
     
 
     
+
 
 
