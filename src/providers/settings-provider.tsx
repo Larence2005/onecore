@@ -14,12 +14,6 @@ export interface Settings {
   userId: string;
 }
 
-interface StoredSettings {
-  clientId: string;
-  tenantId: string;
-  clientSecret: string;
-}
-
 interface SettingsContextType {
   settings: Settings;
   saveSettings: (newSettings: Omit<Settings, 'userId'>) => void;
@@ -29,19 +23,20 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 const defaultSettings: Settings = {
-  clientId: '',
-  tenantId: '',
-  clientSecret: '',
+  clientId: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID || '',
+  tenantId: process.env.NEXT_PUBLIC_AZURE_TENANT_ID || '',
+  clientSecret: process.env.NEXT_PUBLIC_AZURE_CLIENT_SECRET || '',
   userId: '',
 };
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const { user, userProfile } = useAuth();
+  const { userProfile } = useAuth();
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     async function loadSettings() {
+      // Credentials are now from environment variables, but we still need the userId.
       if (userProfile && userProfile.organizationId) {
         try {
           const orgDocRef = doc(db, 'organizations', userProfile.organizationId);
@@ -51,27 +46,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             const orgData = docSnap.data();
             const ownerUid = orgData.owner;
             const owner = orgData.members.find((m: any) => m.uid === ownerUid);
-
-            const storedSettings: StoredSettings = {
-              clientId: orgData.clientId || '',
-              tenantId: orgData.tenantId || '',
-              clientSecret: orgData.clientSecret || ''
-            };
             
-            setSettings({
-              ...storedSettings,
-              userId: owner?.email || ''
-            });
+            let ownerEmail = '';
+            if (owner) {
+              // Prioritize newEmail if it exists, otherwise use original email
+              ownerEmail = owner.newEmail || owner.email;
+            }
 
-          } else {
-             setSettings(defaultSettings);
+            setSettings(prev => ({
+              ...prev,
+              userId: ownerEmail || ''
+            }));
           }
         } catch (error) {
-          console.error("Failed to load settings from Firestore", error);
-          setSettings(defaultSettings);
+          console.error("Failed to load user settings from Firestore", error);
         }
-      } else {
-        setSettings(defaultSettings);
       }
       setIsLoaded(true);
     }
@@ -79,23 +68,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [userProfile]);
 
   const saveSettings = useCallback(async (newSettings: Omit<Settings, 'userId'>) => {
-    if (!user || user.uid !== userProfile?.organizationOwnerUid || !userProfile.organizationId) {
-      console.error("Cannot save settings, user is not the organization owner or org ID is missing.");
-      return;
-    }
-    try {
-      const orgDocRef = doc(db, "organizations", userProfile.organizationId);
-      const settingsToStore = {
-        clientId: newSettings.clientId,
-        tenantId: newSettings.tenantId,
-        clientSecret: newSettings.clientSecret,
-      };
-      await setDoc(orgDocRef, settingsToStore, { merge: true });
-      setSettings({ ...newSettings, userId: user.email || '' });
-    } catch (error) {
-      console.error("Failed to save settings to Firestore", error);
-    }
-  }, [user, userProfile]);
+    // This function is now a no-op for client-side credential saving, 
+    // as they are managed by environment variables.
+    // We could use this for other settings in the future.
+    console.warn("Settings are now managed by environment variables. This function call is a no-op.");
+  }, []);
   
   const isConfigured = !!(settings.clientId && settings.tenantId && settings.clientSecret && settings.userId);
 
