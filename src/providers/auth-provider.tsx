@@ -21,7 +21,7 @@ export interface UserProfile {
   mobile?: string;
   landline?: string;
   website?: string;
-  status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered';
+  status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered' | 'Verified';
 }
 
 
