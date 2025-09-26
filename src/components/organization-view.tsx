@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, sendVerificationEmail } from '@/app/actions';
 import type { OrganizationMember } from '@/app/actions';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, Mail } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, Mail, Send } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -302,6 +302,20 @@ export function OrganizationView() {
     
     const isOwner = user?.uid === userProfile.organizationOwnerUid;
 
+    const renderStatusBadge = (status: OrganizationMember['status']) => {
+        switch (status) {
+            case 'Registered':
+                return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Registered</Badge>;
+            case 'Invited':
+                return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
+            case 'Uninvited':
+                return <Badge variant="destructive">Uninvited</Badge>;
+            default:
+                return <Badge variant="outline">Unknown</Badge>;
+        }
+    };
+
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
             <div className="lg:col-span-2 space-y-6">
@@ -379,7 +393,6 @@ export function OrganizationView() {
                         <TableBody>
                             {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
                                 const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
-                                const isVerified = !!member.uid;
                                 return (
                                     <TableRow key={member.email}>
                                         <TableCell className="font-medium">
@@ -402,15 +415,31 @@ export function OrganizationView() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                             {isVerified ? (
-                                                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>
-                                            ) : (
-                                                <Badge variant="destructive">Unverified</Badge>
-                                            )}
+                                             {renderStatusBadge(member.status)}
                                         </TableCell>
                                         {isOwner && (
                                             <TableCell className="flex items-center gap-2">
-                                                {!isVerified && (
+                                                {member.status === 'Uninvited' && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="icon" 
+                                                                    className="h-8 w-8"
+                                                                    onClick={() => handleSendVerification(member.email, member.name)} 
+                                                                    disabled={isSendingVerification === member.email}
+                                                                >
+                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Send verification email</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                )}
+                                                {member.status === 'Invited' && (
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -425,7 +454,7 @@ export function OrganizationView() {
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
-                                                                <p>Send verification email</p>
+                                                                <p>Resend verification email</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
@@ -622,5 +651,3 @@ export function OrganizationView() {
         </div>
     );
 }
-
-    

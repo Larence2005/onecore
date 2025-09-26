@@ -96,13 +96,13 @@ export interface DetailedEmail extends Email {
 }
 
 export interface OrganizationMember {
-    uid: string;
+    uid: string | null;
     name: string;
     email: string;
     address?: string;
     mobile?: string;
     landline?: string;
-    verificationSent?: boolean;
+    status: 'Uninvited' | 'Invited' | 'Registered';
     isClient?: boolean;
 }
 
@@ -1379,7 +1379,15 @@ export async function createOrganization(name: string, domain: string, uid: stri
         name: name,
         domain: domain,
         owner: uid,
-        members: [{ name: userName, email: email, uid: uid, address: '', mobile: '', landline: '', verificationSent: true }],
+        members: [{ 
+            name: userName, 
+            email: email, 
+            uid: uid, 
+            address: '', 
+            mobile: '', 
+            landline: '', 
+            status: 'Registered' 
+        }],
         address: '',
         mobile: '',
         landline: '',
@@ -1407,8 +1415,18 @@ export async function addMemberToOrganization(organizationId: string, name: stri
         }
     }
     
+    const newMember: OrganizationMember = { 
+        uid: null,
+        name, 
+        email, 
+        address, 
+        mobile, 
+        landline,
+        status: 'Uninvited'
+    };
+
     await updateDoc(organizationRef, {
-        members: arrayUnion({ name, email, address, mobile, landline, verificationSent: false })
+        members: arrayUnion(newMember)
     });
     
     // Invalidate members cache
@@ -1786,7 +1804,7 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
         throw new Error("API settings are not configured to send emails.");
     }
     
-    // --- Update the member's verificationSent status ---
+    // --- Update the member's status to 'Invited' ---
     const organizationRef = doc(db, "organizations", organizationId);
     await runTransaction(db, async (transaction) => {
         const orgDoc = await transaction.get(organizationRef);
@@ -1801,8 +1819,8 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
             throw new Error("Member not found in the organization.");
         }
         
-        // Update the flag for the specific member
-        members[memberIndex].verificationSent = true;
+        // Update the status for the specific member
+        members[memberIndex].status = 'Invited';
 
         transaction.update(organizationRef, { members: members });
     });

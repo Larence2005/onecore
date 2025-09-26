@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import type { SignUpFormData, LoginFormData, MemberSignUpFormData } from '@/lib/types';
+import type { SignUpFormData, LoginFormData, MemberSignUpFormData, OrganizationMember } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, or } from 'firebase/firestore';
 import { createOrganization } from '@/app/actions';
 
@@ -21,6 +21,7 @@ export interface UserProfile {
   mobile?: string;
   landline?: string;
   website?: string;
+  status?: 'Uninvited' | 'Invited' | 'Registered';
 }
 
 
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     for (const orgDoc of allOrgsSnapshot.docs) {
         const orgData = orgDoc.data();
-        const members = (orgData.members || []) as { email: string; uid?: string }[];
+        const members = (orgData.members || []) as OrganizationMember[];
         
         // Check if user is an organization member (agent/admin)
         const memberData = members.find(m => m.uid === user.uid);
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 mobile: orgData.mobile,
                 landline: orgData.landline,
                 website: orgData.website,
+                status: memberData.status
             });
             return;
         }
@@ -202,15 +204,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     for (const orgDoc of orgsSnapshot.docs) {
         const orgData = orgDoc.data();
         // Check if they are an agent invited to the org
-        const agentMembers = (orgData.members || []) as { email: string, verificationSent?: boolean, uid?: string }[];
+        const agentMembers = (orgData.members || []) as OrganizationMember[];
         const agentMatch = agentMembers.find(m => m.email.toLowerCase() === data.email.toLowerCase());
+
         if (agentMatch) {
             if (agentMatch.uid) throw new Error("This email address has already been registered as an agent.");
-            if (agentMatch.verificationSent) {
+            if (agentMatch.status === 'Invited') {
                 orgId = orgDoc.id;
                 isAgent = true;
                 break;
-            } else {
+            } else if (agentMatch.status === 'Uninvited') {
                  throw new Error("Your account has not been verified by an administrator. Please contact them to send a verification email.");
             }
         }
@@ -237,14 +240,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     
     if(isAgent) {
-        // Add the UID to the member in the organization
+        // Add the UID and set status to Registered
         const orgRef = doc(db, 'organizations', orgId);
         const orgDoc = await getDoc(orgRef);
         if(orgDoc.exists()){
-            const members = orgDoc.data().members as {name: string, email: string, uid?: string}[];
+            const members = orgDoc.data().members as OrganizationMember[];
             const updatedMembers = members.map(m => 
                 m.email.toLowerCase() === data.email.toLowerCase() 
-                ? { ...m, uid: userCredential.user.uid } 
+                ? { ...m, uid: userCredential.user.uid, status: 'Registered' as 'Registered' } 
                 : m
             );
             await updateDoc(orgRef, { members: updatedMembers });
