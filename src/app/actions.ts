@@ -1911,7 +1911,7 @@ async function verifyDomain(client: Client, domain: string) {
 }
 
 
-async function createGraphUser(client: Client, displayName: string, username: string, newDomain: string, password: string) {
+async function createGraphUser(client: Client, displayName: string, username: string, newDomain: string, password: string): Promise<any> {
     console.log(`Creating user ${username}@${newDomain} in Microsoft 365...`);
     const user = {
         accountEnabled: true,
@@ -1925,6 +1925,31 @@ async function createGraphUser(client: Client, displayName: string, username: st
     };
     return client.api('/users').post(user);
 }
+
+async function assignLicenseToUser(client: Client, userId: string): Promise<any> {
+    console.log(`Assigning license to user ${userId}...`);
+
+    // First, find an available SKU (license plan)
+    const subscribedSkus = await client.api('/subscribedSkus').get();
+    const developerSku = subscribedSkus.value.find((sku: any) => sku.skuPartNumber === 'DEVELOPERPACK_E5');
+    
+    if (!developerSku || !developerSku.skuId) {
+        throw new Error("Could not find a suitable developer license (SKU) to assign.");
+    }
+    
+    const license = {
+        addLicenses: [
+            {
+                skuId: developerSku.skuId,
+                disabledPlans: [],
+            },
+        ],
+        removeLicenses: [],
+    };
+    
+    return client.api(`/users/${userId}/assignLicense`).post(license);
+}
+
 
 // 3. Cloudflare DNS Functions
 async function recordExistsInCloudflare(type: string, name: string) {
@@ -2126,9 +2151,12 @@ export async function verifyUserEmail(
     }
     
     // 4. Create user in Microsoft 365
-    await createGraphUser(client, displayName, username, newDomain, password);
+    const newUser = await createGraphUser(client, displayName, username, newDomain, password);
     
-    // 5. Update user status in Firestore
+    // 5. Assign a license to the new user
+    await assignLicenseToUser(client, newUser.id);
+    
+    // 6. Update user status in Firestore
     const members = orgData.members as OrganizationMember[];
     const memberIndex = members.findIndex(m => m.uid === userId);
     if (memberIndex === -1) {
