@@ -2060,7 +2060,7 @@ export async function verifyUserEmail(
             for (const record of verificationRecords) {
                 if (record.recordType.toLowerCase() === "txt" && record.text.startsWith("MS=")) {
                     msTxtValue = record.text;
-                    await addDnsRecordToCloudflare("TXT", newDomain, record.text);
+                    await addDnsRecordToCloudflare("TXT", newDomain, `"${record.text}"`);
                     await pollDnsPropagation(newDomain, msTxtValue);
                     break; 
                 }
@@ -2110,7 +2110,7 @@ export async function verifyUserEmail(
                     break;
                 case "txt":
                     if (!rec.text.startsWith("MS=")) {
-                        await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
+                        await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
                     }
                     break;
             }
@@ -2203,3 +2203,6 @@ export async function verifyUserEmail(
 
 
 
+
+
+    
