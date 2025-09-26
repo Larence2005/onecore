@@ -430,7 +430,7 @@ export function OrganizationView() {
                                                                     onClick={() => handleSendVerification(member.email, member.name)} 
                                                                     disabled={isSendingVerification === member.email}
                                                                 >
-                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
@@ -450,7 +450,7 @@ export function OrganizationView() {
                                                                     onClick={() => handleSendVerification(member.email, member.name)} 
                                                                     disabled={isSendingVerification === member.email}
                                                                 >
-                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                                                                 </Button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
