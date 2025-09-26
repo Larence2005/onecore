@@ -1917,6 +1917,7 @@ async function createGraphUser(client: Client, displayName: string, username: st
         accountEnabled: true,
         displayName: displayName,
         mailNickname: username,
+        usageLocation: 'US',
         userPrincipalName: `${username}@${newDomain}`,
         passwordProfile: {
             forceChangePasswordNextSignIn: false,
@@ -2232,6 +2233,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
