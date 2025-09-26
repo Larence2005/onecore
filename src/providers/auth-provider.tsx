@@ -21,7 +21,7 @@ export interface UserProfile {
   mobile?: string;
   landline?: string;
   website?: string;
-  status?: 'Uninvited' | 'Invited' | 'Unverified' | 'Registered';
+  status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered';
 }
 
 
@@ -240,14 +240,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     
     if(isAgent) {
-        // Add the UID and set status to 'Unverified'
+        // Add the UID and set status to 'Not Verified'
         const orgRef = doc(db, 'organizations', orgId);
         const orgDoc = await getDoc(orgRef);
         if(orgDoc.exists()){
             const members = orgDoc.data().members as OrganizationMember[];
             const updatedMembers = members.map(m => 
                 m.email.toLowerCase() === data.email.toLowerCase() 
-                ? { ...m, uid: userCredential.user.uid, status: 'Unverified' as 'Unverified' } 
+                ? { ...m, uid: userCredential.user.uid, status: 'Not Verified' as 'Not Verified' } 
                 : m
             );
             await updateDoc(orgRef, { members: updatedMembers });

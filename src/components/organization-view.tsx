@@ -310,8 +310,8 @@ export function OrganizationView() {
                 return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
             case 'Uninvited':
                 return <Badge variant="destructive">Uninvited</Badge>;
-            case 'Unverified':
-                return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">Unverified</Badge>;
+            case 'Not Verified':
+                return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">Not Verified</Badge>;
             default:
                 return <Badge variant="outline">Unknown</Badge>;
         }
