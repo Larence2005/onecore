@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
-import { CheckCircle, AlertTriangle, RefreshCw, Info } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, Info, Check, ShieldCheck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +34,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/providers/auth-provider";
-import { deleteOrganization } from "@/app/actions";
+import { deleteOrganization, verifyUserEmail } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, deleteDoc } from 'firebase/firestore';
@@ -47,14 +47,56 @@ const formSchema = z.object({
   clientSecret: z.string().min(1, "Client Secret is required."),
 });
 
+const verificationFormSchema = z.object({
+    username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
+    displayName: z.string().min(1, "Display name is required."),
+    password: z.string().min(1, "Password is required to confirm."),
+});
+
 export function SettingsForm() {
   const { settings, isConfigured } = useSettings();
-  const { user, userProfile, logout } = useAuth();
+  const { user, userProfile, logout, fetchUserProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
+  const verificationForm = useForm<z.infer<typeof verificationFormSchema>>({
+    resolver: zodResolver(verificationFormSchema),
+    defaultValues: {
+      username: "",
+      displayName: userProfile?.name || "",
+      password: "",
+    },
+  });
+
+  const onVerificationSubmit = async (values: z.infer<typeof verificationFormSchema>) => {
+    if (!user || !userProfile?.organizationId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User or organization not found.'});
+        return;
+    }
+
+    setIsVerifying(true);
+    try {
+        await verifyUserEmail(
+            userProfile.organizationId,
+            user.uid,
+            values.username,
+            values.displayName,
+            values.password
+        );
+        toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
+        await fetchUserProfile(user); // Re-fetch profile to get new status
+    } catch(e) {
+        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+        toast({ variant: 'destructive', title: 'Verification Failed', description: errorMessage });
+    } finally {
+        setIsVerifying(false);
+    }
+  };
+
 
   const handleDeleteAccount = async () => {
     if (!user || !userProfile || !user.email) {
@@ -109,17 +151,99 @@ export function SettingsForm() {
         setIsDeleting(false);
     }
   }
+
+  const VerificationArea = () => {
+    if (userProfile?.status === 'Verified') {
+        return (
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ShieldCheck className="text-green-500" />
+                        Account Verified
+                    </CardTitle>
+                    <CardDescription>
+                        Your account has been successfully verified and your new email is active.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        )
+    }
+
+    if(userProfile?.status === 'Not Verified') {
+        return (
+            <Card>
+                <Form {...verificationForm}>
+                    <form onSubmit={verificationForm.handleSubmit(onVerificationSubmit)}>
+                        <CardHeader>
+                            <CardTitle>Verify Your Account</CardTitle>
+                            <CardDescription>
+                                Create your new email address for the support system. This will be your primary address for sending and receiving support emails. Your new email will be `username@your_domain.{process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <FormField
+                                control={verificationForm.control}
+                                name="username"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Username</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., support" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={verificationForm.control}
+                                name="displayName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Display Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Support Team" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={verificationForm.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Confirm Your Current Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="********" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                        <CardFooter>
+                            <Button type="submit" disabled={isVerifying}>
+                                {isVerifying ? (
+                                    <>
+                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                        Verifying...
+                                    </>
+                                ) : 'Verify and Create Email'}
+                            </Button>
+                        </CardFooter>
+                    </form>
+                </Form>
+            </Card>
+        )
+    }
+
+    return null;
+  }
   
   if (!isOwner) {
     return (
         <div className="w-full max-w-2xl space-y-6">
-            <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Settings</AlertTitle>
-                <AlertDescription>
-                    API and organization settings are managed by your administrator.
-                </AlertDescription>
-            </Alert>
+            <VerificationArea />
              <Card className="border-destructive">
                 <CardHeader className="flex flex-row items-start justify-between">
                     <div className="space-y-1.5">
@@ -163,6 +287,7 @@ export function SettingsForm() {
 
   return (
     <div className="w-full max-w-2xl space-y-6">
+        <VerificationArea />
         <Card className="border-destructive">
             <CardHeader className="flex flex-row items-start justify-between">
                 <div className="space-y-1.5">
