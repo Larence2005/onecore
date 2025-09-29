@@ -104,17 +104,16 @@ function VerificationArea() {
     
     if (userProfile?.status === 'Verified') {
         return (
-             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <ShieldCheck className="text-green-500" />
-                        Account Verified
-                    </CardTitle>
-                    <CardDescription>
-                        Your account has been successfully verified and your new email is active.
-                    </CardDescription>
-                </CardHeader>
-            </Card>
+             <div className="space-y-6">
+                <h2 className="text-xl font-bold">Account Verified</h2>
+                <Alert variant="default" className="border-green-500">
+                    <ShieldCheck className="h-4 w-4 text-green-500" />
+                    <AlertTitle>Your account is verified.</AlertTitle>
+                    <AlertDescription>
+                        Your new email address is active and ready to use. You can now send and receive support emails through the system.
+                    </AlertDescription>
+                </Alert>
+            </div>
         )
     }
 
@@ -137,8 +136,10 @@ function VerificationArea() {
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onVerificationSubmit)} className="space-y-6">
                         <div className="text-center text-sm text-muted-foreground mt-4 mb-4">
+                            <div className="my-2"></div>
                             Your new email will be:
                             <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
+                            <div className="my-2"></div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField
@@ -196,7 +197,7 @@ function VerificationArea() {
                                 )}
                             />
                         </div>
-                        <div>
+                        <div className="flex justify-end">
                             <Button type="submit" disabled={isVerifying}>
                                 {isVerifying ? (
                                     <>
