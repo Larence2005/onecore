@@ -136,7 +136,7 @@ function VerificationArea() {
                 </div>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onVerificationSubmit)} className="space-y-6">
-                        <div className="text-center text-sm text-muted-foreground mb-4">
+                        <div className="text-center text-sm text-muted-foreground mt-4 mb-4">
                             Your new email will be:
                             <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
                         </div>
@@ -364,5 +364,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-    
