@@ -45,7 +45,12 @@ const verificationFormSchema = z.object({
     username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
     displayName: z.string().min(1, "Display name is required."),
     password: z.string().min(1, "Password is required to create the M365 account."),
+    confirmPassword: z.string().min(1, "Please confirm your password."),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
+
 
 const verificationForm = z.object({
     username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
@@ -64,6 +69,7 @@ function VerificationArea() {
             username: "",
             displayName: userProfile?.name || "",
             password: "",
+            confirmPassword: "",
         },
     });
     
@@ -172,6 +178,19 @@ function VerificationArea() {
                                 render={({ field }) => (
                                     <FormItem>
                                     <FormLabel>New Microsoft 365 Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="********" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Confirm New Password</FormLabel>
                                     <FormControl>
                                         <Input type="password" placeholder="********" {...field} />
                                     </FormControl>
