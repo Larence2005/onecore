@@ -65,6 +65,7 @@ function VerificationArea() {
     const { user, userProfile, fetchUserProfile } = useAuth();
     const { toast } = useToast();
     const [isVerifying, setIsVerifying] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     const form = useForm<z.infer<typeof verificationFormSchema>>({
         resolver: zodResolver(verificationFormSchema),
@@ -108,11 +109,19 @@ function VerificationArea() {
             );
             toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
             await fetchUserProfile(user); // Re-fetch profile to get new status
+            setIsConfirmOpen(false);
         } catch(e) {
             const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
             toast({ variant: 'destructive', title: 'Verification Failed', description: errorMessage });
         } finally {
             setIsVerifying(false);
+        }
+    };
+    
+    const handleVerifyClick = async () => {
+        const isValid = await form.trigger();
+        if (isValid) {
+            setIsConfirmOpen(true);
         }
     };
     
@@ -143,12 +152,12 @@ function VerificationArea() {
                 </div>
                 <Form {...form}>
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+                        <div className="my-2"></div>
                         <div className="text-center text-sm text-muted-foreground mt-4 mb-4">
-                            <div className="my-2"></div>
                             Your new email will be:
                             <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
-                            <div className="my-2"></div>
                         </div>
+                         <div className="my-2"></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField
                                 control={form.control}
@@ -206,12 +215,10 @@ function VerificationArea() {
                             />
                         </div>
                         <div className="flex justify-end">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button disabled={!form.formState.isValid || isVerifying}>
-                                        {isVerifying ? 'Verifying...' : 'Verify and Create Email'}
-                                    </Button>
-                                </AlertDialogTrigger>
+                            <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+                                <Button onClick={handleVerifyClick} disabled={isVerifying}>
+                                    {isVerifying ? 'Verifying...' : 'Verify and Create Email'}
+                                </Button>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
@@ -393,3 +400,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
