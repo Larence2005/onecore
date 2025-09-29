@@ -1964,9 +1964,9 @@ async function addUserToSecurityGroup(client: Client, userId: string, groupId: s
 
 // 3. Cloudflare DNS Functions
 async function recordExistsInCloudflare(type: string, name: string) {
-    const url = `https://api.cloudflare.com/client/v4/zones/${process.env.NEXT_PUBLIC_CLOUDFLARE_ZONE_ID}/dns_records?type=${type}&name=${name}`;
+    const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records?type=${type}&name=${name}`;
     const headers = {
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_CLOUDFLARE_API_TOKEN}`,
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
         "Content-Type": "application/json",
     };
     const response = await axios.get(url, { headers });
@@ -1985,7 +1985,7 @@ async function addDnsRecordToCloudflare(
     return;
   }
 
-  const url = `https://api.cloudflare.com/client/v4/zones/${process.env.NEXT_PUBLIC_CLOUDFLARE_ZONE_ID}/dns_records`;
+  const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records`;
   const payload: any = { type, name: cfName, ttl: 3600 };
   if (data) {
     payload.data = data;
@@ -1997,7 +1997,7 @@ async function addDnsRecordToCloudflare(
   }
 
   const headers = {
-    Authorization: `Bearer ${process.env.NEXT_PUBLIC_CLOUDFLARE_API_TOKEN}`,
+    Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
     "Content-Type": "application/json",
   };
 
@@ -2078,7 +2078,7 @@ export async function verifyUserEmail(
     // 3. Create and verify domain (if owner and not already created)
     if (isOwner && !newDomain) {
         const orgDomainName = orgData.domain.split('.')[0];
-        newDomain = `${orgDomainName}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+        newDomain = `${orgDomainName}.${process.env.PARENT_DOMAIN}`;
         
         // Step 1: Add domain in Azure AD
         await addDomain(client, newDomain);

@@ -25,7 +25,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 const defaultSettings: Settings = {
   clientId: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID || '',
   tenantId: process.env.NEXT_PUBLIC_AZURE_TENANT_ID || '',
-  clientSecret: process.env.NEXT_PUBLIC_AZURE_CLIENT_SECRET || '',
+  clientSecret: process.env.AZURE_CLIENT_SECRET || '',
   userId: '',
 };
 

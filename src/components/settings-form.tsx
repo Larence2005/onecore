@@ -133,7 +133,7 @@ function VerificationArea() {
                     <ShieldCheck className="h-4 w-4 text-green-500" />
                     <AlertTitle>Your account is verified.</AlertTitle>
                     <AlertDescription>
-                        Your new email address is active and ready to use. You can now send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>.
+                    Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
                     </AlertDescription>
                 </Alert>
             </div>
@@ -152,12 +152,10 @@ function VerificationArea() {
                 </div>
                 <Form {...form}>
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                        <div className="my-2"></div>
-                        <div className="text-center text-sm text-muted-foreground mt-4 mb-4">
+                        <div className="text-center text-sm text-muted-foreground my-4">
                             Your new email will be:
                             <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
                         </div>
-                         <div className="my-2"></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField
                                 control={form.control}
@@ -318,7 +316,7 @@ export function SettingsForm() {
     <div className="w-full max-w-2xl space-y-6">
         {isOwner && <VerificationArea />}
 
-        <div className="py-4" />
+        <div className="my-6" />
         
         <div className="flex flex-row items-start justify-between">
             <div className="space-y-1.5">
