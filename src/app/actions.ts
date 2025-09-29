@@ -147,12 +147,32 @@ async function getAPISettings(organizationId: string): Promise<Settings | null> 
     const clientId = process.env.AZURE_CLIENT_ID;
     const tenantId = process.env.AZURE_TENANT_ID;
     const clientSecret = process.env.AZURE_CLIENT_SECRET;
-    const userId = process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL;
-
-    if (!clientId || !tenantId || !clientSecret || !userId) {
-        console.error("API settings are not fully configured in environment variables.");
+    
+    if (!clientId || !tenantId || !clientSecret) {
+        console.error("Azure API settings are not fully configured in environment variables.");
         return null;
     }
+
+    // Fetch the organization to find the admin's verified email
+    const orgDocRef = doc(db, 'organizations', organizationId);
+    const orgDoc = await getDoc(orgDocRef);
+    if (!orgDoc.exists()) {
+        console.error(`Organization with ID ${organizationId} not found.`);
+        return null;
+    }
+
+    const orgData = orgDoc.data();
+    const ownerUid = orgData.owner;
+    const members = orgData.members as OrganizationMember[];
+    
+    const owner = members.find(m => m.uid === ownerUid && m.status === 'Verified');
+
+    if (!owner || !owner.email) {
+        console.error(`Verified admin for organization ${organizationId} not found or has no email.`);
+        return null;
+    }
+
+    const userId = owner.email;
 
     return {
         clientId,
@@ -223,14 +243,19 @@ export async function createTicket(
     }
     
     // Find which company this employee belongs to
-    const allCompanies = await getCompanies(organizationId);
     let companyId: string | undefined = undefined;
-    for (const company of allCompanies) {
-        const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', author.email);
-        const employeeDoc = await getDoc(employeeDocRef);
-        if (employeeDoc.exists()) {
-            companyId = company.id;
-            break;
+    const userProfileDocRef = doc(db, 'userProfiles', author.uid);
+    const userProfileDoc = await getDoc(userProfileDocRef);
+    if(userProfileDoc.exists() && userProfileDoc.data().isClient) {
+        // This is a client user, find their company
+         const allCompanies = await getCompanies(organizationId);
+         for (const company of allCompanies) {
+            const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', author.email);
+            const employeeDoc = await getDoc(employeeDocRef);
+            if (employeeDoc.exists()) {
+                companyId = company.id;
+                break;
+            }
         }
     }
 
@@ -377,10 +402,9 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                 // This is a new conversation thread, create a ticket.
                 const senderEmail = email.from.emailAddress.address.toLowerCase();
 
-                // Check if the sender is an internal agent/admin. If so, don't create a ticket.
-                const orgMembers = await getOrganizationMembers(organizationId);
-                if (orgMembers.some(member => member.uid && member.email.toLowerCase() === senderEmail)) {
-                    continue; // Skip emails from internal members who are registered
+                // Do not create tickets from the monitored email address itself
+                if (senderEmail === settings.userId.toLowerCase()) {
+                    continue;
                 }
 
                 // Check if the sender belongs to any company
@@ -2306,6 +2330,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
