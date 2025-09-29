@@ -47,12 +47,18 @@ const verificationFormSchema = z.object({
     password: z.string().min(1, "Password is required to create the M365 account."),
 });
 
+const verificationForm = z.object({
+    username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
+    displayName: z.string().min(1, "Display name is required."),
+    password: z.string().min(1, "Password is required to create the M365 account."),
+});
+
 function VerificationArea() {
     const { user, userProfile, fetchUserProfile } = useAuth();
     const { toast } = useToast();
     const [isVerifying, setIsVerifying] = useState(false);
 
-    const verificationForm = useForm<z.infer<typeof verificationFormSchema>>({
+    const form = useForm<z.infer<typeof verificationFormSchema>>({
         resolver: zodResolver(verificationFormSchema),
         defaultValues: {
             username: "",
@@ -61,13 +67,13 @@ function VerificationArea() {
         },
     });
     
-    const usernameValue = verificationForm.watch('username');
+    const usernameValue = form.watch('username');
     
     useEffect(() => {
         if(userProfile?.name) {
-            verificationForm.setValue('displayName', userProfile.name);
+            form.setValue('displayName', userProfile.name);
         }
-    }, [userProfile?.name, verificationForm]);
+    }, [userProfile?.name, form]);
 
 
     const onVerificationSubmit = async (values: z.infer<typeof verificationFormSchema>) => {
@@ -121,8 +127,8 @@ function VerificationArea() {
 
         return (
             <Card>
-                <Form {...verificationForm}>
-                    <form onSubmit={verificationForm.handleSubmit(onVerificationSubmit)}>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onVerificationSubmit)}>
                         <CardHeader>
                             <CardTitle>Verify Your Account</CardTitle>
                              <CardDescription>
@@ -130,8 +136,12 @@ function VerificationArea() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            <div className="text-center text-sm text-muted-foreground mb-4">
+                                Your new email will be:
+                                <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
+                            </div>
                              <FormField
-                                control={verificationForm.control}
+                                control={form.control}
                                 name="username"
                                 render={({ field }) => (
                                     <FormItem>
@@ -139,15 +149,12 @@ function VerificationArea() {
                                     <FormControl>
                                         <Input placeholder="e.g., support" {...field} />
                                     </FormControl>
-                                    <FormDescription>
-                                        Your new email will be: <span className="font-medium text-foreground">{newEmailPreview}</span>
-                                    </FormDescription>
                                     <FormMessage />
                                     </FormItem>
                                 )}
                             />
                             <FormField
-                                control={verificationForm.control}
+                                control={form.control}
                                 name="displayName"
                                 render={({ field }) => (
                                     <FormItem>
@@ -160,7 +167,7 @@ function VerificationArea() {
                                 )}
                             />
                              <FormField
-                                control={verificationForm.control}
+                                control={form.control}
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
