@@ -359,44 +359,42 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
         
         const emailsToProcess = data.value;
 
-        // Fetch all allowed email senders once
-        const allowedSenders = new Set<string>();
-        const orgMembers = await getOrganizationMembers(organizationId);
-        orgMembers.forEach(member => {
-            if (member.uid) allowedSenders.add(member.email.toLowerCase())
-        });
-
-        const clientCompanies = await getCompanies(organizationId);
-        for (const company of clientCompanies) {
-            const employees = await getCompanyEmployees(organizationId, company.id);
-            employees.forEach(employee => allowedSenders.add(employee.email.toLowerCase()));
-        }
-
-
         for (const email of emailsToProcess) {
             
             if (!email.conversationId) continue;
             
-            // SECURITY: Always check if the sender is an allowed contact first, regardless of new ticket or reply.
-            const senderEmail = email.from.emailAddress.address.toLowerCase();
-            if (!allowedSenders.has(senderEmail)) {
-                continue; // Skip this email entirely if the sender is unknown.
-            }
-            
-            // Check for notification keywords in the subject
+            // Skip notification emails from our own system to prevent loops
             const subjectLower = email.subject.toLowerCase();
             if (subjectLower.includes("notification:") || subjectLower.includes("update on ticket") || subjectLower.includes("you've been assigned") || subjectLower.includes("ticket created:")) {
-                continue; // Skip notification emails
+                continue; 
             }
-
 
             const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
             const q = query(ticketsCollectionRef, where('conversationId', '==', email.conversationId));
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                // This is a new conversation thread.
-                // The sender has already been verified above.
+                // This is a new conversation thread, create a ticket.
+                const senderEmail = email.from.emailAddress.address.toLowerCase();
+
+                // Check if the sender is an internal agent/admin. If so, don't create a ticket.
+                const orgMembers = await getOrganizationMembers(organizationId);
+                if (orgMembers.some(member => member.email.toLowerCase() === senderEmail)) {
+                    continue; // Skip emails from internal members
+                }
+
+                // Check if the sender belongs to any company
+                let companyId: string | undefined = undefined;
+                const allCompanies = await getCompanies(organizationId);
+                for (const company of allCompanies) {
+                    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', senderEmail);
+                    const employeeDoc = await getDoc(employeeDocRef);
+                    if (employeeDoc.exists()) {
+                        companyId = company.id;
+                        break;
+                    }
+                }
+
                 const ticketNumber = await getNextTicketNumber(organizationId);
                 const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
                 const ticketId = ticketDocRef.id;
@@ -417,6 +415,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                     closedAt: null,
                     ticketNumber: ticketNumber,
                     assignee: null,
+                    companyId: companyId, // Associate company if found
                 };
 
                 try {
@@ -455,7 +454,6 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                         console.error("Failed to send ticket creation notification for email-based ticket:", e);
                     }
 
-
                     await fetchAndStoreFullConversation(organizationId, email.conversationId);
 
                 } catch (e) {
@@ -464,7 +462,6 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
             } else {
                 // It's a reply to an existing ticket.
-                // The sender has already been verified above.
                 await fetchAndStoreFullConversation(organizationId, email.conversationId);
             }
         }
@@ -2309,6 +2306,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
