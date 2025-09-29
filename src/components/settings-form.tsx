@@ -282,7 +282,7 @@ export function SettingsForm() {
     return (
         <div className="w-full max-w-2xl space-y-6">
             <VerificationArea />
-            <Separator />
+            <div className="py-4" />
             <div className="flex flex-row items-start justify-between">
                 <div className="space-y-1.5">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -325,7 +325,7 @@ export function SettingsForm() {
   return (
     <div className="w-full max-w-2xl space-y-6">
         <VerificationArea />
-        <Separator />
+        <div className="py-4" />
         <div className="flex flex-row items-start justify-between">
             <div className="space-y-1.5">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -364,3 +364,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
