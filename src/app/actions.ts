@@ -379,8 +379,8 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
                 // Check if the sender is an internal agent/admin. If so, don't create a ticket.
                 const orgMembers = await getOrganizationMembers(organizationId);
-                if (orgMembers.some(member => member.email.toLowerCase() === senderEmail)) {
-                    continue; // Skip emails from internal members
+                if (orgMembers.some(member => member.uid && member.email.toLowerCase() === senderEmail)) {
+                    continue; // Skip emails from internal members who are registered
                 }
 
                 // Check if the sender belongs to any company
