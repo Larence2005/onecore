@@ -133,7 +133,7 @@ function VerificationArea() {
                     <ShieldCheck className="h-4 w-4 text-green-500" />
                     <AlertTitle>Your account is verified.</AlertTitle>
                     <AlertDescription>
-                        Your new email address is active and ready to use. You can now send and receive support emails through the system.
+                        Your new email address is active and ready to use. You can now send and receive tickets through {userProfile.email}.
                     </AlertDescription>
                 </Alert>
             </div>
@@ -223,7 +223,7 @@ function VerificationArea() {
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Please review the details below. This action will create a new Microsoft 365 user.
+                                    Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
                                         <div className="space-y-2 mt-4 text-foreground">
                                             <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
                                             <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
