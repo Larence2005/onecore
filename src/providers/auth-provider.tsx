@@ -242,21 +242,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     
     if(isAgent) {
-        // Add the UID and set status to 'Not Verified'
         const orgRef = doc(db, 'organizations', orgId);
         const orgDoc = await getDoc(orgRef);
         if(orgDoc.exists()){
             const members = orgDoc.data().members as OrganizationMember[];
             const updatedMembers = members.map(m => 
                 m.email.toLowerCase() === data.email.toLowerCase() 
-                ? { ...m, uid: userCredential.user.uid, status: 'Not Verified' as 'Not Verified' } 
+                ? { ...m, uid: userCredential.user.uid, status: 'Registered' as 'Registered' } 
                 : m
             );
             await updateDoc(orgRef, { members: updatedMembers });
         }
     }
-    // If it's a client employee, we don't need to update any document on signup,
-    // as their authorization is based on their email existing in a company's employee list.
     
     await fetchUserProfile(userCredential.user);
     handleLoginSuccess();
@@ -340,5 +337,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

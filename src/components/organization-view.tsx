@@ -655,5 +655,3 @@ export function OrganizationView() {
         </div>
     );
 }
-
-    
