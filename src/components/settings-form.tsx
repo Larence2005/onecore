@@ -281,60 +281,15 @@ export function SettingsForm() {
     return (
         <div className="w-full max-w-2xl space-y-6">
             <VerificationArea />
-             <Card className="border-destructive">
-                <CardHeader className="flex flex-row items-start justify-between">
-                    <div className="space-y-1.5">
-                        <CardTitle className="flex items-center gap-2">
-                            <AlertTriangle className="text-destructive" />
-                            Delete Account
-                        </CardTitle>
-                        <CardDescription>
-                            Permanently delete your account. This action cannot be undone.
-                        </CardDescription>
-                    </div>
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive">Delete</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete your account. You will be removed from your organization.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDeleteAccount}
-                                disabled={isDeleting}
-                                className={buttonVariants({ variant: "destructive" })}
-                            >
-                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                Continue
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </CardHeader>
-            </Card>
-        </div>
-    );
-  }
-
-  return (
-    <div className="w-full max-w-2xl space-y-6">
-        <VerificationArea />
-        <Card className="border-destructive">
-            <CardHeader className="flex flex-row items-start justify-between">
+            <div className="flex flex-row items-start justify-between">
                 <div className="space-y-1.5">
-                    <CardTitle className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
                         <AlertTriangle className="text-destructive" />
                         Delete Account
-                    </CardTitle>
-                    <CardDescription>
-                        Permanently delete your account and all associated data.
-                    </CardDescription>
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        Permanently delete your account. This action cannot be undone.
+                    </p>
                 </div>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -344,24 +299,65 @@ export function SettingsForm() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your account and remove all your data from our servers. If you are the organization owner, this will delete the entire organization.
+                            This action cannot be undone. This will permanently delete your account. You will be removed from your organization.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                         <AlertDialogAction
+                        <AlertDialogAction
                             onClick={handleDeleteAccount}
                             disabled={isDeleting}
                             className={buttonVariants({ variant: "destructive" })}
-                         >
+                        >
                             {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                             Continue
                         </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </CardHeader>
-        </Card>
+            </div>
+        </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-2xl space-y-6">
+        <VerificationArea />
+        <div className="flex flex-row items-start justify-between">
+            <div className="space-y-1.5">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <AlertTriangle className="text-destructive" />
+                    Delete Account
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Permanently delete your account and all associated data.
+                </p>
+            </div>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Delete</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your account and remove all your data from our servers. If you are the organization owner, this will delete the entire organization.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        disabled={isDeleting}
+                        className={buttonVariants({ variant: "destructive" })}
+                        >
+                        {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                        Continue
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     </div>
   );
 }
