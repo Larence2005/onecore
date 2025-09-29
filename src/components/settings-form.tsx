@@ -42,10 +42,17 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { Separator } from "./ui/separator";
 
 
+const passwordValidation = z
+  .string()
+  .min(8, { message: "Password must be at least 8 characters long." })
+  .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter." })
+  .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter." })
+  .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character." });
+
 const verificationFormSchema = z.object({
     username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
     displayName: z.string().min(1, "Display name is required."),
-    password: z.string().min(1, "Password is required to create the M365 account."),
+    password: passwordValidation,
     confirmPassword: z.string().min(1, "Please confirm your password."),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
