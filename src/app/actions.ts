@@ -165,10 +165,10 @@ async function getAPISettings(organizationId: string): Promise<Settings | null> 
     const ownerUid = orgData.owner;
     const members = orgData.members as OrganizationMember[];
     
-    const owner = members.find(m => m.uid === ownerUid && m.status === 'Verified');
+    const owner = members.find(m => m.uid === ownerUid);
 
     if (!owner || !owner.email) {
-        console.error(`Verified admin for organization ${organizationId} not found or has no email.`);
+        console.error(`Admin for organization ${organizationId} not found or has no email.`);
         return null;
     }
 
