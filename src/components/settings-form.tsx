@@ -52,12 +52,6 @@ const verificationFormSchema = z.object({
 });
 
 
-const verificationForm = z.object({
-    username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
-    displayName: z.string().min(1, "Display name is required."),
-    password: z.string().min(1, "Password is required to create the M365 account."),
-});
-
 function VerificationArea() {
     const { user, userProfile, fetchUserProfile } = useAuth();
     const { toast } = useToast();
@@ -132,78 +126,76 @@ function VerificationArea() {
 
 
         return (
-            <Card>
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-xl font-bold">Verify Your Account</h2>
+                    <p className="text-muted-foreground">
+                        Create your new email address for the support system. This will be your primary address for sending and receiving support emails.
+                    </p>
+                </div>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onVerificationSubmit)}>
-                        <CardHeader>
-                            <CardTitle>Verify Your Account</CardTitle>
-                             <CardDescription>
-                                Create your new email address for the support system. This will be your primary address for sending and receiving support emails.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="text-center text-sm text-muted-foreground mb-4">
-                                Your new email will be:
-                                <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="username"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Username</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g., support" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="displayName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Display Name</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g., Support Team" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>New Microsoft 365 Password</FormLabel>
-                                        <FormControl>
-                                            <Input type="password" placeholder="********" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="confirmPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Confirm New Password</FormLabel>
-                                        <FormControl>
-                                            <Input type="password" placeholder="********" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </CardContent>
-                        <CardFooter>
+                    <form onSubmit={form.handleSubmit(onVerificationSubmit)} className="space-y-6">
+                        <div className="text-center text-sm text-muted-foreground mb-4">
+                            Your new email will be:
+                            <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField
+                                control={form.control}
+                                name="username"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Username</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., support" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="displayName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Display Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Support Team" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>New Microsoft 365 Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="********" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Confirm New Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="********" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div>
                             <Button type="submit" disabled={isVerifying}>
                                 {isVerifying ? (
                                     <>
@@ -212,10 +204,10 @@ function VerificationArea() {
                                     </>
                                 ) : 'Verify and Create Email'}
                             </Button>
-                        </CardFooter>
+                        </div>
                     </form>
                 </Form>
-            </Card>
+            </div>
         )
     }
 
@@ -373,5 +365,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-    
