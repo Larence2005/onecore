@@ -105,7 +105,7 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered';
+    status: 'Uninvited' | 'Invited' | 'Registered' | 'Not Verified' | 'Verified';
     isClient?: boolean;
 }
 
@@ -147,33 +147,19 @@ async function getAPISettings(organizationId: string): Promise<Settings | null> 
     const clientId = process.env.AZURE_CLIENT_ID;
     const tenantId = process.env.AZURE_TENANT_ID;
     const clientSecret = process.env.AZURE_CLIENT_SECRET;
+    const userId = process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL;
 
-    if (!clientId || !tenantId || !clientSecret || !organizationId) {
+    if (!clientId || !tenantId || !clientSecret || !userId) {
+        console.error("API settings are not fully configured in environment variables.");
         return null;
     }
-    
-    // Get the owner's email which is used as the `userId` for Graph API calls
-    try {
-        const orgDocRef = doc(db, 'organizations', organizationId);
-        const docSnap = await getDoc(orgDocRef);
-        if (docSnap.exists()) {
-            const orgData = docSnap.data();
-            const ownerUid = orgData.owner;
-            const owner = orgData.members?.find((m: any) => m.uid === ownerUid);
-            if (owner?.email) {
-                return {
-                    clientId,
-                    tenantId,
-                    clientSecret,
-                    userId: owner.email,
-                };
-            }
-        }
-    } catch (error) {
-        console.error("Failed to retrieve organization owner email for API settings:", error);
-    }
-    
-    return null;
+
+    return {
+        clientId,
+        tenantId,
+        clientSecret,
+        userId,
+    };
 }
 
 
@@ -926,7 +912,7 @@ export async function forwardEmailAction(
         bccRecipients: parseRecipients(bcc),
     };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${messageId}/forward`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/forward`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
