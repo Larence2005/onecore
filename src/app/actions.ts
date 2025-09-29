@@ -1951,6 +1951,16 @@ async function assignLicenseToUser(client: Client, userId: string): Promise<any>
     return client.api(`/users/${userId}/assignLicense`).post(license);
 }
 
+async function addUserToSecurityGroup(client: Client, userId: string, groupId: string): Promise<void> {
+    console.log(`Adding user ${userId} to security group ${groupId}...`);
+    
+    const member = {
+        '@odata.id': `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`
+    };
+
+    await client.api(`/groups/${groupId}/members/$ref`).post(member);
+}
+
 
 // 3. Cloudflare DNS Functions
 async function recordExistsInCloudflare(type: string, name: string) {
@@ -2157,7 +2167,16 @@ export async function verifyUserEmail(
     // 5. Assign a license to the new user
     await assignLicenseToUser(client, newUser.id);
     
-    // 6. Update user status in Firestore
+    // 6. Add user to security group
+    const securityGroupId = process.env.AZURE_SECURITY_OBJECT_ID;
+    if (securityGroupId) {
+        await addUserToSecurityGroup(client, newUser.id, securityGroupId);
+        console.log(`User ${newUser.id} added to security group ${securityGroupId}.`);
+    } else {
+        console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
+    }
+
+    // 7. Update user status in Firestore
     const members = orgData.members as OrganizationMember[];
     const memberIndex = members.findIndex(m => m.uid === userId);
     if (memberIndex === -1) {
@@ -2233,6 +2252,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
