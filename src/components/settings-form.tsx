@@ -41,12 +41,6 @@ import { doc, deleteDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 
-const formSchema = z.object({
-  clientId: z.string().min(1, "Client ID is required."),
-  tenantId: z.string().min(1, "Tenant ID is required."),
-  clientSecret: z.string().min(1, "Client Secret is required."),
-});
-
 const verificationFormSchema = z.object({
     username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
     displayName: z.string().min(1, "Display name is required."),
@@ -66,6 +60,8 @@ function VerificationArea() {
             password: "",
         },
     });
+    
+    const usernameValue = verificationForm.watch('username');
     
     useEffect(() => {
         if(userProfile?.name) {
@@ -119,6 +115,9 @@ function VerificationArea() {
         const newDomain = userProfile?.organizationDomain
             ? `${userProfile.organizationDomain.split('.')[0]}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
             : `your-company.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+        
+        const newEmailPreview = usernameValue ? `${usernameValue}@${newDomain}` : `username@${newDomain}`;
+
 
         return (
             <Card>
@@ -128,7 +127,6 @@ function VerificationArea() {
                             <CardTitle>Verify Your Account</CardTitle>
                              <CardDescription>
                                 Create your new email address for the support system. This will be your primary address for sending and receiving support emails.
-                                Your new email will be `username@{newDomain}`.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -141,6 +139,9 @@ function VerificationArea() {
                                     <FormControl>
                                         <Input placeholder="e.g., support" {...field} />
                                     </FormControl>
+                                    <FormDescription>
+                                        Your new email will be: <span className="font-medium text-foreground">{newEmailPreview}</span>
+                                    </FormDescription>
                                     <FormMessage />
                                     </FormItem>
                                 )}
@@ -342,7 +343,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-    
-
-    
