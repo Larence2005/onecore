@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (memberData) {
             setUserProfile({
                 uid: user.uid,
-                email: user.email,
+                email: memberData.email,
                 name: (memberData as any)?.name || user.displayName || user.email,
                 organizationId: orgDoc.id,
                 organizationName: orgData.name,
