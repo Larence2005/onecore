@@ -53,106 +53,52 @@ const verificationFormSchema = z.object({
     password: z.string().min(1, "Password is required to create the M365 account."),
 });
 
-export function SettingsForm() {
-  const { settings, isConfigured } = useSettings();
-  const { user, userProfile, logout, fetchUserProfile } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  
-  const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+function VerificationArea() {
+    const { user, userProfile, fetchUserProfile } = useAuth();
+    const { toast } = useToast();
+    const [isVerifying, setIsVerifying] = useState(false);
 
-  const verificationForm = useForm<z.infer<typeof verificationFormSchema>>({
-    resolver: zodResolver(verificationFormSchema),
-    defaultValues: {
-      username: "",
-      displayName: userProfile?.name || "",
-      password: "",
-    },
-  });
-
-  const onVerificationSubmit = async (values: z.infer<typeof verificationFormSchema>) => {
-    if (!user || !userProfile?.organizationId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'User or organization not found.'});
-        return;
-    }
-
-    setIsVerifying(true);
-    try {
-        await verifyUserEmail(
-            userProfile.organizationId,
-            user.uid,
-            values.username,
-            values.displayName,
-            values.password,
-        );
-        toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
-        await fetchUserProfile(user); // Re-fetch profile to get new status
-    } catch(e) {
-        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-        toast({ variant: 'destructive', title: 'Verification Failed', description: errorMessage });
-    } finally {
-        setIsVerifying(false);
-    }
-  };
-
-
-  const handleDeleteAccount = async () => {
-    if (!user || !userProfile || !user.email) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "You must be logged in to delete an account.",
-        });
-        return;
-    }
+    const verificationForm = useForm<z.infer<typeof verificationFormSchema>>({
+        resolver: zodResolver(verificationFormSchema),
+        defaultValues: {
+            username: "",
+            displayName: userProfile?.name || "",
+            password: "",
+        },
+    });
     
-    const password = prompt("For your security, please re-enter your password to delete your account:");
-    if (!password) {
-        toast({
-            title: "Deletion Canceled",
-            description: "Password not provided.",
-        });
-        return;
-    }
+    useEffect(() => {
+        if(userProfile?.name) {
+            verificationForm.setValue('displayName', userProfile.name);
+        }
+    }, [userProfile?.name, verificationForm]);
 
-    setIsDeleting(true);
-    try {
-        const credential = EmailAuthProvider.credential(user.email, password);
-        // Re-authenticate the user
-        await reauthenticateWithCredential(user, credential);
-        
-        // If re-authentication is successful, proceed with deletion
-        const isOwner = user.uid === userProfile.organizationOwnerUid;
-        if (isOwner && userProfile.organizationId) {
-            await deleteOrganization(userProfile.organizationId);
+
+    const onVerificationSubmit = async (values: z.infer<typeof verificationFormSchema>) => {
+        if (!user || !userProfile?.organizationId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User or organization not found.'});
+            return;
         }
 
-        // Finally, delete the user from Firebase Authentication
-        await deleteUser(user);
-
-        toast({
-            title: "Account Deleted",
-            description: "Your account and all associated data have been successfully deleted.",
-        });
-        
-        // No need to call logout(), deleteUser signs them out.
-        router.push('/login'); 
-
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during account deletion.";
-        toast({
-            variant: "destructive",
-            title: "Deletion Failed",
-            description: errorMessage,
-        });
-    } finally {
-        setIsDeleting(false);
-    }
-  }
-
-  const VerificationArea = () => {
+        setIsVerifying(true);
+        try {
+            await verifyUserEmail(
+                userProfile.organizationId,
+                user.uid,
+                values.username,
+                values.displayName,
+                values.password,
+            );
+            toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
+            await fetchUserProfile(user); // Re-fetch profile to get new status
+        } catch(e) {
+            const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Verification Failed', description: errorMessage });
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+    
     if (userProfile?.status === 'Verified') {
         return (
              <Card>
@@ -180,7 +126,7 @@ export function SettingsForm() {
                     <form onSubmit={verificationForm.handleSubmit(onVerificationSubmit)}>
                         <CardHeader>
                             <CardTitle>Verify Your Account</CardTitle>
-                            <CardDescription>
+                             <CardDescription>
                                 Create your new email address for the support system. This will be your primary address for sending and receiving support emails.
                                 Your new email will be `username@{newDomain}`.
                             </CardDescription>
@@ -243,7 +189,70 @@ export function SettingsForm() {
     }
 
     return null;
+}
+
+export function SettingsForm() {
+  const { user, userProfile, logout } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+  
+  const handleDeleteAccount = async () => {
+    if (!user || !userProfile || !user.email) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to delete an account.",
+        });
+        return;
+    }
+    
+    const password = prompt("For your security, please re-enter your password to delete your account:");
+    if (!password) {
+        toast({
+            title: "Deletion Canceled",
+            description: "Password not provided.",
+        });
+        return;
+    }
+
+    setIsDeleting(true);
+    try {
+        const credential = EmailAuthProvider.credential(user.email, password);
+        // Re-authenticate the user
+        await reauthenticateWithCredential(user, credential);
+        
+        // If re-authentication is successful, proceed with deletion
+        const isOwner = user.uid === userProfile.organizationOwnerUid;
+        if (isOwner && userProfile.organizationId) {
+            await deleteOrganization(userProfile.organizationId);
+        }
+
+        // Finally, delete the user from Firebase Authentication
+        await deleteUser(user);
+
+        toast({
+            title: "Account Deleted",
+            description: "Your account and all associated data have been successfully deleted.",
+        });
+        
+        // No need to call logout(), deleteUser signs them out.
+        router.push('/login'); 
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during account deletion.";
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: errorMessage,
+        });
+    } finally {
+        setIsDeleting(false);
+    }
   }
+
   
   if (!isOwner) {
     return (
@@ -333,5 +342,7 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
 
     
