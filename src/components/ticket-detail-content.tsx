@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { useSettings } from '@/providers/settings-provider';
 import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -163,7 +162,6 @@ const downloadAttachment = (attachment: Attachment) => {
 
 
 export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: string }) {
-    const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
     const { user, userProfile, loading, logout } = useAuth();
     const router = useRouter();
@@ -415,7 +413,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if(field === 'assignee') setCurrentAssignee(value);
 
 
-        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, settings, {name: userProfile.name, email: user.email});
+        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email});
 
         if (!result.success) {
              toast({
@@ -488,7 +486,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     };
 
     const handleSendReply = async () => {
-        if (!isConfigured || !userProfile?.organizationId || !user || !user.email || !email) {
+        if (!userProfile?.organizationId || !user || !user.email || !email) {
             toast({ variant: "destructive", title: "Cannot Reply", description: "Missing required information to send a reply." });
             return;
         }
@@ -513,7 +511,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             toast({ title: "Sending Reply...", description: "Your reply is being sent." });
 
             await replyToEmailAction(
-                settings, 
                 userProfile.organizationId,
                 email.id,
                 replyingToMessageId, 
@@ -549,7 +546,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     };
     
     const handleSendForward = async () => {
-        if (!isConfigured || !userProfile?.organizationId || !user?.email || !email || !email.ticketNumber) {
+        if (!userProfile?.organizationId || !user?.email || !email || !email.ticketNumber) {
             toast({ variant: "destructive", title: "Cannot Forward", description: "Missing required information to forward this email." });
             return;
         }
@@ -563,7 +560,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (!forwardingMessageId) throw new Error("Could not determine message to forward.");
     
             await forwardEmailAction(
-                settings, 
                 userProfile.organizationId, 
                 ticketId, 
                 forwardingMessageId, 
@@ -586,7 +582,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setShowForwardBcc(false);
     
             if (email?.conversationId) {
-                await fetchAndStoreFullConversation(settings, userProfile.organizationId, email.conversationId);
+                await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
             }
     
         } catch (err) {
@@ -617,8 +613,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (user.uid !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email);
             }
-            if (settings.userId) {
-                ccRecipients.delete(settings.userId.toLowerCase());
+            if (process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL) {
+                ccRecipients.delete(process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL.toLowerCase());
             }
 
             setReplyCc(Array.from(ccRecipients).join(', '));
@@ -650,8 +646,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             }
     
             // Explicitly remove the admin email (sender email from settings) from the CC list
-            if (settings.userId) {
-                allRecipients.delete(settings.userId.toLowerCase());
+            if (process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL) {
+                allRecipients.delete(process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL.toLowerCase());
             }
 
             setReplyCc(Array.from(allRecipients).join(', '));
@@ -690,8 +686,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (user.uid !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email);
             }
-            if (settings.userId) {
-                ccRecipients.delete(settings.userId.toLowerCase());
+             if (process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL) {
+                ccRecipients.delete(process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL.toLowerCase());
             }
             setForwardCc(Array.from(ccRecipients).join(', '));
             setForwardBcc('');
@@ -847,15 +843,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
-                            {!isConfigured ? (
-                                    <Alert>
-                                    <SettingsIcon className="h-4 w-4" />
-                                    <AlertTitle>API Configuration Needed</AlertTitle>
-                                    <AlertDescription>
-                                        Please <Link href="/dashboard?view=settings" className="font-bold underline">configure your API settings</Link> to send replies.
-                                    </AlertDescription>
-                                </Alert>
-                            ) : (
                                 <>
                                     <div className="flex items-center gap-2 border-b">
                                         <Label htmlFor="reply-to" className="py-2.5">To</Label>
@@ -949,7 +936,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                         </Button>
                                     </div>
                                 </>
-                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -960,15 +946,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                             <CardTitle>Forward Email</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
-                                {!isConfigured ? (
-                                    <Alert>
-                                    <SettingsIcon className="h-4 w-4" />
-                                    <AlertTitle>API Configuration Needed</AlertTitle>
-                                    <AlertDescription>
-                                        Please <Link href="/dashboard?view=settings" className="font-bold underline">configure your API settings</Link> to forward emails.
-                                    </AlertDescription>
-                                </Alert>
-                            ) : (
                                 <>
                                     <div className="flex items-center gap-2 border-b">
                                         <Label htmlFor="forward-to" className="py-2.5">To</Label>
@@ -1040,7 +1017,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                         </Button>
                                     </div>
                                 </>
-                            )}
                         </CardContent>
                     </Card>
                 )}

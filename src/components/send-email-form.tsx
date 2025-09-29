@@ -43,14 +43,7 @@ export function SendEmailForm() {
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
-  const [isApiConfigured, setIsApiConfigured] = useState(false);
-
-  useEffect(() => {
-    // A simple check to see if server-side environment variables are likely set.
-    // We can't read them directly on the client.
-    // A more robust solution might involve an API endpoint that returns the configuration status.
-    setIsApiConfigured(!!process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-  }, []);
+  const [isApiConfigured, setIsApiConfigured] = useState(true); // Assume configured and let actions handle errors
 
   useEffect(() => {
     async function fetchMembers() {
@@ -98,6 +91,10 @@ export function SendEmailForm() {
         title: "Uh oh! Something went wrong.",
         description: error instanceof Error ? error.message : "Failed to send email.",
       });
+      // If error indicates API is not configured, update state
+      if (error instanceof Error && error.message.includes("API settings")) {
+        setIsApiConfigured(false);
+      }
     } finally {
       setIsSending(false);
     }
