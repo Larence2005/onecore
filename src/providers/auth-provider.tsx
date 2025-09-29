@@ -22,6 +22,7 @@ export interface UserProfile {
   landline?: string;
   website?: string;
   status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered' | 'Verified';
+  organizationDomain?: string;
 }
 
 
@@ -116,7 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 mobile: orgData.mobile,
                 landline: orgData.landline,
                 website: orgData.website,
-                status: memberData.status
+                status: memberData.status,
+                organizationDomain: orgData.domain
             });
             return;
         }
@@ -340,5 +342,3 @@ export const useAuth = () => {
 };
 
     
-
-

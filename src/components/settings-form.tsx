@@ -170,6 +170,10 @@ export function SettingsForm() {
     }
 
     if(userProfile?.status === 'Not Verified') {
+        const newDomain = userProfile?.organizationDomain
+            ? `${userProfile.organizationDomain.split('.')[0]}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
+            : `your-company.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+
         return (
             <Card>
                 <Form {...verificationForm}>
@@ -177,7 +181,8 @@ export function SettingsForm() {
                         <CardHeader>
                             <CardTitle>Verify Your Account</CardTitle>
                             <CardDescription>
-                                Create your new email address for the support system. This will be your primary address for sending and receiving support emails. Your new email will be `username@your_domain.{process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
+                                Create your new email address for the support system. This will be your primary address for sending and receiving support emails.
+                                Your new email will be `username@{newDomain}`.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -328,3 +333,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
