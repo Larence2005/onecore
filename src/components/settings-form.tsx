@@ -78,6 +78,7 @@ function VerificationArea() {
     
     const usernameValue = form.watch('username');
     const displayNameValue = form.watch('displayName');
+    const passwordValue = form.watch('password');
     const newDomain = userProfile?.organizationDomain
             ? `${userProfile.organizationDomain.split('.')[0]}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
             : `your-company.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
@@ -220,6 +221,7 @@ function VerificationArea() {
                                             <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
                                             <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
                                             <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
+                                            <p><strong className="font-medium">Password:</strong> {passwordValue}</p>
                                         </div>
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
@@ -391,5 +393,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-    
