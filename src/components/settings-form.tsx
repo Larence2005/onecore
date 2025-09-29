@@ -77,6 +77,11 @@ function VerificationArea() {
     });
     
     const usernameValue = form.watch('username');
+    const displayNameValue = form.watch('displayName');
+    const newDomain = userProfile?.organizationDomain
+            ? `${userProfile.organizationDomain.split('.')[0]}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
+            : `your-company.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+    const newEmailPreview = usernameValue ? `${usernameValue}@${newDomain}` : `username@${newDomain}`;
     
     useEffect(() => {
         if(userProfile?.name) {
@@ -126,13 +131,7 @@ function VerificationArea() {
     }
 
     if(userProfile?.status === 'Not Verified') {
-        const newDomain = userProfile?.organizationDomain
-            ? `${userProfile.organizationDomain.split('.')[0]}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
-            : `your-company.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
         
-        const newEmailPreview = usernameValue ? `${usernameValue}@${newDomain}` : `username@${newDomain}`;
-
-
         return (
             <div className="space-y-6">
                 <div>
@@ -142,7 +141,7 @@ function VerificationArea() {
                     </p>
                 </div>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onVerificationSubmit)} className="space-y-6">
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
                         <div className="text-center text-sm text-muted-foreground mt-4 mb-4">
                             <div className="my-2"></div>
                             Your new email will be:
@@ -206,14 +205,33 @@ function VerificationArea() {
                             />
                         </div>
                         <div className="flex justify-end">
-                            <Button type="submit" disabled={isVerifying}>
-                                {isVerifying ? (
-                                    <>
-                                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                        Verifying...
-                                    </>
-                                ) : 'Verify and Create Email'}
-                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button disabled={!form.formState.isValid || isVerifying}>
+                                        {isVerifying ? 'Verifying...' : 'Verify and Create Email'}
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Please review the details below. This action will create a new Microsoft 365 user.
+                                        <div className="space-y-2 mt-4 text-foreground">
+                                            <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
+                                            <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
+                                            <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
+                                        </div>
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={form.handleSubmit(onVerificationSubmit)} disabled={isVerifying}>
+                                        {isVerifying && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                        Confirm
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     </form>
                 </Form>
