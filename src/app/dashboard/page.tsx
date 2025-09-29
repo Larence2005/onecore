@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
 import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
 import { getLatestEmails, getCompanies, fetchAndStoreFullConversation, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
-import { useSettings } from '@/providers/settings-provider';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -35,7 +34,6 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<View>('analytics');
   
-  const { settings, isConfigured } = useSettings();
   const { toast } = useToast();
   const [emails, setEmails] = useState<Email[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,26 +58,24 @@ function HomePageContent() {
 
 
   const syncLatestEmails = useCallback(async () => {
-    // Any member of the organization can trigger a sync.
-    // The `getLatestEmails` action uses the owner's settings which are loaded by the SettingsProvider.
-    if (isConfigured && userProfile?.organizationId) {
+    if (userProfile?.organizationId) {
         try {
-            await getLatestEmails(settings, userProfile.organizationId);
+            await getLatestEmails(userProfile.organizationId);
         } catch (syncError) {
             // Silently fail, error is logged in the action
         }
     }
-  }, [settings, isConfigured, userProfile]);
+  }, [userProfile]);
   
   const runDeadlineChecks = useCallback(async () => {
-    if (isConfigured && userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
+    if (userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
         try {
-            await checkTicketDeadlinesAndNotify(settings, userProfile.organizationId);
+            await checkTicketDeadlinesAndNotify(userProfile.organizationId);
         } catch (deadlineError) {
             // Silently fail, error is logged in the action
         }
     }
-  }, [settings, isConfigured, userProfile, user]);
+  }, [userProfile, user]);
 
   useEffect(() => {
     if (!user || !userProfile?.organizationId) return;

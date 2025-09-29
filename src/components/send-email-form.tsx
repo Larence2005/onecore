@@ -16,7 +16,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { sendEmailAction, getOrganizationMembers } from "@/app/actions";
 import type { OrganizationMember } from "@/app/actions";
@@ -38,13 +37,20 @@ const formSchema = z.object({
 });
 
 export function SendEmailForm() {
-  const { settings, isConfigured } = useSettings();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
+  const [isApiConfigured, setIsApiConfigured] = useState(false);
+
+  useEffect(() => {
+    // A simple check to see if server-side environment variables are likely set.
+    // We can't read them directly on the client.
+    // A more robust solution might involve an API endpoint that returns the configuration status.
+    setIsApiConfigured(!!process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+  }, []);
 
   useEffect(() => {
     async function fetchMembers() {
@@ -68,17 +74,17 @@ export function SendEmailForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!isConfigured) {
+    if (!userProfile?.organizationId) {
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Please configure your API settings first.",
+            description: "Cannot send email without an organization context.",
         });
         return;
     }
     setIsSending(true);
     try {
-      await sendEmailAction(settings, values);
+      await sendEmailAction(userProfile.organizationId, values);
       toast({
         title: "Email Sent!",
         description: `Your email to ${values.recipient} has been sent successfully.`,
@@ -100,13 +106,13 @@ export function SendEmailForm() {
     const isCcVisible = showCc || !!form.watch('cc');
     const isBccVisible = showBcc || !!form.watch('bcc');
   
-  if (!isConfigured) {
+  if (!isApiConfigured) {
     return (
         <Alert className="max-w-2xl mx-auto">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Configuration Required</AlertTitle>
             <AlertDescription>
-                Please go to the Settings tab to configure your Microsoft Graph API credentials before you can send emails.
+                The application is not fully configured to send emails. Please contact your system administrator.
             </AlertDescription>
         </Alert>
     );

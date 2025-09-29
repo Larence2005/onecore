@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import type { Email, ActivityLog, Company } from '@/app/actions';
-import { getTicketsFromDB, getAllActivityLogs, getCompanies } from '@/app/actions';
+import { getTicketsFromDB, getAllActivityLogs } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -370,5 +370,3 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         </div>
     );
 }
-
-    

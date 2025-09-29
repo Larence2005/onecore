@@ -1,7 +1,6 @@
 
 "use server";
 
-import type { Settings } from '@/providers/settings-provider';
 import {
     ConfidentialClientApplication,
     Configuration,
@@ -106,7 +105,7 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered' | 'Verified';
+    status: 'Uninvited' | 'Invited' | 'Registered';
     isClient?: boolean;
 }
 
@@ -135,6 +134,46 @@ export interface Note {
     content: string;
     date: string;
     user: string;
+}
+
+interface Settings {
+  clientId: string;
+  tenantId: string;
+  clientSecret: string;
+  userId: string;
+}
+
+async function getAPISettings(organizationId: string): Promise<Settings | null> {
+    const clientId = process.env.AZURE_CLIENT_ID;
+    const tenantId = process.env.AZURE_TENANT_ID;
+    const clientSecret = process.env.AZURE_CLIENT_SECRET;
+
+    if (!clientId || !tenantId || !clientSecret || !organizationId) {
+        return null;
+    }
+    
+    // Get the owner's email which is used as the `userId` for Graph API calls
+    try {
+        const orgDocRef = doc(db, 'organizations', organizationId);
+        const docSnap = await getDoc(orgDocRef);
+        if (docSnap.exists()) {
+            const orgData = docSnap.data();
+            const ownerUid = orgData.owner;
+            const owner = orgData.members?.find((m: any) => m.uid === ownerUid);
+            if (owner?.email) {
+                return {
+                    clientId,
+                    tenantId,
+                    clientSecret,
+                    userId: owner.email,
+                };
+            }
+        }
+    } catch (error) {
+        console.error("Failed to retrieve organization owner email for API settings:", error);
+    }
+    
+    return null;
 }
 
 
@@ -191,8 +230,7 @@ export async function createTicket(
     organizationId: string, 
     author: { uid: string, name: string, email: string }, 
     title: string, 
-    body: string,
-    settings: Settings | null
+    body: string
 ): Promise<{ success: boolean, id?: string, error?: string }> {
     if (!organizationId || !author.uid || !title.trim()) {
         return { success: false, error: 'Missing required fields to create a ticket.' };
@@ -265,6 +303,7 @@ export async function createTicket(
         });
         
         // Send notification email
+        const settings = await getAPISettings(organizationId);
         if (settings) {
             try {
                 const headersList = headers();
@@ -281,7 +320,7 @@ export async function createTicket(
                     <br>
                     <p>You can also reply to this email thread to add comments to your ticket.</p>
                 `;
-                await sendEmailAction(settings, {
+                await sendEmailAction(organizationId, {
                     recipient: author.email,
                     subject: notificationSubject,
                     body: notificationBody,
@@ -305,7 +344,13 @@ export async function createTicket(
 }
 
 
-export async function getLatestEmails(settings: Settings, organizationId: string): Promise<void> {
+export async function getLatestEmails(organizationId: string): Promise<void> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        console.log("Skipping email sync: API credentials not configured.");
+        return;
+    }
+    
     try {
         const authResponse = await getAccessToken(settings);
         if (!authResponse?.accessToken) {
@@ -415,7 +460,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                             <p>You can also reply to this email thread to add comments to your ticket.</p>
                         `;
 
-                        await sendEmailAction(settings, {
+                        await sendEmailAction(organizationId, {
                             recipient: preliminaryTicketData.senderEmail,
                             subject: notificationSubject,
                             body: notificationBody,
@@ -425,7 +470,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
                     }
 
 
-                    await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
+                    await fetchAndStoreFullConversation(organizationId, email.conversationId);
 
                 } catch (e) {
                     console.log(`Ticket creation for conversation ${email.conversationId} skipped, likely already exists.`);
@@ -434,7 +479,7 @@ export async function getLatestEmails(settings: Settings, organizationId: string
             } else {
                 // It's a reply to an existing ticket.
                 // The sender has already been verified above.
-                await fetchAndStoreFullConversation(settings, organizationId, email.conversationId);
+                await fetchAndStoreFullConversation(organizationId, email.conversationId);
             }
         }
     } catch (error) {
@@ -502,7 +547,13 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
 }
 
 
-export async function fetchAndStoreFullConversation(settings: Settings, organizationId: string, conversationId: string): Promise<DetailedEmail[]> {
+export async function fetchAndStoreFullConversation(organizationId: string, conversationId: string): Promise<DetailedEmail[]> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        console.log("Skipping conversation fetch: API credentials not configured.");
+        return [];
+    }
+
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         // Can't fetch from API, return empty array. The caller should handle this.
@@ -703,7 +754,12 @@ const parseRecipients = (recipients: string | undefined): { emailAddress: { addr
     });
 };
 
-export async function sendEmailAction(settings: Settings, emailData: {recipient: string, subject: string, body: string, cc?: string, bcc?: string}): Promise<{ success: boolean }> {
+export async function sendEmailAction(organizationId: string, emailData: {recipient: string, subject: string, body: string, cc?: string, bcc?: string}): Promise<{ success: boolean }> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error('Failed to acquire access token. Check your API settings.');
+    }
+    
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
@@ -741,7 +797,6 @@ export async function sendEmailAction(settings: Settings, emailData: {recipient:
 }
 
 export async function replyToEmailAction(
-    settings: Settings,
     organizationId: string,
     ticketId: string,
     messageId: string,
@@ -753,6 +808,11 @@ export async function replyToEmailAction(
     cc: string | undefined,
     bcc: string | undefined
 ): Promise<{ success: boolean }> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error('Failed to acquire access token. Check your API settings.');
+    }
+    
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
@@ -820,7 +880,7 @@ export async function replyToEmailAction(
 
         // Schedule a background sync to get the real data from the mail server
         setTimeout(() => {
-            fetchAndStoreFullConversation(settings, organizationId, conversationId).catch(console.error);
+            fetchAndStoreFullConversation(organizationId, conversationId).catch(console.error);
         }, 10000); // 10-second delay to allow Graph API to process
     }
     
@@ -833,7 +893,6 @@ export async function replyToEmailAction(
 
 
 export async function forwardEmailAction(
-    settings: Settings,
     organizationId: string,
     ticketId: string,
     messageId: string,
@@ -845,6 +904,11 @@ export async function forwardEmailAction(
     ticketNumber: number,
     ticketSubject: string
 ): Promise<{ success: boolean }> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error('Failed to acquire access token. Check your API settings.');
+    }
+    
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
@@ -1006,7 +1070,6 @@ export async function updateTicket(
         companyId?: string | null;
         assignee?: string | null;
     },
-    settings: Settings | null,
     currentUser: { name: string; email: string }
 ) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
@@ -1045,6 +1108,7 @@ export async function updateTicket(
         });
 
         // --- Post-transaction actions (like sending emails) ---
+        const settings = await getAPISettings(organizationId);
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
                 const members = await getOrganizationMembers(organizationId);
@@ -1085,7 +1149,7 @@ export async function updateTicket(
                 `;
 
                 try {
-                    await sendEmailAction(settings, {
+                    await sendEmailAction(organizationId, {
                         recipient: ticketData.senderEmail,
                         cc: ccRecipients.join(','),
                         subject: notificationSubject,
@@ -1116,7 +1180,7 @@ export async function updateTicket(
                         <p>You can view and respond to the ticket here: <a href="${ticketUrl}">${ticketUrl}</a></p>
                     `;
                     try {
-                        await sendEmailAction(settings, {
+                        await sendEmailAction(organizationId, {
                             recipient: newAssignee.email,
                             subject: subject,
                             body: body,
@@ -1741,8 +1805,14 @@ export async function updateCompany(
 }
     
     
-export async function checkTicketDeadlinesAndNotify(settings: Settings, organizationId: string) {
-    if (!organizationId || !settings.clientId) return;
+export async function checkTicketDeadlinesAndNotify(organizationId: string) {
+    if (!organizationId) return;
+
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        console.log("Skipping deadline checks: API credentials not configured.");
+        return;
+    }
 
     try {
         const now = new Date();
@@ -1782,7 +1852,7 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
                     `;
 
                     try {
-                        await sendEmailAction(settings, {
+                        await sendEmailAction(organizationId, {
                             recipient: assignee.email,
                             subject: subject,
                             body: body,
@@ -1803,8 +1873,9 @@ export async function checkTicketDeadlinesAndNotify(settings: Settings, organiza
     }
 }
     
-export async function sendVerificationEmail(settings: Settings, organizationId: string, recipientEmail: string, recipientName: string) {
-    if (!settings.clientId) {
+export async function sendVerificationEmail(organizationId: string, recipientEmail: string, recipientName: string) {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
         throw new Error("API settings are not configured to send emails.");
     }
     
@@ -1848,7 +1919,7 @@ export async function sendVerificationEmail(settings: Settings, organizationId: 
         <p>Once registered, you will be able to access and manage support tickets.</p>
     `;
 
-    await sendEmailAction(settings, {
+    await sendEmailAction(organizationId, {
         recipient: recipientEmail,
         subject: subject,
         body: body,

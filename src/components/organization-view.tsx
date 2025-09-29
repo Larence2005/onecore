@@ -46,12 +46,10 @@ import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { PropertyItem } from './property-item';
 import { Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
-import { useSettings } from '@/providers/settings-provider';
 
 
 export function OrganizationView() {
     const { user, userProfile, loading, fetchUserProfile, logout } = useAuth();
-    const { settings, isConfigured } = useSettings();
     const { toast } = useToast();
     const [organizationName, setOrganizationName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -221,15 +219,11 @@ export function OrganizationView() {
     };
     
     const handleSendVerification = async (email: string, name: string) => {
-        if (!isConfigured) {
-            toast({ variant: 'destructive', title: 'Cannot Send Email', description: 'Please configure API settings first.'});
-            return;
-        }
         if (!userProfile?.organizationId) return;
 
         setIsSendingVerification(email);
         try {
-            await sendVerificationEmail(settings, userProfile.organizationId, email, name);
+            await sendVerificationEmail(userProfile.organizationId, email, name);
             toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${email}.` });
             await fetchMembers(); // Re-fetch to get updated verificationSent status
         } catch (error) {
@@ -310,10 +304,6 @@ export function OrganizationView() {
                 return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
             case 'Uninvited':
                 return <Badge variant="destructive">Uninvited</Badge>;
-            case 'Not Verified':
-                return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">Not Verified</Badge>;
-            case 'Verified':
-                return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
             default:
                 return <Badge variant="outline">Unknown</Badge>;
         }
