@@ -133,7 +133,7 @@ function VerificationArea() {
                     <ShieldCheck className="h-4 w-4 text-green-500" />
                     <AlertTitle>Your account is verified.</AlertTitle>
                     <AlertDescription>
-                        Your new email address is active and ready to use. You can now send and receive tickets through {userProfile.email}.
+                        Your new email address is active and ready to use. You can now send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>.
                     </AlertDescription>
                 </Alert>
             </div>
