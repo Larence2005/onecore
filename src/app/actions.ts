@@ -2210,8 +2210,13 @@ export async function verifyUserEmail(
                 verifyAttempts++;
                 try {
                     await verifyDomain(client, newDomain);
-                    console.log("✅ Domain verified successfully!");
-                    verified = true;
+                    const updatedDomainInfo = await getDomain(client, newDomain);
+                    if (updatedDomainInfo.isVerified) {
+                        console.log("✅ Domain verified successfully!");
+                        verified = true;
+                    } else {
+                         throw new Error("Verification API call succeeded but domain is still not verified.");
+                    }
                 } catch (err: any) {
                     console.error(`Attempt ${verifyAttempts}: Verification failed:`, err.message);
                     console.log("⏳ Waiting for verification...");
@@ -2223,43 +2228,7 @@ export async function verifyUserEmail(
             }
         }
         
-        // Step 5: Add service configuration records
-        const serviceRecords = await getDomainServiceRecords(client, newDomain);
-        for (const rec of serviceRecords) {
-            switch (rec.recordType.toLowerCase()) {
-                case "mx":
-                    await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-                    break;
-                case "cname":
-                    // Add required CNAME records for Outlook and Enterprise registration
-                    if (rec.label === 'autodiscover') {
-                        await addDnsRecordToCloudflare("CNAME", rec.label, 'autodiscover.outlook.com');
-                    } else if (rec.label === 'enterpriseregistration') {
-                        await addDnsRecordToCloudflare("CNAME", rec.label, 'enterpriseregistration.windows.net');
-                    } else {
-                        await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
-                    }
-                    break;
-                case "srv":
-                    await addDnsRecordToCloudflare("SRV", rec.label, undefined, undefined, {
-                        service: rec.service.replace(/^_/, ""),
-                        proto: rec.protocol.replace(/^_/, ""),
-                        name: newDomain,
-                        priority: rec.priority,
-                        weight: rec.weight,
-                        port: rec.port,
-                        target: rec.nameTarget,
-                    });
-                    break;
-                case "txt":
-                    if (!rec.text.startsWith("MS=")) {
-                        await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
-                    }
-                    break;
-            }
-        }
-        
-        // Save the new domain to Firestore
+        // Save the new domain to Firestore right after verification
         await updateDoc(orgRef, { newDomain: newDomain });
         console.log("Domain created and saved to Firestore.");
     }
@@ -2282,8 +2251,30 @@ export async function verifyUserEmail(
     } else {
         console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
     }
+    
+    // 7. Add DNS Records for Email
+    console.log("Adding essential DNS records for email...");
+    const serviceRecords = await getDomainServiceRecords(client, newDomain);
+    for (const rec of serviceRecords) {
+        switch (rec.recordType.toLowerCase()) {
+            case "mx":
+                await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
+                break;
+            case "cname":
+                if (rec.label === 'autodiscover') {
+                    await addDnsRecordToCloudflare("CNAME", rec.label, 'autodiscover.outlook.com');
+                }
+                break;
+            case "txt":
+                if (rec.text.toLowerCase().startsWith("v=spf")) {
+                    await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
+                }
+                break;
+        }
+    }
 
-    // 7. Update user status in Firestore
+
+    // 8. Update user status in Firestore
     const members = orgData.members as OrganizationMember[];
     const memberIndex = members.findIndex(m => m.uid === userId);
     if (memberIndex === -1) {
@@ -2376,3 +2367,4 @@ export async function verifyUserEmail(
 
 
     
+
