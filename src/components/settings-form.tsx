@@ -65,6 +65,12 @@ function VerificationArea() {
     const { toast } = useToast();
     const [isVerifying, setIsVerifying] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [parentDomain, setParentDomain] = useState('');
+
+    useEffect(() => {
+        // This will only run on the client-side
+        setParentDomain(process.env.NEXT_PUBLIC_PARENT_DOMAIN || '');
+    }, []);
 
     const form = useForm<z.infer<typeof verificationFormSchema>>({
         resolver: zodResolver(verificationFormSchema),
@@ -79,8 +85,9 @@ function VerificationArea() {
     const usernameValue = form.watch('username');
     const displayNameValue = form.watch('displayName');
     const passwordValue = form.watch('password');
-    const newDomain = userProfile?.newDomain;
-    const newEmailPreview = usernameValue && newDomain ? `${usernameValue}@${newDomain}` : `username@${newDomain}`;
+    const orgDomainName = userProfile?.organizationDomain?.split('.')[0] || '';
+    const newDomain = orgDomainName && parentDomain ? `${orgDomainName}.${parentDomain}` : '';
+    const newEmailPreview = usernameValue && newDomain ? `${usernameValue}@${newDomain}` : (newDomain ? `username@${newDomain}` : 'Enter username to see preview');
     
     useEffect(() => {
         if(userProfile?.name) {
@@ -218,12 +225,14 @@ function VerificationArea() {
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                    Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
-                                        <div className="space-y-2 mt-4 text-foreground">
-                                            <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
-                                            <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
-                                            <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
-                                            <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
+                                        <div>
+                                            Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
+                                            <div className="space-y-2 mt-4 text-foreground">
+                                                <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
+                                                <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
+                                                <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
+                                                <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
+                                            </div>
                                         </div>
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>

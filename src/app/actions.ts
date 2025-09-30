@@ -2178,7 +2178,7 @@ export async function verifyUserEmail(
     // 3. Create and verify domain (if owner and not already created)
     if (isOwner && !newDomain) {
         const orgDomainName = orgData.domain.split('.')[0];
-        newDomain = `${orgDomainName}.${process.env.PARENT_DOMAIN}`;
+        newDomain = `${orgDomainName}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
         
         // Step 1: Add domain in Azure AD
         await addDomain(client, newDomain);
@@ -2231,7 +2231,14 @@ export async function verifyUserEmail(
                     await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
                     break;
                 case "cname":
-                    await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
+                    // Add required CNAME records for Outlook and Enterprise registration
+                    if (rec.label === 'autodiscover') {
+                        await addDnsRecordToCloudflare("CNAME", rec.label, 'autodiscover.outlook.com');
+                    } else if (rec.label === 'enterpriseregistration') {
+                        await addDnsRecordToCloudflare("CNAME", rec.label, 'enterpriseregistration.windows.net');
+                    } else {
+                        await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
+                    }
                     break;
                 case "srv":
                     await addDnsRecordToCloudflare("SRV", rec.label, undefined, undefined, {
