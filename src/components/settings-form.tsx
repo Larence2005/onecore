@@ -18,7 +18,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useSettings } from "@/providers/settings-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
 import { CheckCircle, AlertTriangle, RefreshCw, Info, Check, ShieldCheck } from "lucide-react";
@@ -80,10 +79,8 @@ function VerificationArea() {
     const usernameValue = form.watch('username');
     const displayNameValue = form.watch('displayName');
     const passwordValue = form.watch('password');
-    const newDomain = userProfile?.organizationDomain
-            ? `${userProfile.organizationDomain.split('.')[0]}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`
-            : `your-company.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
-    const newEmailPreview = usernameValue ? `${usernameValue}@${newDomain}` : `username@${newDomain}`;
+    const newDomain = userProfile?.newDomain;
+    const newEmailPreview = usernameValue && newDomain ? `${usernameValue}@${newDomain}` : `username@${newDomain}`;
     
     useEffect(() => {
         if(userProfile?.name) {
@@ -223,10 +220,10 @@ function VerificationArea() {
                                     <AlertDialogDescription>
                                     Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
                                         <div className="space-y-2 mt-4 text-foreground">
-                                            <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
-                                            <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
-                                            <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
-                                            <p><strong className="font-medium">Password:</strong> {passwordValue}</p>
+                                            <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
+                                            <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
+                                            <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
+                                            <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
                                         </div>
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
