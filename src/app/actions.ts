@@ -323,19 +323,40 @@ export async function createTicket(
                 const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
 
                 const notificationSubject = `Ticket Created: #${ticketNumber} - ${title}`;
-                const notificationBody = `
-                    <p>Hello ${author.name},</p>
-                    <p>Your ticket with the subject "${title}" has been created successfully.</p>
-                    <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
-                    <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
-                    <br>
-                    <p>This is an automated notification. Replies to this email are not monitored.</p>
-                `;
-                await sendEmailAction(organizationId, {
-                    recipient: author.email,
-                    subject: notificationSubject,
-                    body: notificationBody,
-                });
+                let notificationBody: string;
+
+                // Check if the author is a client
+                const isClient = userProfileDoc.exists() && userProfileDoc.data().isClient;
+
+                if (isClient) {
+                    // For clients, send the email to the support inbox and CC the client
+                    notificationBody = `
+                        <p>A new ticket has been created by ${author.name} (${author.email}).</p>
+                        <hr>
+                        ${body}
+                    `;
+                    await sendEmailAction(organizationId, {
+                        recipient: settings.userId, // Send TO the support email
+                        cc: author.email, // CC the client
+                        subject: notificationSubject,
+                        body: notificationBody,
+                    });
+                } else {
+                    // For agents, send a confirmation TO them
+                    notificationBody = `
+                        <p>Hello ${author.name},</p>
+                        <p>Your ticket with the subject "${title}" has been created successfully.</p>
+                        <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
+                        <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                        <br>
+                        <p>This is an automated notification. Replies to this email are not monitored.</p>
+                    `;
+                    await sendEmailAction(organizationId, {
+                        recipient: author.email,
+                        subject: notificationSubject,
+                        body: notificationBody,
+                    });
+                }
             } catch(e) {
                 console.error("Failed to send ticket creation notification for manually created ticket:", e);
                 // Don't fail the whole operation if email fails
@@ -810,7 +831,7 @@ export async function replyToEmailAction(
     comment: string,
     conversationId: string | undefined,
     attachments: NewAttachment[],
-    currentUser: { name: string; email: string },
+    currentUser: { name: string; email: string, isClient: boolean },
     to: string,
     cc: string | undefined,
     bcc: string | undefined
@@ -825,11 +846,17 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
+    // If the current user is a client, add their email to the CC
+    const finalCc = new Set<string>((cc || '').split(/[,;]\s*/).filter(Boolean));
+    if (currentUser.isClient) {
+        finalCc.add(currentUser.email);
+    }
+    
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
             toRecipients: parseRecipients(to), // 'to' is now part of the payload
-            ccRecipients: parseRecipients(cc),
+            ccRecipients: parseRecipients(Array.from(finalCc).join(', ')),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
                 '@odata.type': '#microsoft.graph.fileAttachment',
@@ -872,7 +899,7 @@ export async function replyToEmailAction(
             receivedDateTime: new Date().toISOString(),
             bodyPreview: comment.substring(0, 255),
             toRecipients: parseRecipients(to),
-            ccRecipients: parseRecipients(cc),
+            ccRecipients: parseRecipients(Array.from(finalCc).join(', ')),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(a => ({...a, id: `optimistic-att-${Date.now()}`, size: 0 })),
         };
