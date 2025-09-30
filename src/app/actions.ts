@@ -329,7 +329,7 @@ export async function createTicket(
                     <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
                     <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
                     <br>
-                    <p>You can also reply to this email thread to add comments to your ticket.</p>
+                    <p>This is an automated notification. Replies to this email are not monitored.</p>
                 `;
                 await sendEmailAction(organizationId, {
                     recipient: author.email,
@@ -466,7 +466,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                             <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
                             <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
                             <br>
-                            <p>You can also reply to this email thread to add comments to your ticket.</p>
+                            <p>This is an automated notification. Replies to this email are not monitored.</p>
                         `;
 
                         await sendEmailAction(organizationId, {
