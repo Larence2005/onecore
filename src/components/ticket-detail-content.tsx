@@ -505,6 +505,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                     contentBytes: await convertFileToBase64(file),
                 }))
             );
+
+            const isClientReplying = userProfile.isClient === true;
+            let finalCc = replyCc;
+
+            if (isClientReplying) {
+                // If client is replying from webapp, add them to CC
+                const ccSet = new Set((replyCc || '').split(/[,;]\s*/).filter(Boolean));
+                ccSet.add(user.email);
+                finalCc = Array.from(ccSet).join(', ');
+            }
             
             // Immediately hide reply form and show toast
             setReplyingToMessageId(null);
@@ -517,9 +527,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 replyContent, 
                 email?.conversationId, 
                 attachmentPayloads,
-                { name: userProfile.name || user.email, email: user.email },
+                { name: userProfile.name || user.email, email: user.email, isClient: isClientReplying },
                 replyTo,
-                replyCc, 
+                finalCc, 
                 replyBcc
             );
 
@@ -608,13 +618,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setIsAddingNote(false);
             setReplyContent('');
 
+            const isClientReplying = userProfile.isClient === true;
             const ccRecipients = new Set<string>();
-            // Only add current user to CC if they are not the admin
-            if (user.uid !== userProfile.organizationOwnerUid) {
+            // If client is replying, CC themself
+            if (isClientReplying) {
                 ccRecipients.add(user.email);
-            }
-            if (process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL) {
-                ccRecipients.delete(process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL.toLowerCase());
             }
 
             setReplyCc(Array.from(ccRecipients).join(', '));
@@ -635,9 +643,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
-            // Add current agent to CC if they are not the owner
-            if (user.uid !== userProfile.organizationOwnerUid) {
+            const isClientReplying = userProfile.isClient === true;
+
+            // If client is replying, add them to CC list
+            if (isClientReplying) {
                 allRecipients.add(user.email.toLowerCase());
+            } else { // If agent is replying, add them to CC list
+                 allRecipients.add(user.email.toLowerCase());
             }
 
             // Remove the original sender from the CC list as they are already in 'To'
@@ -645,10 +657,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
     
-            // Explicitly remove the admin email (sender email from settings) from the CC list
-            if (process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL) {
-                allRecipients.delete(process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL.toLowerCase());
-            }
+            // Remove the current user from the CC list as they are the one sending
+            allRecipients.delete(user.email.toLowerCase());
 
             setReplyCc(Array.from(allRecipients).join(', '));
             setReplyBcc('');
@@ -685,9 +695,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             // Only add current user to CC if they are not the admin
             if (user.uid !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email);
-            }
-             if (process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL) {
-                ccRecipients.delete(process.env.NEXT_PUBLIC_NOTIFICATION_EMAIL.toLowerCase());
             }
             setForwardCc(Array.from(ccRecipients).join(', '));
             setForwardBcc('');
@@ -1494,3 +1501,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    

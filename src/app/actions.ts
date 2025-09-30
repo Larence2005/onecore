@@ -167,8 +167,8 @@ async function getAPISettings(organizationId: string): Promise<Settings | null> 
     
     const owner = members.find(m => m.uid === ownerUid);
 
-    if (!owner || !owner.email) {
-        console.error(`Admin for organization ${organizationId} not found or has no email.`);
+    if (!owner || !owner.email || owner.status !== 'Verified') {
+        console.error(`Verified admin for organization ${organizationId} not found or has no email.`);
         return null;
     }
 
@@ -313,7 +313,7 @@ export async function createTicket(
             user: author.email || 'System',
         });
         
-        // Send notification email
+        // Send email for the ticket creation
         const settings = await getAPISettings(organizationId);
         if (settings) {
             try {
@@ -322,15 +322,16 @@ export async function createTicket(
                 const protocol = headersList.get('x-forwarded-proto') || 'http';
                 const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
 
-                const notificationSubject = `Ticket Created: #${ticketNumber} - ${title}`;
-                let notificationBody: string;
+                const emailSubject = `[Ticket #${ticketNumber}] ${title}`;
+                let emailBody: string;
 
                 // Check if the author is a client
                 const isClient = userProfileDoc.exists() && userProfileDoc.data().isClient;
 
                 if (isClient) {
-                    // For clients, send the email to the support inbox and CC the client
-                    notificationBody = `
+                    // For clients, send the email TO the support inbox and CC the client.
+                    // This makes it act like they sent it from their email client.
+                    emailBody = `
                         <p>A new ticket has been created by ${author.name} (${author.email}).</p>
                         <hr>
                         ${body}
@@ -338,12 +339,12 @@ export async function createTicket(
                     await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
                         cc: author.email, // CC the client
-                        subject: notificationSubject,
-                        body: notificationBody,
+                        subject: emailSubject,
+                        body: emailBody,
                     });
                 } else {
-                    // For agents, send a confirmation TO them
-                    notificationBody = `
+                    // For agents creating a ticket, send a confirmation notification TO them.
+                    emailBody = `
                         <p>Hello ${author.name},</p>
                         <p>Your ticket with the subject "${title}" has been created successfully.</p>
                         <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
@@ -353,12 +354,12 @@ export async function createTicket(
                     `;
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
-                        subject: notificationSubject,
-                        body: notificationBody,
+                        subject: `Ticket Created: #${ticketNumber} - ${title}`,
+                        body: emailBody,
                     });
                 }
             } catch(e) {
-                console.error("Failed to send ticket creation notification for manually created ticket:", e);
+                console.error("Failed to send ticket creation email for manually created ticket:", e);
                 // Don't fail the whole operation if email fails
             }
         }
@@ -831,7 +832,7 @@ export async function replyToEmailAction(
     comment: string,
     conversationId: string | undefined,
     attachments: NewAttachment[],
-    currentUser: { name: string; email: string, isClient: boolean },
+    currentUser: { name: string; email: string; isClient: boolean },
     to: string,
     cc: string | undefined,
     bcc: string | undefined
@@ -846,17 +847,11 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
-    // If the current user is a client, add their email to the CC
-    const finalCc = new Set<string>((cc || '').split(/[,;]\s*/).filter(Boolean));
-    if (currentUser.isClient) {
-        finalCc.add(currentUser.email);
-    }
-    
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
             toRecipients: parseRecipients(to), // 'to' is now part of the payload
-            ccRecipients: parseRecipients(Array.from(finalCc).join(', ')),
+            ccRecipients: parseRecipients(cc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
                 '@odata.type': '#microsoft.graph.fileAttachment',
@@ -899,7 +894,7 @@ export async function replyToEmailAction(
             receivedDateTime: new Date().toISOString(),
             bodyPreview: comment.substring(0, 255),
             toRecipients: parseRecipients(to),
-            ccRecipients: parseRecipients(Array.from(finalCc).join(', ')),
+            ccRecipients: parseRecipients(cc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(a => ({...a, id: `optimistic-att-${Date.now()}`, size: 0 })),
         };
@@ -2369,5 +2364,8 @@ export async function verifyUserEmail(
     
 
     
+
+    
+
 
     
