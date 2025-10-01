@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -220,7 +221,12 @@ function VerificationArea() {
                         <div className="flex justify-end">
                             <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                                 <Button onClick={handleVerifyClick} disabled={isVerifying}>
-                                    {isVerifying ? 'Verifying...' : 'Verify and Create Email'}
+                                    {isVerifying ? (
+                                        <>
+                                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                            Verifying...
+                                        </>
+                                    ) : 'Verify and Create Email'}
                                 </Button>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
