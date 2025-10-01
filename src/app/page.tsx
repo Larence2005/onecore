@@ -187,11 +187,6 @@ export default function LoginPage() {
                     Create Admin Account
                 </Link>
             </p>
-            <p className="mt-2">
-                <Link href="/member-signup" className="font-medium text-primary hover:underline">
-                    Invited to an organization? Register here
-                </Link>
-            </p>
           </div>
         </div>
       </div>
