@@ -2076,9 +2076,8 @@ async function recordExistsInCloudflare(type: string, name: string) {
 async function addDnsRecordToCloudflare(
   type: string,
   cfName: string,
-  content?: string,
+  content: string,
   priority?: number,
-  data?: any
 ) {
   if (await recordExistsInCloudflare(type, cfName)) {
     console.log(`⚠️ Record already exists: [${type}] ${cfName}. Skipping.`);
@@ -2086,20 +2085,14 @@ async function addDnsRecordToCloudflare(
   }
 
   const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records`;
-  const payload: any = { type, name: cfName, ttl: 3600 };
-  
-  if (type === 'CNAME' || type === 'TXT') {
-      payload.content = content;
-  } else if (type === 'MX') {
-      payload.content = content;
-      payload.priority = priority;
-  } else if (data) {
-    payload.data = data;
+  const payload: any = { type, name: cfName, ttl: 3600, content };
+
+  if (priority !== undefined) {
+    payload.priority = priority;
   }
 
   const headers = {
     Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-    "Content-Type": "application/json",
     "Content-Type": "application/json",
   };
 
@@ -2176,7 +2169,6 @@ export async function verifyUserEmail(
     // 2. Initialize Graph Client
     const client = getGraphClient();
     let newDomain = orgData.newDomain;
-    let serviceRecords: any[] = [];
 
     // 3. Create and verify domain (if owner and not already created)
     if (isOwner && !newDomain) {
@@ -2242,9 +2234,6 @@ export async function verifyUserEmail(
     if (!newDomain) {
         throw new Error("Organization domain has not been created by the admin yet.");
     }
-    
-    // Get service records BEFORE adding them
-    serviceRecords = await getDomainServiceRecords(client, newDomain);
 
     // 4. Create user in Microsoft 365
     const newUser = await createGraphUser(client, displayName, username, newDomain, password);
@@ -2261,15 +2250,17 @@ export async function verifyUserEmail(
         console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
     }
     
-    // 7. Add DNS Records for Email
+    // 7. Add DNS Records for Email (strictly following user's snippet)
     console.log("Adding essential DNS records for email...");
+    const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
         const type = rec.recordType.toLowerCase();
 
         if (type === "mx") {
             await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
         } else if (type === "cname" && rec.label.toLowerCase() === "autodiscover") {
-            await addDnsRecordToCloudflare("CNAME", rec.label, rec.pointsTo);
+            const cname = rec.label + "." + newDomain;
+            await addDnsRecordToCloudflare("CNAME", cname, rec.pointsTo);
         } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
             await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
         } else {
@@ -2374,6 +2365,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
