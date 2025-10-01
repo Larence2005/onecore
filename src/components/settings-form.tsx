@@ -227,12 +227,8 @@ function VerificationArea() {
                         <div className="flex justify-end">
                             <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                                 <Button onClick={handleVerifyClick} disabled={isVerifying}>
-                                    {isVerifying ? (
-                                        <>
-                                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                            Verifying...
-                                        </>
-                                    ) : 'Verify and Create Email'}
+                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin hidden" />
+                                    Verify and Create Email
                                 </Button>
                                 <AlertDialogContent>
                                     {isVerifying ? (
@@ -248,16 +244,14 @@ function VerificationArea() {
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    <span>
-                                                        Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
-                                                    </span>
-                                                    <div className="space-y-2 mt-4 text-foreground text-left">
-                                                        <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
-                                                        <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
-                                                        <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
-                                                        <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
-                                                    </div>
+                                                    Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
                                                 </AlertDialogDescription>
+                                                <div className="space-y-2 pt-4 text-foreground text-left text-sm">
+                                                    <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
+                                                    <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
+                                                    <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
+                                                    <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
+                                                </div>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
@@ -389,5 +383,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-    
