@@ -1015,13 +1015,32 @@ export async function forwardEmailAction(
     return { success: true };
 }
 
+async function incrementEmployeeCount(organizationId: string, companyId: string) {
+    const companyRef = doc(db, 'organizations', organizationId, 'companies', companyId);
+    await updateDoc(companyRef, {
+        employeeCount: increment(1)
+    });
+}
+
+async function decrementEmployeeCount(organizationId: string, companyId: string) {
+    const companyRef = doc(db, 'organizations', organizationId, 'companies', companyId);
+    await updateDoc(companyRef, {
+        employeeCount: increment(-1)
+    });
+}
+
 
 export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Omit<Employee, 'status' | 'Verified'>) {
     if (!organizationId || !companyId || !employee.email) {
         return; // Or throw an error
     }
     const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', employee.email);
-    // Use set with merge to create or update, preventing duplicates based on email doc ID
+    
+    const docSnap = await getDoc(employeeDocRef);
+    if(docSnap.exists()) {
+        throw new Error("An employee with this email already exists in this company.");
+    }
+    
     await setDoc(employeeDocRef, { 
         name: employee.name, 
         email: employee.email,
@@ -1029,10 +1048,13 @@ export async function addEmployeeToCompany(organizationId: string, companyId: st
         mobile: employee.mobile || '',
         landline: employee.landline || '',
         status: 'Uninvited', // Set default status
-    }, { merge: true });
+    });
     
-    // Invalidate company-specific employee cache
+    await incrementEmployeeCount(organizationId, companyId);
+    
+    // Invalidate company-specific employee cache and counts
     companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
 }
 
 export async function getCompanyEmployees(organizationId: string, companyId: string): Promise<Employee[]> {
@@ -1124,9 +1146,12 @@ export async function deleteCompanyEmployee(organizationId: string, companyId: s
                 console.error(`Failed to delete user from Firebase Auth with UID: ${uid}. They might have already been deleted.`, error);
             }
         }
+        
+        await decrementEmployeeCount(organizationId, companyId);
     }
 
     companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
 
     return { success: true };
 }
@@ -1760,7 +1785,8 @@ export async function addCompany(organizationId: string, companyName: string): P
             address: '',
             mobile: '',
             landline: '',
-            website: ''
+            website: '',
+            employeeCount: 0,
         });
 
         // Invalidate company list caches
@@ -1786,12 +1812,8 @@ export async function getCompanies(organizationId: string): Promise<Company[]> {
     
     const companies = companiesSnapshot.docs.map(doc => ({
         id: doc.id,
-        name: doc.data().name,
-        address: doc.data().address,
-        mobile: doc.data().mobile,
-        landline: doc.data().landline,
-        website: doc.data().website,
-    }));
+        ...doc.data(),
+    }) as Company);
     
     companiesCache.set(cacheKey, companies);
     return companies;
@@ -1825,17 +1847,13 @@ export async function getCompanyWithTicketAndEmployeeCount(organizationId: strin
         }
     });
 
-    // Get employee counts
-    const companiesWithCounts = await Promise.all(companies.map(async (company) => {
-        const employeesCollectionRef = collection(db, 'organizations', organizationId, 'companies', company.id, 'employees');
-        const employeesSnapshot = await getDocs(employeesCollectionRef);
+    const companiesWithCounts = companies.map(company => {
         return {
             ...company,
             ticketCount: ticketCounts.get(company.id) || 0,
             unresolvedTicketCount: unresolvedTicketCounts.get(company.id) || 0,
-            employeeCount: employeesSnapshot.size,
         };
-    }));
+    });
 
     companiesCache.set(cacheKey, companiesWithCounts);
     return companiesWithCounts;
@@ -1878,7 +1896,13 @@ export async function updateCompany(
         throw new Error("Organization ID and Company ID are required.");
     }
     const companyDocRef = doc(db, 'organizations', organizationId, 'companies', companyId);
-    await updateDoc(companyDocRef, data);
+    
+    const updateData: any = {...data};
+    if (data.name) {
+        updateData.name_lowercase = data.name.trim().toLowerCase();
+    }
+
+    await updateDoc(companyDocRef, updateData);
 
     // Invalidate company caches
     companiesCache.invalidate(`company_details:${organizationId}:${companyId}`);
@@ -2492,6 +2516,9 @@ export async function verifyUserEmail(
 
 
 
+
+
+    
 
 
     
