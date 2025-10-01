@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -82,6 +81,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     
     const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [verifyingEmployee, setVerifyingEmployee] = useState<Employee | null>(null);
     const [isSendingVerification, setIsSendingVerification] = useState<string | null>(null);
 
 
@@ -304,19 +304,20 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         }
     };
     
-    const handleSendVerification = async (email: string, name: string) => {
-        if (!userProfile?.organizationId || !company?.id) return;
+    const handleSendVerification = async (employee: Employee | null) => {
+        if (!userProfile?.organizationId || !company?.id || !employee) return;
 
-        setIsSendingVerification(email);
+        setIsSendingVerification(employee.email);
         try {
-            await sendEmployeeVerificationEmail(userProfile.organizationId, company.id, email, name);
-            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${email}.` });
+            await sendEmployeeVerificationEmail(userProfile.organizationId, company.id, employee.email, employee.name);
+            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${employee.email}.` });
             await fetchCompanyData();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
             toast({ variant: 'destructive', title: 'Failed to Send', description: errorMessage });
         } finally {
             setIsSendingVerification(null);
+            setVerifyingEmployee(null);
         }
     };
 
@@ -436,21 +437,20 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const renderEmployeeStatusBadge = (status: Employee['status']) => {
         switch (status) {
             case 'Verified':
-            case 'Registered':
                 return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
             case 'Invited':
                 return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
             case 'Uninvited':
                 return <Badge variant="destructive">Uninvited</Badge>;
             default:
-                return <Badge variant="outline">Unknown</Badge>;
+                return <Badge variant="outline">{status || 'Unknown'}</Badge>;
         }
     };
 
 
     return (
         <SidebarProvider>
-            <AlertDialog open={!!deletingEmployee} onOpenChange={(isOpen) => !isOpen && setDeletingEmployee(null)}>
+            <AlertDialog>
                 <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
                     <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
                         <div className="flex-grow flex flex-col">
@@ -720,20 +720,22 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                             <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
                                                                             {isOwner && (
                                                                                 <TableCell className="flex items-center justify-end gap-2">
-                                                                                    {employee.status !== 'Verified' && employee.status !== 'Registered' && (
+                                                                                    {employee.status !== 'Verified' && (
                                                                                         <TooltipProvider>
                                                                                             <Tooltip>
-                                                                                                <TooltipTrigger asChild>
-                                                                                                    <Button 
-                                                                                                        variant="ghost" 
-                                                                                                        size="icon" 
-                                                                                                        className="h-8 w-8"
-                                                                                                        onClick={() => handleSendVerification(employee.email, employee.name)} 
-                                                                                                        disabled={isSendingVerification === employee.email}
-                                                                                                    >
-                                                                                                        {isSendingVerification === employee.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                                                    </Button>
-                                                                                                </TooltipTrigger>
+                                                                                                <AlertDialogTrigger asChild>
+                                                                                                    <TooltipTrigger asChild>
+                                                                                                        <Button 
+                                                                                                            variant="ghost" 
+                                                                                                            size="icon" 
+                                                                                                            className="h-8 w-8"
+                                                                                                            onClick={() => setVerifyingEmployee(employee)}
+                                                                                                            disabled={isSendingVerification === employee.email}
+                                                                                                        >
+                                                                                                            {isSendingVerification === employee.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                                                        </Button>
+                                                                                                    </TooltipTrigger>
+                                                                                                </AlertDialogTrigger>
                                                                                                 <TooltipContent>
                                                                                                     <p>{employee.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
                                                                                                 </TooltipContent>
@@ -849,10 +851,25 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => setDeletingEmployee(null)}>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                             {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                             Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will send an invitation to {verifyingEmployee?.name} at {verifyingEmployee?.email}. They will be able to register and start using the ticketing system.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setVerifyingEmployee(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleSendVerification(verifyingEmployee)} disabled={isSendingVerification === verifyingEmployee?.email}>
+                            {isSendingVerification === verifyingEmployee?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Send Invite
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

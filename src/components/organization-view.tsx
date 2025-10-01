@@ -73,6 +73,7 @@ export function OrganizationView() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [deletingMember, setDeletingMember] = useState<OrganizationMember | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [verifyingMember, setVerifyingMember] = useState<OrganizationMember | null>(null);
     const [isSendingVerification, setIsSendingVerification] = useState<string | null>(null);
     
     const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
@@ -219,19 +220,20 @@ export function OrganizationView() {
         }
     };
     
-    const handleSendVerification = async (email: string, name: string) => {
-        if (!userProfile?.organizationId) return;
+    const handleSendVerification = async (member: OrganizationMember | null) => {
+        if (!userProfile?.organizationId || !member) return;
 
-        setIsSendingVerification(email);
+        setIsSendingVerification(member.email);
         try {
-            await sendVerificationEmail(userProfile.organizationId, email, name);
-            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${email}.` });
+            await sendVerificationEmail(userProfile.organizationId, member.email, member.name);
+            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${member.email}.` });
             await fetchMembers(); // Re-fetch to get updated verificationSent status
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
             toast({ variant: 'destructive', title: 'Failed to Send', description: errorMessage });
         } finally {
             setIsSendingVerification(null);
+            setVerifyingMember(null);
         }
     };
 
@@ -308,7 +310,7 @@ export function OrganizationView() {
             case 'Not Verified':
                 return <Badge variant="destructive">Not Verified</Badge>;
             default:
-                return <Badge variant="outline">Unknown</Badge>;
+                return <Badge variant="outline">{status || 'Unknown'}</Badge>;
         }
     };
 
@@ -420,17 +422,19 @@ export function OrganizationView() {
                                                     {(member.status === 'Uninvited' || member.status === 'Invited') && !memberIsOwner && (
                                                         <TooltipProvider>
                                                             <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button 
-                                                                        variant="ghost" 
-                                                                        size="icon" 
-                                                                        className="h-8 w-8"
-                                                                        onClick={() => handleSendVerification(member.email, member.name)} 
-                                                                        disabled={isSendingVerification === member.email}
-                                                                    >
-                                                                        {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                    </Button>
-                                                                </TooltipTrigger>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-8 w-8"
+                                                                            onClick={() => setVerifyingMember(member)}
+                                                                            disabled={isSendingVerification === member.email}
+                                                                        >
+                                                                            {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                </AlertDialogTrigger>
                                                                 <TooltipContent>
                                                                     <p>{member.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
                                                                 </TooltipContent>
@@ -623,6 +627,21 @@ export function OrganizationView() {
                     <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                         {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                         Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will send an invitation to {verifyingMember?.name} at {verifyingMember?.email}. They will be able to register and start using the ticketing system.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setVerifyingMember(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleSendVerification(verifyingMember)} disabled={isSendingVerification === verifyingMember?.email}>
+                        {isSendingVerification === verifyingMember?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                        Send Invite
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
