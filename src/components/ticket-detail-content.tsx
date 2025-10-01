@@ -610,10 +610,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
         message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
-        // Don't CC the person we are replying to
+        // Don't CC the person we are replying to or ourself
         if (message.senderEmail) {
             allRecipients.delete(message.senderEmail.toLowerCase());
         }
+        allRecipients.delete(user.email.toLowerCase());
 
         const isOwner = user.uid === userProfile.organizationOwnerUid;
         const isAgent = !isOwner && !userProfile.isClient;
@@ -623,6 +624,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             allRecipients.add(user.email.toLowerCase());
         } else if (isOwner) {
             allRecipients.delete(user.email.toLowerCase());
+        }
+        
+        // Add current user to CC if not admin
+        if (!isOwner) {
+            allRecipients.add(user.email.toLowerCase());
         }
 
         setReplyCc(Array.from(allRecipients).join(', '));
