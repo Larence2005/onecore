@@ -209,7 +209,7 @@ export function OrganizationView() {
         setIsCreating(true);
         try {
             const userName = user.displayName || user.email;
-            await createOrganization(organizationName, user.uid, userName, user.email);
+            await createOrganization(organizationName, userProfile?.organizationDomain || '', user.uid, userName, user.email);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
             await fetchUserProfile(user);
         } catch (error) {
@@ -316,7 +316,7 @@ export function OrganizationView() {
 
 
     return (
-        <AlertDialog>
+        <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex justify-between items-start">
@@ -422,46 +422,80 @@ export function OrganizationView() {
                                                     {(member.status === 'Uninvited' || member.status === 'Invited') && !memberIsOwner && (
                                                         <TooltipProvider>
                                                             <Tooltip>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <TooltipTrigger asChild>
-                                                                        <Button 
-                                                                            variant="ghost" 
-                                                                            size="icon" 
-                                                                            className="h-8 w-8"
-                                                                            onClick={() => setVerifyingMember(member)}
-                                                                            disabled={isSendingVerification === member.email}
-                                                                        >
-                                                                            {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                        </Button>
-                                                                    </TooltipTrigger>
-                                                                </AlertDialogTrigger>
-                                                                <TooltipContent>
-                                                                    <p>{member.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
-                                                                </TooltipContent>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Button 
+                                                                                variant="ghost" 
+                                                                                size="icon" 
+                                                                                className="h-8 w-8"
+                                                                                onClick={() => setVerifyingMember(member)}
+                                                                                disabled={isSendingVerification === member.email}
+                                                                            >
+                                                                                {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                            </Button>
+                                                                        </TooltipTrigger>
+                                                                    </AlertDialogTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{member.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
+                                                                    </TooltipContent>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                This will send an invitation to {verifyingMember?.name} at {verifyingMember?.email}. They will be able to register and start using the ticketing system.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel onClick={() => setVerifyingMember(null)}>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleSendVerification(verifyingMember)} disabled={isSendingVerification === verifyingMember?.email}>
+                                                                                {isSendingVerification === verifyingMember?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                Send Invite
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
                                                             </Tooltip>
                                                         </TooltipProvider>
                                                     )}
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                                                                <Pencil className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            {!memberIsOwner && (
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(member); }} className="text-destructive focus:text-destructive">
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                    <AlertDialog>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    Edit
+                                                                </DropdownMenuItem>
+                                                                {!memberIsOwner && (
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(member); }} className="text-destructive focus:text-destructive">
+                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                            Delete
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                    {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                    Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </TableCell>
                                             )}
                                         </TableRow>
@@ -614,37 +648,6 @@ export function OrganizationView() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                        {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                        Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will send an invitation to {verifyingMember?.name} at {verifyingMember?.email}. They will be able to register and start using the ticketing system.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setVerifyingMember(null)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleSendVerification(verifyingMember)} disabled={isSendingVerification === verifyingMember?.email}>
-                        {isSendingVerification === verifyingMember?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                        Send Invite
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        </>
     );
 }
