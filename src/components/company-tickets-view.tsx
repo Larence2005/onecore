@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -739,42 +740,25 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                                     </TooltipProvider>
                                                                                 )}
 
-                                                                                <AlertDialog open={deletingEmployee?.email === employee.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingEmployee(null); }}>
-                                                                                    <DropdownMenu>
-                                                                                        <DropdownMenuTrigger asChild>
-                                                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                                            </Button>
-                                                                                        </DropdownMenuTrigger>
-                                                                                        <DropdownMenuContent align="end">
-                                                                                            <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
-                                                                                                <Pencil className="mr-2 h-4 w-4" />
-                                                                                                Edit
-                                                                                            </DropdownMenuItem>
-                                                                                            <AlertDialogTrigger asChild>
-                                                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                                                    Delete
-                                                                                                </DropdownMenuItem>
-                                                                                            </AlertDialogTrigger>
-                                                                                        </DropdownMenuContent>
-                                                                                    </DropdownMenu>
-                                                                                    <AlertDialogContent>
-                                                                                        <AlertDialogHeader>
-                                                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                                            <AlertDialogDescription>
-                                                                                                This action will delete {deletingEmployee?.name} and cannot be undone.
-                                                                                            </AlertDialogDescription>
-                                                                                        </AlertDialogHeader>
-                                                                                        <AlertDialogFooter>
-                                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                                            <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                <DropdownMenu>
+                                                                                    <DropdownMenuTrigger asChild>
+                                                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                                            <MoreHorizontal className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </DropdownMenuTrigger>
+                                                                                    <DropdownMenuContent align="end">
+                                                                                        <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
+                                                                                            <Pencil className="mr-2 h-4 w-4" />
+                                                                                            Edit
+                                                                                        </DropdownMenuItem>
+                                                                                        <AlertDialogTrigger asChild>
+                                                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(employee); }} className="text-destructive focus:text-destructive">
+                                                                                                <Trash2 className="mr-2 h-4 w-4" />
                                                                                                 Delete
-                                                                                            </AlertDialogAction>
-                                                                                        </AlertDialogFooter>
-                                                                                    </AlertDialogContent>
-                                                                                </AlertDialog>
+                                                                                            </DropdownMenuItem>
+                                                                                        </AlertDialogTrigger>
+                                                                                    </DropdownMenuContent>
+                                                                                </DropdownMenu>
                                                                             </TableCell>
                                                                         )}
                                                                     </TableRow>
@@ -856,6 +840,23 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={!!deletingEmployee} onOpenChange={(isOpen) => !isOpen && setDeletingEmployee(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action will delete {deletingEmployee?.name} and cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </SidebarProvider>
     );
 }

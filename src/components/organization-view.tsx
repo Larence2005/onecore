@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -311,337 +312,340 @@ export function OrganizationView() {
 
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
-            <div className="lg:col-span-2 space-y-6">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-2xl font-bold">{userProfile.organizationName || 'Your Organization'}</h1>
-                        <p className="text-muted-foreground">
-                            Invite and manage your organization's agents.
-                        </p>
-                    </div>
-                    {isOwner && (
-                        <div className="flex items-center gap-2">
-                            <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="default" size="sm">
-                                        <UserPlus className="mr-2 h-4 w-4" />
-                                        Add Agent
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-2xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Agent</DialogTitle>
-                                        <DialogDescription>
-                                            Invite a new agent to your organization. They will be able to sign up with their email.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="new-member-name">Name</Label>
-                                            <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="new-member-email">Email</Label>
-                                            <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="new-member-mobile">Mobile Number</Label>
-                                            <Input id="new-member-mobile" value={newMemberMobile} onChange={(e) => setNewMemberMobile(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="new-member-landline">Telephone Number</Label>
-                                            <Input id="new-member-landline" value={newMemberLandline} onChange={(e) => setNewMemberLandline(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2 sm:col-span-2">
-                                            <Label htmlFor="new-member-address">Address</Label>
-                                            <Textarea id="new-member-address" value={newMemberAddress} onChange={(e) => setNewMemberAddress(e.target.value)} placeholder="123 Main St..." />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button type="button" variant="secondary" onClick={resetAddMemberForm}>Cancel</Button>
-                                        </DialogClose>
-                                        <Button onClick={handleAddMember} disabled={isAddingMember}>
-                                            {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+        <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h1 className="text-2xl font-bold">{userProfile.organizationName || 'Your Organization'}</h1>
+                            <p className="text-muted-foreground">
+                                Invite and manage your organization's agents.
+                            </p>
+                        </div>
+                        {isOwner && (
+                            <div className="flex items-center gap-2">
+                                <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="default" size="sm">
+                                            <UserPlus className="mr-2 h-4 w-4" />
                                             Add Agent
                                         </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Add New Agent</DialogTitle>
+                                            <DialogDescription>
+                                                Invite a new agent to your organization. They will be able to sign up with their email.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="new-member-name">Name</Label>
+                                                <Input id="new-member-name" value={newMemberName} onChange={(e) => setNewMemberName(e.target.value)} placeholder="John Doe" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="new-member-email">Email</Label>
+                                                <Input id="new-member-email" type="email" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} placeholder="john.d@example.com" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="new-member-mobile">Mobile Number</Label>
+                                                <Input id="new-member-mobile" value={newMemberMobile} onChange={(e) => setNewMemberMobile(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="new-member-landline">Telephone Number</Label>
+                                                <Input id="new-member-landline" value={newMemberLandline} onChange={(e) => setNewMemberLandline(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label htmlFor="new-member-address">Address</Label>
+                                                <Textarea id="new-member-address" value={newMemberAddress} onChange={(e) => setNewMemberAddress(e.target.value)} placeholder="123 Main St..." />
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <DialogClose asChild>
+                                                <Button type="button" variant="secondary" onClick={resetAddMemberForm}>Cancel</Button>
+                                            </DialogClose>
+                                            <Button onClick={handleAddMember} disabled={isAddingMember}>
+                                                {isAddingMember && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                Add Agent
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
+                                    const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
+                                    return (
+                                        <TableRow key={member.email}>
+                                            <TableCell className="font-medium">
+                                                <Link href={`/organization/members/${encodeURIComponent(member.email)}`} className="hover:underline">
+                                                    {member.name}
+                                                </Link>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                                            <TableCell>
+                                                {memberIsOwner ? (
+                                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
+                                                        <Crown className="mr-1 h-3 w-3" />
+                                                        Admin
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline">
+                                                        <UserIcon className="mr-1 h-3 w-3" />
+                                                        Agent
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {renderStatusBadge(member.status)}
+                                            </TableCell>
+                                            {isOwner && (
+                                                <TableCell className="flex items-center gap-2">
+                                                    {member.status === 'Uninvited' && (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="icon" 
+                                                                        className="h-8 w-8"
+                                                                        onClick={() => handleSendVerification(member.email, member.name)} 
+                                                                        disabled={isSendingVerification === member.email}
+                                                                    >
+                                                                        {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Send verification email</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )}
+                                                    {member.status === 'Invited' && (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="icon" 
+                                                                        className="h-8 w-8"
+                                                                        onClick={() => handleSendVerification(member.email, member.name)} 
+                                                                        disabled={isSendingVerification === member.email}
+                                                                    >
+                                                                        {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Resend verification email</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                                                                <Pencil className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            {!memberIsOwner && (
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(member); }} className="text-destructive focus:text-destructive">
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    );
+                                }) : (
+                                    <TableRow>
+                                        <TableCell colSpan={isOwner ? 5 : 4} className="h-24 text-center">
+                                            No agents found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-4">
+                            <div className="text-sm text-muted-foreground">
+                                Showing {Math.min(membersPerPage * currentPage, members.length)} of {members.length} members.
+                            </div>
+                            <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">Rows per page</span>
+                                    <Select value={String(membersPerPage)} onValueChange={(value) => { setMembersPerPage(Number(value)); setCurrentPage(1); }}>
+                                        <SelectTrigger className="h-8 w-[70px]">
+                                            <SelectValue placeholder={String(membersPerPage)} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="10">10</SelectItem>
+                                            <SelectItem value="25">25</SelectItem>
+                                            <SelectItem value="50">50</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
-                
-                <div>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Status</TableHead>
-                                {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {paginatedMembers.length > 0 ? paginatedMembers.map((member) => {
-                                const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
-                                return (
-                                    <TableRow key={member.email}>
-                                        <TableCell className="font-medium">
-                                            <Link href={`/organization/members/${encodeURIComponent(member.email)}`} className="hover:underline">
-                                                {member.name}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                                        <TableCell>
-                                            {memberIsOwner ? (
-                                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
-                                                    <Crown className="mr-1 h-3 w-3" />
-                                                    Admin
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline">
-                                                    <UserIcon className="mr-1 h-3 w-3" />
-                                                    Agent
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                             {renderStatusBadge(member.status)}
-                                        </TableCell>
-                                        {isOwner && (
-                                            <TableCell className="flex items-center gap-2">
-                                                {member.status === 'Uninvited' && (
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    className="h-8 w-8"
-                                                                    onClick={() => handleSendVerification(member.email, member.name)} 
-                                                                    disabled={isSendingVerification === member.email}
-                                                                >
-                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>Send verification email</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                )}
-                                                {member.status === 'Invited' && (
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    className="h-8 w-8"
-                                                                    onClick={() => handleSendVerification(member.email, member.name)} 
-                                                                    disabled={isSendingVerification === member.email}
-                                                                >
-                                                                    {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p>Resend verification email</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                )}
-                                                <Dialog open={isEditDialogOpen && editingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setEditingMember(null); setIsEditDialogOpen(isOpen); }}>
-                                                    <AlertDialog open={deletingMember?.email === member.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingMember(null); }}>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </DropdownMenuItem>
-                                                                {!memberIsOwner && (
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <DropdownMenuItem onClick={() => handleDeleteClick(member)} onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                                            Delete
-                                                                        </DropdownMenuItem>
-                                                                    </AlertDialogTrigger>
-                                                                )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                    {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                    Delete
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                    <DialogContent className="sm:max-w-2xl">
-                                                        <DialogHeader>
-                                                            <DialogTitle>Edit Agent</DialogTitle>
-                                                        </DialogHeader>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-name">Name</Label>
-                                                                <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-email">Email</Label>
-                                                                <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-mobile">Mobile Number</Label>
-                                                                <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label htmlFor="update-landline">Telephone Number</Label>
-                                                                <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
-                                                            </div>
-                                                            <div className="space-y-2 sm:col-span-2">
-                                                                <Label htmlFor="update-address">Address</Label>
-                                                                <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
-                                                            </div>
-                                                        </div>
-                                                        <DialogFooter>
-                                                            <DialogClose asChild>
-                                                                <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
-                                                            </DialogClose>
-                                                            <Button onClick={handleUpdateMember} disabled={isUpdating}>
-                                                                {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                Save Changes
-                                                            </Button>
-                                                        </DialogFooter>
-                                                    </DialogContent>
-                                                </Dialog>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                );
-                            }) : (
-                                <TableRow>
-                                    <TableCell colSpan={isOwner ? 5 : 4} className="h-24 text-center">
-                                        No agents found.
-                                    </TableCell>
-                                </TableRow>
+
+                <div className="lg:col-span-1 space-y-6">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle>Properties</CardTitle>
+                            {isOwner && (
+                                <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="secondary" size="sm">
+                                            <Pencil className="mr-2 h-3 w-3" />
+                                            Edit
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-2xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Organization Settings</DialogTitle>
+                                            <DialogDescription>Manage your organization's details.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="org-update-name">Organization Name</Label>
+                                                <Input id="org-update-name" value={updatedOrganizationName} onChange={(e) => setUpdatedOrganizationName(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="org-update-website">Website</Label>
+                                                <Input id="org-update-website" value={updatedOrgWebsite} onChange={(e) => setUpdatedOrgWebsite(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="org-update-mobile">Mobile Number</Label>
+                                                <Input id="org-update-mobile" value={updatedOrgMobile} onChange={(e) => setUpdatedOrgMobile(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="org-update-landline">Landline</Label>
+                                                <Input id="org-update-landline" value={updatedOrgLandline} onChange={(e) => setUpdatedOrgLandline(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label htmlFor="org-update-address">Address</Label>
+                                                <Textarea id="org-update-address" value={updatedOrgAddress} onChange={(e) => setUpdatedOrgAddress(e.target.value)} />
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <DialogClose asChild>
+                                                <Button type="button" variant="secondary">Cancel</Button>
+                                            </DialogClose>
+                                            <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg}>
+                                                {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                Save Changes
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
                             )}
-                        </TableBody>
-                    </Table>
+                        </CardHeader>
+                        <CardContent>
+                            <dl className="grid grid-cols-1 gap-y-4">
+                                <PropertyItem icon={Building} label="Organization Name" value={userProfile.organizationName} />
+                                <PropertyItem icon={Users} label="Total Agents" value={members.length.toString()} />
+                                <PropertyItem icon={MapPin} label="Address" value={userProfile.address} />
+                                <PropertyItem icon={Phone} label="Mobile" value={userProfile.mobile} />
+                                <PropertyItem icon={Phone} label="Landline" value={userProfile.landline} />
+                                <PropertyItem icon={LinkIcon} label="Website" value={userProfile.website} isLink />
+                            </dl>
+                        </CardContent>
+                    </Card>
                 </div>
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-4">
-                        <div className="text-sm text-muted-foreground">
-                            Showing {Math.min(membersPerPage * currentPage, members.length)} of {members.length} members.
+            </div>
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit Agent</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="update-name">Name</Label>
+                            <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
                         </div>
-                        <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Rows per page</span>
-                                <Select value={String(membersPerPage)} onValueChange={(value) => { setMembersPerPage(Number(value)); setCurrentPage(1); }}>
-                                    <SelectTrigger className="h-8 w-[70px]">
-                                        <SelectValue placeholder={String(membersPerPage)} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="10">10</SelectItem>
-                                        <SelectItem value="25">25</SelectItem>
-                                        <SelectItem value="50">50</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                                Page {currentPage} of {totalPages}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-email">Email</Label>
+                            <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-mobile">Mobile Number</Label>
+                            <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-landline">Telephone Number</Label>
+                            <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                            <Label htmlFor="update-address">Address</Label>
+                            <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
                         </div>
                     </div>
-                )}
-            </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setEditingMember(null)}>Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleUpdateMember} disabled={isUpdating}>
+                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-            <div className="lg:col-span-1 space-y-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Properties</CardTitle>
-                        {isOwner && (
-                            <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="secondary" size="sm">
-                                        <Pencil className="mr-2 h-3 w-3" />
-                                        Edit
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-2xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Organization Settings</DialogTitle>
-                                        <DialogDescription>Manage your organization's details.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="org-update-name">Organization Name</Label>
-                                            <Input id="org-update-name" value={updatedOrganizationName} onChange={(e) => setUpdatedOrganizationName(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="org-update-website">Website</Label>
-                                            <Input id="org-update-website" value={updatedOrgWebsite} onChange={(e) => setUpdatedOrgWebsite(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="org-update-mobile">Mobile Number</Label>
-                                            <Input id="org-update-mobile" value={updatedOrgMobile} onChange={(e) => setUpdatedOrgMobile(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="org-update-landline">Landline</Label>
-                                            <Input id="org-update-landline" value={updatedOrgLandline} onChange={(e) => setUpdatedOrgLandline(e.target.value)} />
-                                        </div>
-                                        <div className="space-y-2 sm:col-span-2">
-                                            <Label htmlFor="org-update-address">Address</Label>
-                                            <Textarea id="org-update-address" value={updatedOrgAddress} onChange={(e) => setUpdatedOrgAddress(e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button type="button" variant="secondary">Cancel</Button>
-                                        </DialogClose>
-                                        <Button onClick={handleUpdateOrganization} disabled={isUpdatingOrg}>
-                                            {isUpdatingOrg && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                            Save Changes
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                        )}
-                    </CardHeader>
-                    <CardContent>
-                        <dl className="grid grid-cols-1 gap-y-4">
-                            <PropertyItem icon={Building} label="Organization Name" value={userProfile.organizationName} />
-                            <PropertyItem icon={Users} label="Total Agents" value={members.length.toString()} />
-                            <PropertyItem icon={MapPin} label="Address" value={userProfile.address} />
-                            <PropertyItem icon={Phone} label="Mobile" value={userProfile.mobile} />
-                            <PropertyItem icon={Phone} label="Landline" value={userProfile.landline} />
-                            <PropertyItem icon={LinkIcon} label="Website" value={userProfile.website} isLink />
-                        </dl>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+            <AlertDialog open={!!deletingMember} onOpenChange={(isOpen) => !isOpen && setDeletingMember(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }
