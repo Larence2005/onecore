@@ -2088,14 +2088,13 @@ async function addDnsRecordToCloudflare(
   const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records`;
   const payload: any = { type, name: cfName, ttl: 3600 };
   
-  if (data) {
+  if (type === 'CNAME' || type === 'TXT') {
+      payload.content = content;
+  } else if (type === 'MX') {
+      payload.content = content;
+      payload.priority = priority;
+  } else if (data) {
     payload.data = data;
-  } else if (content) {
-    payload.content = content;
-  }
-
-  if (priority !== undefined) {
-    payload.priority = priority;
   }
 
   const headers = {
@@ -2103,7 +2102,7 @@ async function addDnsRecordToCloudflare(
     "Content-Type": "application/json",
   };
 
-  console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName} = ${content || JSON.stringify(data)}`);
+  console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName}`);
 
   try {
     const response = await axios.post(url, payload, { headers });
@@ -2198,7 +2197,7 @@ export async function verifyUserEmail(
             for (const record of verificationRecords) {
                 if (record.recordType.toLowerCase() === "txt" && record.text.startsWith("MS=")) {
                     msTxtValue = record.text;
-                    await addDnsRecordToCloudflare("TXT", newDomain, `"${record.text}"`);
+                    await addDnsRecordToCloudflare("TXT", newDomain, record.text);
                     await pollDnsPropagation(newDomain, msTxtValue);
                     break; 
                 }
@@ -2258,13 +2257,16 @@ export async function verifyUserEmail(
     console.log("Adding essential DNS records for email...");
     const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
-        const recordType = rec.recordType.toLowerCase();
-        if (recordType === "mx") {
+        const type = rec.recordType.toLowerCase();
+
+        if (type === "mx") {
             await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-        } else if (recordType === "cname" && rec.label === 'autodiscover') {
+        } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
             await addDnsRecordToCloudflare("CNAME", rec.label, rec.pointsTo);
-        } else if (recordType === "txt" && rec.text.toLowerCase().startsWith("v=spf")) {
-            await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
+        } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
+            await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
+        } else {
+            console.log(`⏭️ Skipping non-email record: ${rec.recordType} ${rec.label || newDomain}`);
         }
     }
 
@@ -2364,3 +2366,6 @@ export async function verifyUserEmail(
     
 
 
+
+
+    
