@@ -847,11 +847,20 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
+    let finalCc = cc;
+    if (!currentUser.isClient) {
+        // If an agent is replying, add them to the CC list
+        const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean));
+        ccSet.add(currentUser.email);
+        finalCc = Array.from(ccSet).join(', ');
+    }
+
+
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
             toRecipients: parseRecipients(to), // 'to' is now part of the payload
-            ccRecipients: parseRecipients(cc),
+            ccRecipients: parseRecipients(finalCc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
                 '@odata.type': '#microsoft.graph.fileAttachment',
@@ -894,7 +903,7 @@ export async function replyToEmailAction(
             receivedDateTime: new Date().toISOString(),
             bodyPreview: comment.substring(0, 255),
             toRecipients: parseRecipients(to),
-            ccRecipients: parseRecipients(cc),
+            ccRecipients: parseRecipients(finalCc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(a => ({...a, id: `optimistic-att-${Date.now()}`, size: 0 })),
         };
