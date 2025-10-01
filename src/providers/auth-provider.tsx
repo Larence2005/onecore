@@ -21,7 +21,7 @@ export interface UserProfile {
   mobile?: string;
   landline?: string;
   website?: string;
-  status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Registered' | 'Verified';
+  status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Verified';
   organizationDomain?: string;
 }
 
@@ -237,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     break;
                  } else if (employeeData.status === 'Uninvited') {
                     throw new Error("Your account has not been verified by your company administrator. Please contact them to send a verification email.");
-                 } else if (employeeData.status === 'Registered') {
+                 } else if (employeeData.status === 'Verified') {
                     throw new Error("This email address has already been registered as an employee.");
                  }
             }
@@ -258,14 +258,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const members = orgDoc.data().members as OrganizationMember[];
             const updatedMembers = members.map(m => 
                 m.email.toLowerCase() === data.email.toLowerCase() 
-                ? { ...m, uid: userCredential.user.uid, status: 'Registered' as 'Registered' } 
+                ? { ...m, uid: userCredential.user.uid, status: 'Verified' as 'Verified' } 
                 : m
             );
             await updateDoc(orgRef, { members: updatedMembers });
         }
     } else if (isClientEmployee && companyId) {
         const employeeDocRef = doc(db, 'organizations', orgId, 'companies', companyId, 'employees', data.email);
-        await updateDoc(employeeDocRef, { status: 'Registered', uid: userCredential.user.uid });
+        await updateDoc(employeeDocRef, { status: 'Verified', uid: userCredential.user.uid });
     }
     
     await fetchUserProfile(userCredential.user);

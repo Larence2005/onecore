@@ -50,7 +50,7 @@ export interface Employee {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered';
+    status: 'Uninvited' | 'Invited' | 'Verified';
 }
 
 export interface OrganizationMember {
@@ -60,6 +60,6 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered' | 'Not Verified' | 'Verified';
+    status: 'Uninvited' | 'Invited' | 'Not Verified' | 'Verified';
     isClient?: boolean;
 }

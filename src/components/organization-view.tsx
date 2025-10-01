@@ -300,11 +300,11 @@ export function OrganizationView() {
     const renderStatusBadge = (status: OrganizationMember['status']) => {
         switch (status) {
             case 'Verified':
-            case 'Registered':
                 return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
             case 'Invited':
-                return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
+                return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
             case 'Uninvited':
+                return <Badge variant="destructive">Uninvited</Badge>;
             case 'Not Verified':
                 return <Badge variant="destructive">Not Verified</Badge>;
             default:
@@ -417,7 +417,7 @@ export function OrganizationView() {
                                             </TableCell>
                                             {isOwner && (
                                                 <TableCell className="flex items-center gap-2">
-                                                    {member.status === 'Uninvited' && (
+                                                    {(member.status === 'Uninvited' || member.status === 'Invited') && !memberIsOwner && (
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
@@ -432,27 +432,7 @@ export function OrganizationView() {
                                                                     </Button>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p>Send verification email</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    )}
-                                                    {member.status === 'Invited' && (
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button 
-                                                                        variant="ghost" 
-                                                                        size="icon" 
-                                                                        className="h-8 w-8"
-                                                                        onClick={() => handleSendVerification(member.email, member.name)} 
-                                                                        disabled={isSendingVerification === member.email}
-                                                                    >
-                                                                        {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Resend verification email</p>
+                                                                    <p>{member.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         </TooltipProvider>

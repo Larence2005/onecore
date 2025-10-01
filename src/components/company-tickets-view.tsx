@@ -231,13 +231,12 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         if (!editingEmployee || !company || !userProfile?.organizationId) return;
         setIsUpdatingEmployee(true);
         try {
-            const employeeData: Employee = {
+            const employeeData: Partial<Employee> = {
                 name: updatedEmployeeName,
                 email: updatedEmployeeEmail,
                 address: updatedEmployeeAddress,
                 mobile: updatedEmployeeMobile,
                 landline: updatedEmployeeLandline,
-                status: editingEmployee.status, // Preserve status
             };
             await updateCompanyEmployee(userProfile.organizationId, company.id, editingEmployee.email, employeeData);
             toast({ title: "Employee Updated", description: "The employee's details have been updated." });
@@ -261,7 +260,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
         setIsAddingEmployee(true);
         try {
-            const newEmployee: Omit<Employee, 'status'> = {
+            const newEmployee: Omit<Employee, 'status' | 'Verified'> = {
                 name: newEmployeeName,
                 email: newEmployeeEmail,
                 address: newEmployeeAddress,
@@ -436,12 +435,13 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     
     const renderEmployeeStatusBadge = (status: Employee['status']) => {
         switch (status) {
+            case 'Verified':
             case 'Registered':
                 return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
             case 'Invited':
-                return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
+                return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
             case 'Uninvited':
-                return <Badge variant="destructive">Not Verified</Badge>;
+                return <Badge variant="destructive">Uninvited</Badge>;
             default:
                 return <Badge variant="outline">Unknown</Badge>;
         }
@@ -720,7 +720,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                             <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
                                                                             {isOwner && (
                                                                                 <TableCell className="flex items-center justify-end gap-2">
-                                                                                    {employee.status !== 'Registered' && (
+                                                                                    {employee.status !== 'Verified' && employee.status !== 'Registered' && (
                                                                                         <TooltipProvider>
                                                                                             <Tooltip>
                                                                                                 <TooltipTrigger asChild>

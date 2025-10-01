@@ -127,7 +127,7 @@ export interface Employee {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered';
+    status: 'Uninvited' | 'Invited' | 'Registered' | 'Verified';
 }
 
 export interface Note {
@@ -844,8 +844,8 @@ export async function replyToEmailAction(
     }
 
     // Enforce verification for client employees
-    if (currentUser.isClient && currentUser.status !== 'Registered') {
-        throw new Error('You must be a registered employee to reply to tickets. Please complete your registration.');
+    if (currentUser.isClient && currentUser.status !== 'Verified') {
+        throw new Error('You must be a verified employee to reply to tickets. Please complete your registration.');
     }
     
     const authResponse = await getAccessToken(settings);
@@ -898,12 +898,12 @@ export async function replyToEmailAction(
         }
     }
 
-    if (conversationId) {
-        // Schedule a background sync to get the real data from the mail server
-        setTimeout(() => {
+    // Schedule a background sync to get the real data from the mail server
+    setTimeout(() => {
+        if (conversationId) {
             fetchAndStoreFullConversation(organizationId, conversationId).catch(console.error);
-        }, 10000); // 10-second delay to allow Graph API to process
-    }
+        }
+    }, 10000); // 10-second delay to allow Graph API to process
     
     // Invalidate caches to ensure next hard-refresh gets new data
     ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
@@ -979,7 +979,7 @@ export async function forwardEmailAction(
 }
 
 
-export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Omit<Employee, 'status'>) {
+export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Omit<Employee, 'status' | 'Verified'>) {
     if (!organizationId || !companyId || !employee.email) {
         return; // Or throw an error
     }
@@ -1020,16 +1020,17 @@ export async function updateCompanyEmployee(
     organizationId: string,
     companyId: string,
     originalEmail: string,
-    employeeData: Employee
+    employeeData: Partial<Employee>
 ) {
-    if (!organizationId || !companyId || !originalEmail || !employeeData.email) {
+    if (!organizationId || !companyId || !originalEmail) {
         throw new Error("Missing required parameters to update employee.");
     }
     
     const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', originalEmail);
-    
+    const newEmail = employeeData.email || originalEmail;
+
     // If the email is not changing, we can just update the document.
-    if (originalEmail === employeeData.email) {
+    if (originalEmail === newEmail) {
         await updateDoc(employeeDocRef, {
             name: employeeData.name,
             address: employeeData.address || '',
@@ -1045,7 +1046,7 @@ export async function updateCompanyEmployee(
                 throw new Error("Original employee record not found.");
             }
             
-            const newEmployeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', employeeData.email);
+            const newEmployeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', newEmail);
             
             // Check if the new email already exists to prevent overwriting another employee.
             const newDocCheck = await transaction.get(newEmployeeDocRef);
@@ -2123,10 +2124,17 @@ async function addDnsRecordToCloudflare(
   }
 
   const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records`;
-  const payload: any = { type, name: cfName, ttl: 3600, content };
+  const payload: any = { type, name: cfName, ttl: 3600 };
 
-  if (priority !== undefined) {
-    payload.priority = priority;
+  if (type === 'TXT') {
+      payload.content = content;
+  } else if (type === 'CNAME') {
+      payload.content = content;
+  } else if (type === 'MX') {
+      payload.content = content;
+      payload.priority = priority;
+  } else {
+    payload.content = content;
   }
   
   const headers = {
@@ -2134,7 +2142,7 @@ async function addDnsRecordToCloudflare(
     "Content-Type": "application/json",
   };
 
-  console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName}`);
+  console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName} with content ${payload.content}`);
 
   try {
     const response = await axios.post(url, payload, { headers });
@@ -2229,7 +2237,7 @@ export async function verifyUserEmail(
             for (const record of verificationRecords) {
                 if (record.recordType.toLowerCase() === "txt" && record.text.startsWith("MS=")) {
                     msTxtValue = record.text;
-                    await addDnsRecordToCloudflare("TXT", newDomain, `"${record.text}"`);
+                    await addDnsRecordToCloudflare("TXT", newDomain, record.text);
                     await pollDnsPropagation(newDomain, msTxtValue);
                     break; 
                 }
@@ -2296,14 +2304,12 @@ export async function verifyUserEmail(
         if (type === "mx") {
             // Mail delivery (primary MX)
             await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-
         } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
             // Autodiscover for Outlook
             await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
-
         } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
             // SPF for email sending
-            await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
+            await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
         } else {
             console.log(`⏭️ Skipping non-email record: ${rec.recordType} ${rec.label || newDomain}`);
         }
