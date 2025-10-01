@@ -507,14 +507,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             );
 
             const isClientReplying = userProfile.isClient === true;
-            let finalCc = replyCc;
-
-            if (isClientReplying) {
-                // If client is replying from webapp, add them to CC
-                const ccSet = new Set((replyCc || '').split(/[,;]\s*/).filter(Boolean));
-                ccSet.add(user.email);
-                finalCc = Array.from(ccSet).join(', ');
-            }
             
             // Immediately hide reply form and show toast
             setReplyingToMessageId(null);
@@ -529,7 +521,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 attachmentPayloads,
                 { name: userProfile.name || user.email, email: user.email, isClient: isClientReplying },
                 replyTo,
-                finalCc, 
+                replyCc, 
                 replyBcc
             );
 
@@ -620,8 +612,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
             const isClientReplying = userProfile.isClient === true;
             const ccRecipients = new Set<string>();
-            // If client is replying, CC themself
+            
             if (isClientReplying) {
+                ccRecipients.add(user.email);
+            } else {
                 ccRecipients.add(user.email);
             }
 
@@ -645,19 +639,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             
             const isClientReplying = userProfile.isClient === true;
 
-            // If client is replying, add them to CC list
             if (isClientReplying) {
                 allRecipients.add(user.email.toLowerCase());
-            } else { // If agent is replying, add them to CC list
+            } else {
                  allRecipients.add(user.email.toLowerCase());
             }
 
-            // Remove the original sender from the CC list as they are already in 'To'
             if (message.senderEmail) {
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
     
-            // Remove the current user from the CC list as they are the one sending
             allRecipients.delete(user.email.toLowerCase());
 
             setReplyCc(Array.from(allRecipients).join(', '));
