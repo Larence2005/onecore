@@ -105,7 +105,7 @@ export interface OrganizationMember {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered' | 'Not Verified' | 'Verified';
+    status: 'Uninvited' | 'Invited' | 'Not Verified' | 'Verified';
     isClient?: boolean;
 }
 
@@ -127,7 +127,7 @@ export interface Employee {
     address?: string;
     mobile?: string;
     landline?: string;
-    status: 'Uninvited' | 'Invited' | 'Registered' | 'Verified';
+    status: 'Uninvited' | 'Invited' | 'Verified';
     uid?: string;
 }
 
