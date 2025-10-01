@@ -74,6 +74,7 @@ function VerificationArea() {
 
     const form = useForm<z.infer<typeof verificationFormSchema>>({
         resolver: zodResolver(verificationFormSchema),
+        mode: 'onChange',
         defaultValues: {
             username: "",
             displayName: userProfile?.name || "",
