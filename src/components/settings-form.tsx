@@ -50,7 +50,7 @@ const passwordValidation = z
   .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character." });
 
 const verificationFormSchema = z.object({
-    username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9]+$/, "Username can only contain letters and numbers."),
+    username: z.string().min(1, "Username is required.").regex(/^[a-zA-Z0-9.-]+$/, "Username can only contain letters, numbers, dots, and hyphens."),
     displayName: z.string().min(1, "Display name is required."),
     password: passwordValidation,
     confirmPassword: z.string().min(1, "Please confirm your password."),
