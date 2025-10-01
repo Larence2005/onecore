@@ -1172,7 +1172,7 @@ export async function updateTicket(
     },
     currentUser: { name: string; email: string }
 ) {
-    const ticketDocRef = doc(db, 'organizations', organizationId, 'id');
+    const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
         let ticketData: any;
         let originalStatus: string;
@@ -1325,8 +1325,8 @@ export async function updateTicket(
         if (data.priority && data.priority !== originalPriority) {
             await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: new Date().toISOString(), user: currentUser.email });
         }
-        if (data.deadline !== originalDeadline) {
-            const detail = data.deadline ? `set to ${format(parseISO(data.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
+        if (newData.deadline !== originalDeadline) {
+            const detail = newData.deadline ? `set to ${format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
             await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUser.email });
         }
 
@@ -2570,3 +2570,5 @@ export async function verifyUserEmail(
     
 
   
+
+    

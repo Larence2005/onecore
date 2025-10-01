@@ -13,7 +13,7 @@ import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
 import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
-import { getCompanies, fetchAndStoreFullConversation, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
+import { getCompanies, getLatestEmails, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -57,15 +57,29 @@ function HomePageContent() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
 
-  const runDeadlineChecks = useCallback(async () => {
-    if (userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
+  const runBackgroundTasks = useCallback(async () => {
+    if (userProfile?.organizationId) {
         try {
-            await checkTicketDeadlinesAndNotify(userProfile.organizationId);
-        } catch (deadlineError) {
+            await getLatestEmails(userProfile.organizationId);
+        } catch (emailError) {
             // Silently fail, error is logged in the action
+        }
+
+        if(user?.uid === userProfile.organizationOwnerUid) {
+            try {
+                await checkTicketDeadlinesAndNotify(userProfile.organizationId);
+            } catch (deadlineError) {
+                 // Silently fail, error is logged in the action
+            }
         }
     }
   }, [userProfile, user]);
+
+  useEffect(() => {
+    runBackgroundTasks(); // Run once on initial load
+    const interval = setInterval(runBackgroundTasks, 5 * 60 * 1000); // Poll every 5 minutes
+    return () => clearInterval(interval);
+  }, [runBackgroundTasks]);
 
   useEffect(() => {
     if (!user || !userProfile?.organizationId) return;
@@ -210,14 +224,11 @@ function HomePageContent() {
     };
     
     const unsubscribePromise = setupListener();
-    
-    // Run deadline checks on component mount
-    runDeadlineChecks();
 
     return () => {
       unsubscribePromise.then(unsub => unsub && unsub());
     }
-  }, [user, userProfile, runDeadlineChecks]);
+  }, [user, userProfile]);
 
 
   useEffect(() => {
