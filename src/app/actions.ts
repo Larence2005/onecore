@@ -2208,7 +2208,7 @@ async function addDnsRecordToCloudflare(
   const payload: any = { type, name: cfName, ttl: 3600 };
 
   if (type === 'TXT') {
-      payload.content = `"${content}"`;
+      payload.content = `${content}`;
   } else if (type === 'CNAME') {
       payload.content = content;
   } else if (type === 'MX') {
@@ -2361,23 +2361,8 @@ export async function verifyUserEmail(
     if (!newDomain) {
         throw new Error("Organization domain has not been created by the admin yet.");
     }
-
-    // 4. Create user in Microsoft 365
-    const newUser = await createGraphUser(client, displayName, username, newDomain, password);
     
-    // 5. Assign a license to the new user
-    await assignLicenseToUser(client, newUser.id);
-    
-    // 6. Add user to security group
-    const securityGroupId = process.env.AZURE_SECURITY_OBJECT_ID;
-    if (securityGroupId) {
-        await addUserToSecurityGroup(client, newUser.id, securityGroupId);
-        console.log(`User ${newUser.id} added to security group ${securityGroupId}.`);
-    } else {
-        console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
-    }
-    
-    // 7. Add DNS Records for Email
+     // 4. Add DNS Records for Email (Moved before user creation)
     const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
         const type = rec.recordType.toLowerCase();
@@ -2394,6 +2379,23 @@ export async function verifyUserEmail(
         } else {
             console.log(`⏭️ Skipping non-email record: ${rec.recordType} ${rec.label || newDomain}`);
         }
+    }
+
+
+    // 5. Create user in Microsoft 365
+    const newUser = await createGraphUser(client, displayName, username, newDomain, password);
+    await new Promise(r => setTimeout(r, 30000)); // Add delay for mailbox provisioning
+    
+    // 6. Assign a license to the new user
+    await assignLicenseToUser(client, newUser.id);
+    
+    // 7. Add user to security group
+    const securityGroupId = process.env.AZURE_SECURITY_OBJECT_ID;
+    if (securityGroupId) {
+        await addUserToSecurityGroup(client, newUser.id, securityGroupId);
+        console.log(`User ${newUser.id} added to security group ${securityGroupId}.`);
+    } else {
+        console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
     }
 
 
@@ -2521,3 +2523,6 @@ export async function verifyUserEmail(
 
 
     
+
+
+      
