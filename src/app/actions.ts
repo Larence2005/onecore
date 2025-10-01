@@ -316,7 +316,10 @@ export async function createTicket(
         const settings = await getAPISettings(organizationId);
         if (settings) {
             try {
-                const ticketUrl = `/tickets/${newTicketRef.id}`;
+                const headersList = headers();
+                const host = headersList.get('host') || 'localhost:3000';
+                const protocol = headersList.get('x-forwarded-proto') || 'http';
+                const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
 
                 const emailSubject = `[Ticket #${ticketNumber}] ${title}`;
                 let emailBody: string;
@@ -472,7 +475,10 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
                     // Send notification for email-based tickets
                     try {
-                        const ticketUrl = `/tickets/${ticketId}`;
+                        const headersList = headers();
+                        const host = headersList.get('host') || 'localhost:3000';
+                        const protocol = headersList.get('x-forwarded-proto') || 'http';
+                        const ticketUrl = `${protocol}://${host}/tickets/${ticketId}`;
                         
                         const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
                         const notificationBody = `
@@ -889,15 +895,14 @@ export async function replyToEmailAction(
     }
 
     let finalCc = cc;
-    // Add current user to CC if they are not already in the 'to' or 'cc' list.
     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
     const toSet = new Set(to.split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
 
+    // Always add the current user to the CC list if they aren't already there.
     if (!toSet.has(currentUser.email.toLowerCase()) && !ccSet.has(currentUser.email.toLowerCase())) {
-        ccSet.add(currentUser.email);
+        ccSet.add(currentUser.email.toLowerCase());
         finalCc = Array.from(ccSet).join(', ');
     }
-
 
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
@@ -1290,7 +1295,10 @@ export async function updateTicket(
                 const members = await getOrganizationMembers(organizationId);
                 const newAssignee = members.find(m => m.uid === data.assignee);
                 if (newAssignee && newAssignee.email) {
-                    const ticketUrl = `/tickets/${id}`;
+                    const headersList = headers();
+                    const host = headersList.get('host') || 'localhost:3000';
+                    const protocol = headersList.get('x-forwarded-proto') || 'http';
+                    const ticketUrl = `${protocol}://${host}/tickets/${id}`;
                     
                     const subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                     const body = `
@@ -2011,7 +2019,10 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
                 if (ticket.assignee) {
                     const assignee = members.find(m => m.uid === ticket.assignee);
                     if (assignee?.email) {
-                        const ticketUrl = `/tickets/${ticket.id}`;
+                        const headersList = headers();
+                        const host = headersList.get('host') || 'localhost:3000';
+                        const protocol = headersList.get('x-forwarded-proto') || 'http';
+                        const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
                         const subject = `Overdue Ticket: #${ticket.ticketNumber} - ${ticket.subject}`;
                         const body = `<p>Ticket #${ticket.ticketNumber} is now overdue.</p><p>View ticket: ${ticketUrl}</p>`;
                         await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
@@ -2034,7 +2045,10 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
                      if (ticket.assignee) {
                         const assignee = members.find(m => m.uid === ticket.assignee);
                         if (assignee?.email) {
-                            const ticketUrl = `/tickets/${ticket.id}`;
+                            const headersList = headers();
+                            const host = headersList.get('host') || 'localhost:3000';
+                            const protocol = headersList.get('x-forwarded-proto') || 'http';
+                            const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
                             const subject = `Reminder: Ticket #${ticket.ticketNumber} is due in ${dayToSend} day(s)`;
                             const body = `<p>Ticket #${ticket.ticketNumber} is due soon.</p><p>View ticket: ${ticketUrl}</p>`;
                             await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
