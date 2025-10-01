@@ -299,12 +299,14 @@ export function OrganizationView() {
 
     const renderStatusBadge = (status: OrganizationMember['status']) => {
         switch (status) {
+            case 'Verified':
             case 'Registered':
-                return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Registered</Badge>;
+                return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
             case 'Invited':
                 return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
             case 'Uninvited':
-                return <Badge variant="destructive">Uninvited</Badge>;
+            case 'Not Verified':
+                return <Badge variant="destructive">Not Verified</Badge>;
             default:
                 return <Badge variant="outline">Unknown</Badge>;
         }
@@ -312,7 +314,7 @@ export function OrganizationView() {
 
 
     return (
-        <AlertDialog open={!!deletingMember} onOpenChange={(isOpen) => !isOpen && setDeletingMember(null)}>
+        <AlertDialog>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex justify-between items-start">
@@ -637,7 +639,7 @@ export function OrganizationView() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                         {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                         Delete
