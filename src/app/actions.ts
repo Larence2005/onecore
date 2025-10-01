@@ -2087,11 +2087,13 @@ async function addDnsRecordToCloudflare(
 
   const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records`;
   const payload: any = { type, name: cfName, ttl: 3600 };
+  
   if (data) {
     payload.data = data;
-  } else {
+  } else if (content) {
     payload.content = content;
   }
+
   if (priority !== undefined) {
     payload.priority = priority;
   }
@@ -2256,20 +2258,13 @@ export async function verifyUserEmail(
     console.log("Adding essential DNS records for email...");
     const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
-        switch (rec.recordType.toLowerCase()) {
-            case "mx":
-                await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-                break;
-            case "cname":
-                if (rec.label === 'autodiscover') {
-                    await addDnsRecordToCloudflare("CNAME", rec.label, 'autodiscover.outlook.com');
-                }
-                break;
-            case "txt":
-                if (rec.text.toLowerCase().startsWith("v=spf")) {
-                    await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
-                }
-                break;
+        const recordType = rec.recordType.toLowerCase();
+        if (recordType === "mx") {
+            await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
+        } else if (recordType === "cname" && rec.label === 'autodiscover') {
+            await addDnsRecordToCloudflare("CNAME", rec.label, rec.pointsTo);
+        } else if (recordType === "txt" && rec.text.toLowerCase().startsWith("v=spf")) {
+            await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
         }
     }
 
@@ -2367,4 +2362,5 @@ export async function verifyUserEmail(
 
 
     
+
 
