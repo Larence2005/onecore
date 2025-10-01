@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
-import { isPast, parseISO, isWithinInterval, addHours } from 'date-fns';
+import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds } from 'date-fns';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 import axios from 'axios';
@@ -660,16 +660,39 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
     // Sort messages by date to process them chronologically
     conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
     
-    // De-duplication logic based on unique message ID
+    // De-duplication logic
     const uniqueMessages: DetailedEmail[] = [];
-    const seenMessageIds = new Set<string>();
+    const seenSignatures = new Set<string>();
+
+    const getMessageSignature = (msg: DetailedEmail): string => {
+        // Create a signature based on content that is likely to be identical in duplicates
+        const sender = msg.senderEmail?.toLowerCase() || 'unknown';
+        const body = msg.body?.content?.trim() || '';
+        // A more stable signature
+        return `${sender}:${msg.subject}:${body.length}`;
+    };
 
     for (const msg of conversationMessages) {
-        if (!seenMessageIds.has(msg.id)) {
+        const signature = getMessageSignature(msg);
+        let isDuplicate = false;
+
+        // Check against already added unique messages
+        for (const uniqueMsg of uniqueMessages) {
+            if (getMessageSignature(uniqueMsg) === signature) {
+                const timeDiff = Math.abs(differenceInSeconds(parseISO(msg.receivedDateTime), parseISO(uniqueMsg.receivedDateTime)));
+                // If signatures match and timestamps are very close, consider it a duplicate
+                if (timeDiff < 20) { // e.g., within 20 seconds
+                    isDuplicate = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isDuplicate) {
             uniqueMessages.push(msg);
-            seenMessageIds.add(msg.id);
         }
     }
+
 
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: uniqueMessages });
@@ -2469,3 +2492,6 @@ export async function verifyUserEmail(
 
 
 
+
+
+    
