@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { getLatestEmails } from '@/app/actions';
+import { getLatestEmails, checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase-admin';
 
@@ -24,23 +24,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, message: 'No organizations found.' });
     }
 
-    const emailPromises = querySnapshot.docs.map(doc => {
+    const jobPromises = querySnapshot.docs.map(doc => {
       const organizationId = doc.id;
-      console.log(`Processing emails for organization: ${organizationId}`);
-      return getLatestEmails(organizationId).catch(error => {
+      console.log(`Processing jobs for organization: ${organizationId}`);
+      
+      const emailPromise = getLatestEmails(organizationId).catch(error => {
         // Log errors per organization but don't fail the entire job
         console.error(`Failed to process emails for organization ${organizationId}:`, error);
       });
+
+      const deadlinePromise = checkTicketDeadlinesAndNotify(organizationId).catch(error => {
+        console.error(`Failed to check deadlines for organization ${organizationId}:`, error);
+      });
+      
+      return Promise.allSettled([emailPromise, deadlinePromise]);
     });
 
-    await Promise.all(emailPromises);
+    await Promise.all(jobPromises);
 
-    return NextResponse.json({ success: true, message: 'Email sync completed for all organizations.' });
+    return NextResponse.json({ success: true, message: 'Cron jobs completed for all organizations.' });
   } catch (error) {
     console.error('Cron job failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
     return new NextResponse(errorMessage, { status: 500 });
   }
 }
-
-    
