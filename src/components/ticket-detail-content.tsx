@@ -1398,8 +1398,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
                                                     <Popover>
-                                                        <PopoverTrigger asChild disabled={isClient}>
-                                                            <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
+                                                        <PopoverTrigger asChild disabled={isClient || !!currentPriority}>
+                                                            <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0 disabled:opacity-100 disabled:cursor-default">
                                                                 {currentDeadline ? format(currentDeadline, 'PPp') : 'Set deadline'}
                                                             </Button>
                                                         </PopoverTrigger>
