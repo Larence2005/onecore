@@ -128,6 +128,7 @@ export interface Employee {
     mobile?: string;
     landline?: string;
     status: 'Uninvited' | 'Invited' | 'Registered' | 'Verified';
+    uid?: string;
 }
 
 export interface Note {
@@ -245,16 +246,13 @@ export async function createTicket(
     
     // Find which company this employee belongs to
     let companyId: string | undefined = undefined;
-    const userProfileDocRef = doc(db, 'userProfiles', author.uid);
-    const userProfileDoc = await getDoc(userProfileDocRef);
-    if(userProfileDoc.exists() && userProfileDoc.data().isClient) {
-        // This is a client user, find their company
-         const allCompanies = await getCompanies(organizationId);
-         for (const company of allCompanies) {
-            const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', author.email);
-            const employeeDoc = await getDoc(employeeDocRef);
+    const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
+    if (orgDoc.exists()) {
+        const companiesSnapshot = await getDocs(collection(orgDoc.ref, 'companies'));
+        for (const companyDoc of companiesSnapshot.docs) {
+            const employeeDoc = await getDoc(doc(companyDoc.ref, 'employees', author.email));
             if (employeeDoc.exists()) {
-                companyId = company.id;
+                companyId = companyDoc.id;
                 break;
             }
         }
@@ -327,7 +325,7 @@ export async function createTicket(
                 let emailBody: string;
 
                 // Check if the author is a client
-                const isClient = userProfileDoc.exists() && userProfileDoc.data().isClient;
+                const isClient = !!companyId;
 
                 if (isClient) {
                     // For clients, send the email TO the support inbox and CC the client.
@@ -1074,7 +1072,20 @@ export async function deleteCompanyEmployee(organizationId: string, companyId: s
     }
 
     const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', email);
-    await deleteDoc(employeeDocRef);
+    const employeeDoc = await getDoc(employeeDocRef);
+
+    if (employeeDoc.exists()) {
+        const uid = employeeDoc.data().uid;
+        await deleteDoc(employeeDocRef);
+
+        if (uid) {
+            try {
+                await adminAuth.deleteUser(uid);
+            } catch (error) {
+                console.error(`Failed to delete user from Firebase Auth with UID: ${uid}. They might have already been deleted.`, error);
+            }
+        }
+    }
 
     companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
 
@@ -1599,7 +1610,8 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     }
 
     const organizationRef = doc(db, "organizations", organizationId);
-    
+    let memberToDelete: OrganizationMember | undefined;
+
     await runTransaction(db, async (transaction) => {
         const orgDoc = await transaction.get(organizationRef);
         if (!orgDoc.exists()) {
@@ -1607,7 +1619,7 @@ export async function deleteMemberFromOrganization(organizationId: string, email
         }
 
         const members = (orgDoc.data().members || []) as OrganizationMember[];
-        const memberToDelete = members.find(m => m.email === email);
+        memberToDelete = members.find(m => m.email === email);
         if (!memberToDelete) {
              throw new Error("Member not found to delete.");
         }
@@ -1616,7 +1628,14 @@ export async function deleteMemberFromOrganization(organizationId: string, email
         transaction.update(organizationRef, { members: updatedMembers });
     });
 
-    // Invalidate members cache
+    if (memberToDelete?.uid) {
+        try {
+            await adminAuth.deleteUser(memberToDelete.uid);
+        } catch (error) {
+            console.error(`Failed to delete user from Firebase Auth with UID: ${memberToDelete.uid}. They may have already been deleted.`, error);
+        }
+    }
+    
     membersCache.invalidate(`members:${organizationId}`);
 
     return { success: true };
