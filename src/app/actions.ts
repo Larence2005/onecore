@@ -893,29 +893,6 @@ export async function replyToEmailAction(
     }
 
     if (conversationId) {
-        // Optimistically add the sent message to the Firestore conversation
-        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-        const optimisticReply: Partial<DetailedEmail> = {
-            id: `optimistic-${Date.now()}`,
-            sender: currentUser.name,
-            senderEmail: currentUser.email,
-            body: { contentType: 'html', content: comment },
-            receivedDateTime: new Date().toISOString(),
-            bodyPreview: comment.substring(0, 255),
-            toRecipients: parseRecipients(to),
-            ccRecipients: parseRecipients(finalCc),
-            bccRecipients: parseRecipients(bcc),
-            attachments: attachments.map(a => ({...a, id: `optimistic-att-${Date.now()}`, size: 0 })),
-        };
-
-        try {
-            await updateDoc(conversationDocRef, {
-                messages: arrayUnion(optimisticReply)
-            });
-        } catch (e) {
-            console.error("Failed to add optimistic reply to conversation:", e);
-        }
-
         // Schedule a background sync to get the real data from the mail server
         setTimeout(() => {
             fetchAndStoreFullConversation(organizationId, conversationId).catch(console.error);
@@ -2377,6 +2354,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
