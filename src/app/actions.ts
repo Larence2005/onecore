@@ -2100,6 +2100,7 @@ async function addDnsRecordToCloudflare(
   const headers = {
     Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
     "Content-Type": "application/json",
+    "Content-Type": "application/json",
   };
 
   console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName}`);
@@ -2175,6 +2176,7 @@ export async function verifyUserEmail(
     // 2. Initialize Graph Client
     const client = getGraphClient();
     let newDomain = orgData.newDomain;
+    let serviceRecords: any[] = [];
 
     // 3. Create and verify domain (if owner and not already created)
     if (isOwner && !newDomain) {
@@ -2184,7 +2186,7 @@ export async function verifyUserEmail(
         // Step 1: Add domain in Azure AD
         await addDomain(client, newDomain);
 
-        // Step 2: Check domain status
+        // Step 2: Check domain status and get verification records
         const domainInfo = await getDomain(client, newDomain);
         console.log("Domain info:", JSON.stringify(domainInfo, null, 2));
         
@@ -2197,7 +2199,7 @@ export async function verifyUserEmail(
             for (const record of verificationRecords) {
                 if (record.recordType.toLowerCase() === "txt" && record.text.startsWith("MS=")) {
                     msTxtValue = record.text;
-                    await addDnsRecordToCloudflare("TXT", newDomain, record.text);
+                    await addDnsRecordToCloudflare("TXT", newDomain, `"${record.text}"`);
                     await pollDnsPropagation(newDomain, msTxtValue);
                     break; 
                 }
@@ -2220,6 +2222,9 @@ export async function verifyUserEmail(
                     }
                 } catch (err: any) {
                     console.error(`Attempt ${verifyAttempts}: Verification failed:`, err.message);
+                    if (err.response) {
+                        console.error("Error response:", err.response.data);
+                    }
                     console.log("⏳ Waiting for verification...");
                     await new Promise(res => setTimeout(res, 30000));
                 }
@@ -2238,6 +2243,9 @@ export async function verifyUserEmail(
         throw new Error("Organization domain has not been created by the admin yet.");
     }
     
+    // Get service records BEFORE adding them
+    serviceRecords = await getDomainServiceRecords(client, newDomain);
+
     // 4. Create user in Microsoft 365
     const newUser = await createGraphUser(client, displayName, username, newDomain, password);
     
@@ -2255,18 +2263,17 @@ export async function verifyUserEmail(
     
     // 7. Add DNS Records for Email
     console.log("Adding essential DNS records for email...");
-    const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
         const type = rec.recordType.toLowerCase();
 
         if (type === "mx") {
             await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-        } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
+        } else if (type === "cname" && rec.label.toLowerCase() === "autodiscover") {
             await addDnsRecordToCloudflare("CNAME", rec.label, rec.pointsTo);
         } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
-            await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
+            await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
         } else {
-            console.log(`⏭️ Skipping non-email record: ${rec.recordType} ${rec.label || newDomain}`);
+            console.log(`⏭️ Skipping non-essential record: ${rec.recordType} ${rec.label || newDomain}`);
         }
     }
 
@@ -2367,5 +2374,7 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
