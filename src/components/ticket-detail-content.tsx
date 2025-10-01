@@ -646,7 +646,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
     
-            allRecipients.delete(user.email.toLowerCase());
+            // Do not remove the current user's email if they are an agent
+            if(isClientReplying) {
+                allRecipients.delete(user.email.toLowerCase());
+            }
 
             setReplyCc(Array.from(allRecipients).join(', '));
             setReplyBcc('');
@@ -1490,3 +1493,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     );
 }
 
+
+
+    
