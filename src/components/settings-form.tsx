@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -220,36 +219,43 @@ function VerificationArea() {
                         </div>
                         <div className="flex justify-end">
                             <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                                <Button onClick={handleVerifyClick} disabled={isVerifying}>
-                                    {isVerifying ? (
-                                        <>
-                                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                            Verifying...
-                                        </>
-                                    ) : 'Verify and Create Email'}
+                                <Button onClick={handleVerifyClick}>
+                                    Verify and Create Email
                                 </Button>
                                 <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        <span>
-                                            Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
-                                        </span>
-                                        <div className="space-y-2 mt-4 text-foreground text-left">
-                                            <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
-                                            <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
-                                            <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
-                                            <p><strong className="font-medium">Password:</strong> {passwordValue}</p>
+                                    {isVerifying ? (
+                                        <div className="flex flex-col items-center justify-center text-center space-y-4 p-8">
+                                            <RefreshCw className="h-10 w-10 animate-spin text-primary" />
+                                            <h2 className="text-xl font-semibold">Verification in Progress</h2>
+                                            <p className="text-muted-foreground">
+                                                This process can take several minutes. Please do not close this window.
+                                            </p>
                                         </div>
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={form.handleSubmit(onVerificationSubmit)} disabled={isVerifying}>
-                                        {isVerifying && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                        Confirm
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
+                                    ) : (
+                                        <>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    <span>
+                                                        Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
+                                                    </span>
+                                                    <div className="space-y-2 mt-4 text-foreground text-left">
+                                                        <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
+                                                        <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
+                                                        <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
+                                                        <p><strong className="font-medium">Password:</strong> {passwordValue}</p>
+                                                    </div>
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={form.handleSubmit(onVerificationSubmit)} disabled={isVerifying}>
+                                                    {isVerifying && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Confirm
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </>
+                                    )}
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
