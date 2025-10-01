@@ -2413,12 +2413,12 @@ export async function verifyUserEmail(
     await assignLicenseToUser(client, newUser.id);
     
     // 7. Add user to security group
-    const securityGroupId = process.env.AZURE_SECURITY_OBJECT_ID;
+    const securityGroupId = process.env.AZURE_SECURITY_GROUP_ID;
     if (securityGroupId) {
         await addUserToSecurityGroup(client, newUser.id, securityGroupId);
         console.log(`User ${newUser.id} added to security group ${securityGroupId}.`);
     } else {
-        console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
+        console.warn("AZURE_SECURITY_GROUP_ID environment variable not set. Skipping adding user to security group.");
     }
 
 
@@ -2553,3 +2553,5 @@ export async function verifyUserEmail(
       
 
     
+
+  

@@ -315,7 +315,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                      if (ticketData.deadline !== previousTicket.deadline) {
-                        const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy')}` : 'removed';
+                        const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUserEmail });
                     }
                     if (ticketData.companyId !== previousTicket.companyId) {
@@ -341,6 +341,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
                 // Update UI state and ref
                  setEmail(prevEmail => prevEmail ? ({ ...prevEmail, ...ticketData }) : ticketData);
+                 setCurrentDeadline(ticketData.deadline ? parseISO(ticketData.deadline) : undefined);
                  previousEmailRef.current = { ...(email || {}), ...ticketData } as DetailedEmail;
             }
         });
@@ -1399,7 +1400,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                     <Popover>
                                                         <PopoverTrigger asChild disabled={isClient}>
                                                             <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0">
-                                                                {currentDeadline ? format(currentDeadline, 'MMMM d, yyyy') : 'Set deadline'}
+                                                                {currentDeadline ? format(currentDeadline, 'PPp') : 'Set deadline'}
                                                             </Button>
                                                         </PopoverTrigger>
                                                         <PopoverContent className="w-auto p-0" align="end">
@@ -1489,3 +1490,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+  
