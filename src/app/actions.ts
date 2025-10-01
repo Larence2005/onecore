@@ -2091,6 +2091,11 @@ async function addDnsRecordToCloudflare(
     payload.priority = priority;
   }
 
+  // Handle specific record type content formatting
+  if (type.toUpperCase() === 'CNAME' || type.toUpperCase() === 'MX' || type.toUpperCase() === 'TXT') {
+    payload.content = content;
+  }
+  
   const headers = {
     Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
     "Content-Type": "application/json",
@@ -2365,6 +2370,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
