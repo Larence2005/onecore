@@ -5,12 +5,12 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus, Trash2 } from 'lucide-react';
+import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus, Trash2, Mail } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee, sendEmployeeVerificationEmail } from '@/app/actions';
 import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +31,8 @@ import { Textarea } from "./ui/textarea";
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
+import { Badge } from './ui/badge';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 type StatusFilter = 'all' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
@@ -79,6 +81,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     
     const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSendingVerification, setIsSendingVerification] = useState<string | null>(null);
 
 
 
@@ -233,6 +236,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 address: updatedEmployeeAddress,
                 mobile: updatedEmployeeMobile,
                 landline: updatedEmployeeLandline,
+                status: editingEmployee.status, // Preserve status
             };
             await updateCompanyEmployee(userProfile.organizationId, company.id, editingEmployee.email, employeeData);
             toast({ title: "Employee Updated", description: "The employee's details have been updated." });
@@ -256,7 +260,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
         setIsAddingEmployee(true);
         try {
-            const newEmployee: Employee = {
+            const newEmployee: Omit<Employee, 'status'> = {
                 name: newEmployeeName,
                 email: newEmployeeEmail,
                 address: newEmployeeAddress,
@@ -297,6 +301,22 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             toast({ variant: 'destructive', title: 'Deletion Failed', description: errorMessage });
         } finally {
             setIsDeleting(false);
+        }
+    };
+    
+    const handleSendVerification = async (email: string, name: string) => {
+        if (!userProfile?.organizationId || !company?.id) return;
+
+        setIsSendingVerification(email);
+        try {
+            await sendEmployeeVerificationEmail(userProfile.organizationId, company.id, email, name);
+            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${email}.` });
+            await fetchCompanyData();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Failed to Send', description: errorMessage });
+        } finally {
+            setIsSendingVerification(null);
         }
     };
 
@@ -411,6 +431,19 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         }
 
         return null;
+    };
+    
+    const renderEmployeeStatusBadge = (status: Employee['status']) => {
+        switch (status) {
+            case 'Registered':
+                return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Registered</Badge>;
+            case 'Invited':
+                return <Badge variant="destructive" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
+            case 'Uninvited':
+                return <Badge variant="destructive">Uninvited</Badge>;
+            default:
+                return <Badge variant="outline">Unknown</Badge>;
+        }
     };
 
 
@@ -669,8 +702,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                 <TableRow>
                                                                     <TableHead>Name</TableHead>
                                                                     <TableHead>Email</TableHead>
-                                                                    <TableHead>Tickets</TableHead>
-                                                                    {isOwner && <TableHead className="w-[50px] text-right">Actions</TableHead>}
+                                                                    <TableHead>Status</TableHead>
+                                                                    {isOwner && <TableHead className="w-[100px] text-right">Actions</TableHead>}
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
@@ -682,11 +715,30 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                             </Link>
                                                                         </TableCell>
                                                                         <TableCell>{employee.email}</TableCell>
-                                                                        <TableCell>
-                                                                            {tickets.filter(t => t.senderEmail?.toLowerCase() === employee.email.toLowerCase()).length}
-                                                                        </TableCell>
+                                                                        <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
                                                                         {isOwner && (
-                                                                            <TableCell className="text-right">
+                                                                            <TableCell className="flex items-center justify-end gap-2">
+                                                                                {employee.status !== 'Registered' && (
+                                                                                    <TooltipProvider>
+                                                                                        <Tooltip>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <Button 
+                                                                                                    variant="ghost" 
+                                                                                                    size="icon" 
+                                                                                                    className="h-8 w-8"
+                                                                                                    onClick={() => handleSendVerification(employee.email, employee.name)} 
+                                                                                                    disabled={isSendingVerification === employee.email}
+                                                                                                >
+                                                                                                    {isSendingVerification === employee.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                                                </Button>
+                                                                                            </TooltipTrigger>
+                                                                                            <TooltipContent>
+                                                                                                <p>{employee.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
+                                                                                            </TooltipContent>
+                                                                                        </Tooltip>
+                                                                                    </TooltipProvider>
+                                                                                )}
+
                                                                                 <AlertDialog open={deletingEmployee?.email === employee.email} onOpenChange={(isOpen) => { if (!isOpen) setDeletingEmployee(null); }}>
                                                                                     <DropdownMenu>
                                                                                         <DropdownMenuTrigger asChild>

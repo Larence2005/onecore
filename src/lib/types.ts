@@ -42,3 +42,24 @@ export const memberSignUpSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 export type MemberSignUpFormData = z.infer<typeof memberSignUpSchema>;
+
+
+export interface Employee {
+    name: string;
+    email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    status: 'Uninvited' | 'Invited' | 'Registered';
+}
+
+export interface OrganizationMember {
+    uid: string | null;
+    name: string;
+    email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    status: 'Uninvited' | 'Invited' | 'Registered' | 'Not Verified' | 'Verified';
+    isClient?: boolean;
+}

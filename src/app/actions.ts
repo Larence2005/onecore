@@ -127,6 +127,7 @@ export interface Employee {
     address?: string;
     mobile?: string;
     landline?: string;
+    status: 'Uninvited' | 'Invited' | 'Registered';
 }
 
 export interface Note {
@@ -832,7 +833,7 @@ export async function replyToEmailAction(
     comment: string,
     conversationId: string | undefined,
     attachments: NewAttachment[],
-    currentUser: { name: string; email: string; isClient: boolean },
+    currentUser: { name: string; email: string; isClient: boolean; status?: string },
     to: string,
     cc: string | undefined,
     bcc: string | undefined
@@ -840,6 +841,11 @@ export async function replyToEmailAction(
     const settings = await getAPISettings(organizationId);
     if (!settings) {
         throw new Error('Failed to acquire access token. Check your API settings.');
+    }
+
+    // Enforce verification for client employees
+    if (currentUser.isClient && currentUser.status !== 'Registered') {
+        throw new Error('You must be a registered employee to reply to tickets. Please complete your registration.');
     }
     
     const authResponse = await getAccessToken(settings);
@@ -973,7 +979,7 @@ export async function forwardEmailAction(
 }
 
 
-export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Employee) {
+export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Omit<Employee, 'status'>) {
     if (!organizationId || !companyId || !employee.email) {
         return; // Or throw an error
     }
@@ -985,6 +991,7 @@ export async function addEmployeeToCompany(organizationId: string, companyId: st
         address: employee.address || '',
         mobile: employee.mobile || '',
         landline: employee.landline || '',
+        status: 'Uninvited', // Set default status
     }, { merge: true });
     
     // Invalidate company-specific employee cache
@@ -1045,9 +1052,12 @@ export async function updateCompanyEmployee(
             if (newDocCheck.exists()) {
                 throw new Error("An employee with the new email address already exists.");
             }
+            
+            const oldData = oldDoc.data() as Employee;
+            const newData = { ...oldData, ...employeeData };
 
             transaction.delete(employeeDocRef);
-            transaction.set(newEmployeeDocRef, employeeData);
+            transaction.set(newEmployeeDocRef, newData);
         });
     }
 
@@ -1942,6 +1952,48 @@ export async function sendVerificationEmail(organizationId: string, recipientEma
 
     return { success: true };
 }
+
+export async function sendEmployeeVerificationEmail(organizationId: string, companyId: string, recipientEmail: string, recipientName: string) {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error("API settings are not configured to send emails.");
+    }
+    
+    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', companyId, 'employees', recipientEmail);
+    const employeeDoc = await getDoc(employeeDocRef);
+    if (!employeeDoc.exists()) {
+        throw new Error("Employee not found in the specified company.");
+    }
+
+    // Update the employee's status to 'Invited'
+    await updateDoc(employeeDocRef, { status: 'Invited' });
+    
+    // Invalidate employee cache
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+
+    const headersList = headers();
+    const host = headersList.get('host') || '';
+    const protocol = headersList.get('x-forwarded-proto') || 'http';
+    const signupUrl = `${protocol}://${host}/member-signup`;
+
+    const subject = "You've been invited to your company's support portal";
+    const body = `
+        <p>Hello ${recipientName},</p>
+        <p>You have been invited to join your company's support ticketing portal.</p>
+        <p>Please complete your registration by visiting the following link:</p>
+        <p><a href="${signupUrl}">${signupUrl}</a></p>
+        <p>Once registered, you will be able to submit and manage support tickets.</p>
+    `;
+
+    await sendEmailAction(organizationId, {
+        recipient: recipientEmail,
+        subject: subject,
+        body: body,
+    });
+
+    return { success: true };
+}
+
     
 // --- Verification and Domain Creation ---
 

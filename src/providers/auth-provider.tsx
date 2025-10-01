@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import type { SignUpFormData, LoginFormData, MemberSignUpFormData, OrganizationMember } from '@/lib/types';
+import type { SignUpFormData, LoginFormData, MemberSignUpFormData, OrganizationMember, Employee } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, or } from 'firebase/firestore';
 import { createOrganization } from '@/app/actions';
 
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const employeeDocRef = doc(companyDoc.ref, 'employees', user.email);
             const employeeDoc = await getDoc(employeeDocRef);
             if (employeeDoc.exists()) {
-                const employeeData = employeeDoc.data();
+                const employeeData = employeeDoc.data() as Employee;
                 setUserProfile({
                     uid: user.uid,
                     email: user.email,
@@ -139,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     organizationName: orgData.name,
                     organizationOwnerUid: orgData.owner,
                     isClient: true,
+                    status: employeeData.status,
                 });
                 return;
             }
@@ -198,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const memberSignup = async (data: MemberSignUpFormData) => {
     let orgId: string | null = null;
+    let companyId: string | null = null;
     let isAgent = false;
     let isClientEmployee = false;
     
@@ -227,9 +229,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const employeeDocRef = doc(companyDoc.ref, 'employees', data.email);
             const employeeDoc = await getDoc(employeeDocRef);
             if (employeeDoc.exists()) {
-                orgId = orgDoc.id;
-                isClientEmployee = true;
-                break;
+                 const employeeData = employeeDoc.data() as Employee;
+                 if (employeeData.status === 'Invited') {
+                    orgId = orgDoc.id;
+                    companyId = companyDoc.id;
+                    isClientEmployee = true;
+                    break;
+                 } else if (employeeData.status === 'Uninvited') {
+                    throw new Error("Your account has not been verified by your company administrator. Please contact them to send a verification email.");
+                 } else if (employeeData.status === 'Registered') {
+                    throw new Error("This email address has already been registered as an employee.");
+                 }
             }
         }
         if (isClientEmployee) break;
@@ -253,6 +263,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
             await updateDoc(orgRef, { members: updatedMembers });
         }
+    } else if (isClientEmployee && companyId) {
+        const employeeDocRef = doc(db, 'organizations', orgId, 'companies', companyId, 'employees', data.email);
+        await updateDoc(employeeDocRef, { status: 'Registered', uid: userCredential.user.uid });
     }
     
     await fetchUserProfile(userCredential.user);
