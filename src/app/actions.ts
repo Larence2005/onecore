@@ -2090,11 +2090,6 @@ async function addDnsRecordToCloudflare(
   if (priority !== undefined) {
     payload.priority = priority;
   }
-
-  // Handle specific record type content formatting
-  if (type.toUpperCase() === 'CNAME' || type.toUpperCase() === 'MX' || type.toUpperCase() === 'TXT') {
-    payload.content = content;
-  }
   
   const headers = {
     Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
@@ -2256,20 +2251,23 @@ export async function verifyUserEmail(
     }
     
     // 7. Add DNS Records for Email
-    console.log("Adding essential DNS records for email...");
     const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
         const type = rec.recordType.toLowerCase();
 
         if (type === "mx") {
+            // Mail delivery (primary MX)
             await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-        } else if (type === "cname" && rec.label.toLowerCase() === "autodiscover") {
-            const cname = rec.label + "." + newDomain;
-            await addDnsRecordToCloudflare("CNAME", cname, rec.pointsTo);
+
+        } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
+            // Autodiscover for Outlook
+            await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
+
         } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
+            // SPF for email sending
             await addDnsRecordToCloudflare("TXT", newDomain, `"${rec.text}"`);
         } else {
-            console.log(`⏭️ Skipping non-essential record: ${rec.recordType} ${rec.label || newDomain}`);
+            console.log(`⏭️ Skipping non-email record: ${rec.recordType} ${rec.label || newDomain}`);
         }
     }
 
@@ -2370,6 +2368,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
