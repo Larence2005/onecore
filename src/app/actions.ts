@@ -852,9 +852,11 @@ export async function replyToEmailAction(
     }
 
     let finalCc = cc;
-    if (!currentUser.isClient) {
-        // If an agent is replying, add them to the CC list
-        const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean));
+    // Add current user to CC if they are not already in the 'to' or 'cc' list.
+    const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
+    const toSet = new Set(to.split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
+
+    if (!toSet.has(currentUser.email.toLowerCase()) && !ccSet.has(currentUser.email.toLowerCase())) {
         ccSet.add(currentUser.email);
         finalCc = Array.from(ccSet).join(', ');
     }
@@ -2431,6 +2433,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
