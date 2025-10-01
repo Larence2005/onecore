@@ -221,9 +221,7 @@ export function AgentProfile({ email }: { email: string }) {
     };
     
     const handleMenuClick = (view: string) => {
-        if(view === 'tickets' || view === '/') {
-            router.push('/dashboard');
-        } else if (view === 'archive') {
+        if (view === 'archive') {
             router.push('/archive');
         } else {
             router.push(`/dashboard?view=${view}`); 

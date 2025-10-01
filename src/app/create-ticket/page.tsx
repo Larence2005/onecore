@@ -33,9 +33,7 @@ export default function CreateTicketPage() {
     };
     
     const handleMenuClick = (view: string) => {
-        if(view === 'tickets' || view === '/') {
-            router.push('/dashboard');
-        } else if (view === 'create-ticket') {
+        if (view === 'create-ticket') {
             router.push('/create-ticket');
         } else {
             router.push(`/dashboard?view=${view}`); 
