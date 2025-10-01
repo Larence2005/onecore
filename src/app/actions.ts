@@ -561,7 +561,6 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             deadline: data.deadline,
             closedAt: data.closedAt,
             ticketNumber: data.ticketNumber,
-            statusBeforeArchive: data.statusBeforeArchive,
             companyId: data.companyId,
             companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
             assignee: data.assignee,

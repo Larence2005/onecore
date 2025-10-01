@@ -33,8 +33,7 @@ export function ArchiveView() {
             const tickets = await getTicketsFromDB(userProfile.organizationId, { 
                 includeArchived: true, 
             });
-            // Filter only for archived tickets client-side, as the function can return all if needed elsewhere.
-            setArchivedTickets(tickets.filter(t => t.status === 'Archived'));
+            setArchivedTickets(tickets);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             setError(errorMessage);
