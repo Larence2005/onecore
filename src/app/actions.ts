@@ -1,4 +1,3 @@
-
 "use server";
 
 import {
@@ -316,10 +315,7 @@ export async function createTicket(
         const settings = await getAPISettings(organizationId);
         if (settings) {
             try {
-                const headersList = headers();
-                const host = headersList.get('host') || '';
-                const protocol = headersList.get('x-forwarded-proto') || 'http';
-                const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
+                const ticketUrl = `/tickets/${newTicketRef.id}`;
 
                 const emailSubject = `[Ticket #${ticketNumber}] ${title}`;
                 let emailBody: string;
@@ -347,7 +343,7 @@ export async function createTicket(
                         <p>Hello ${author.name},</p>
                         <p>Your ticket with the subject "${title}" has been created successfully.</p>
                         <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
-                        <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                        <p>You can view your ticket and any updates at this URL: ${ticketUrl}</p>
                         <br>
                         <p>This is an automated notification. Replies to this email are not monitored.</p>
                     `;
@@ -475,17 +471,14 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
                     // Send notification for email-based tickets
                     try {
-                        const headersList = headers();
-                        const host = headersList.get('host') || '';
-                        const protocol = headersList.get('x-forwarded-proto') || 'http';
-                        const ticketUrl = `${protocol}://${host}/tickets/${ticketId}`;
+                        const ticketUrl = `/tickets/${ticketId}`;
                         
                         const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
                         const notificationBody = `
                             <p>Hello ${preliminaryTicketData.sender},</p>
                             <p>Your ticket with the subject "${preliminaryTicketData.title}" has been created successfully.</p>
                             <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
-                            <p>You can view your ticket and any updates here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                            <p>You can view your ticket and any updates at this URL: ${ticketUrl}</p>
                             <br>
                             <p>This is an automated notification. Replies to this email are not monitored.</p>
                         `;
@@ -1179,6 +1172,9 @@ export async function updateTicket(
         let originalAssignee: string | null;
         let originalPriority: string;
         let originalDeadline: string | null;
+        let originalType: string;
+        let originalCompanyId: string | null;
+        let originalTags: string[];
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -1191,6 +1187,10 @@ export async function updateTicket(
             originalAssignee = ticketData.assignee || null;
             originalPriority = ticketData.priority;
             originalDeadline = ticketData.deadline || null;
+            originalType = ticketData.type || 'Incident';
+            originalCompanyId = ticketData.companyId || null;
+            originalTags = ticketData.tags || [];
+
 
             const updateData: any = { ...data };
 
@@ -1208,7 +1208,6 @@ export async function updateTicket(
                 updateData.tags = arrayRemove('Resolved Late');
             }
             
-            // Set deadline based on priority change
             if (data.priority && data.priority !== ticketData.priority) {
                 const now = new Date();
                 switch (data.priority) {
@@ -1234,7 +1233,6 @@ export async function updateTicket(
             transaction.update(ticketDocRef, updateData);
         });
 
-        // --- Post-transaction actions (like sending emails) ---
         const settings = await getAPISettings(organizationId);
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
@@ -1256,11 +1254,9 @@ export async function updateTicket(
                     });
                 }
                 
-                // Add owner and agent emails to the participants set
                 if (owner?.email) emailParticipants.add(owner.email.toLowerCase());
                 if (assignedAgent?.email) emailParticipants.add(assignedAgent.email.toLowerCase());
 
-                // Remove the primary client from the participants set to avoid them being in CC
                 emailParticipants.delete(ticketData.senderEmail.toLowerCase());
                 
                 const ccRecipients = Array.from(emailParticipants);
@@ -1293,18 +1289,14 @@ export async function updateTicket(
                 const members = await getOrganizationMembers(organizationId);
                 const newAssignee = members.find(m => m.uid === data.assignee);
                 if (newAssignee && newAssignee.email) {
-                    
-                    const headersList = headers();
-                    const host = headersList.get('host') || '';
-                    const protocol = headersList.get('x-forwarded-proto') || 'http';
-                    const ticketUrl = `${protocol}://${host}/tickets/${id}`;
+                    const ticketUrl = `/tickets/${id}`;
                     
                     const subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                     const body = `
                         <p>Hello ${newAssignee.name},</p>
                         <p>You have been assigned a new ticket by ${currentUser.name}.</p>
                         <p><b>Ticket #${ticketData.ticketNumber}: ${ticketData.title}</b></p>
-                        <p>You can view and respond to the ticket here: <a href="${ticketUrl}">${ticketUrl}</a></p>
+                        <p>You can view and respond to the ticket here: ${ticketUrl}</p>
                     `;
                     try {
                         await sendEmailAction(organizationId, {
@@ -1319,19 +1311,45 @@ export async function updateTicket(
              }
         }
         
-        // --- Manual activity logging after transaction ---
         const newData = await getDoc(ticketDocRef).then(d => d.data());
         
         if (data.priority && data.priority !== originalPriority) {
             await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: new Date().toISOString(), user: currentUser.email });
         }
+        if (data.status && data.status !== originalStatus) {
+            await addActivityLog(organizationId, id, { type: 'Status', details: `changed from ${originalStatus} to ${data.status}`, date: new Date().toISOString(), user: currentUser.email });
+        }
+        if (data.type && data.type !== originalType) {
+            await addActivityLog(organizationId, id, { type: 'Type', details: `changed from ${originalType} to ${data.type}`, date: new Date().toISOString(), user: currentUser.email });
+        }
+        if (data.assignee !== undefined && data.assignee !== originalAssignee) {
+            const members = await getOrganizationMembers(organizationId);
+            const prevAssigneeName = members.find(m => m.uid === originalAssignee)?.name || 'Unassigned';
+            const newAssigneeName = members.find(m => m.uid === data.assignee)?.name || 'Unassigned';
+            await addActivityLog(organizationId, id, { type: 'Assignee', details: `changed from ${prevAssigneeName} to ${newAssigneeName}`, date: new Date().toISOString(), user: currentUser.email });
+        }
+        if (data.companyId !== undefined && data.companyId !== originalCompanyId) {
+            const companies = await getCompanies(organizationId);
+            const prevCompanyName = companies.find(c => c.id === originalCompanyId)?.name || 'None';
+            const newCompanyName = companies.find(c => c.id === data.companyId)?.name || 'None';
+            await addActivityLog(organizationId, id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: new Date().toISOString(), user: currentUser.email });
+        }
         if (newData.deadline !== originalDeadline) {
             const detail = newData.deadline ? `set to ${format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
             await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUser.email });
         }
+        if (data.tags) {
+            const addedTags = data.tags.filter(t => !originalTags.includes(t));
+            const removedTags = originalTags.filter(t => !data.tags!.includes(t));
+            if (addedTags.length > 0) {
+                await addActivityLog(organizationId, id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString(), user: currentUser.email });
+            }
+            if (removedTags.length > 0) {
+                await addActivityLog(organizationId, id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString(), user: currentUser.email });
+            }
+        }
 
 
-        // Invalidate relevant caches
         ticketsCache.invalidate(`ticket:${organizationId}:${id}`);
         ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
         activityCache.invalidatePrefix(`activity:${organizationId}`);
@@ -1961,12 +1979,9 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
 
     try {
         const now = new Date();
-        const reminderTimeFrame = addHours(now, 24);
-
         const ticketsRef = collection(db, 'organizations', organizationId, 'tickets');
         const q = query(ticketsRef, 
             where('status', 'in', ['Open', 'Pending']),
-            where('deadline', '!=', null)
         );
 
         const querySnapshot = await getDocs(q);
@@ -1974,43 +1989,54 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
 
         for (const ticketDoc of querySnapshot.docs) {
             const ticket = ticketDoc.data() as Email;
+            
+            if (!ticket.deadline) continue;
+
             const ticketDeadline = parseISO(ticket.deadline!);
+            const daysUntilDeadline = differenceInSeconds(ticketDeadline, now) / (60 * 60 * 24);
 
-            const isApproaching = isWithinInterval(ticketDeadline, { start: now, end: reminderTimeFrame });
-            const hasBeenNotified = ticket.tags?.includes('deadline-reminder-sent');
-
-            if (isApproaching && !hasBeenNotified && ticket.assignee) {
-                const assignee = members.find(m => m.uid === ticket.assignee);
-                if (assignee?.email) {
-                    const headersList = headers();
-                    const host = headersList.get('host') || '';
-                    const protocol = headersList.get('x-forwarded-proto') || 'http';
-                    const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
-                    
-                    const subject = `Reminder: Ticket #${ticket.ticketNumber} is due soon`;
-                    const body = `
-                        <p>Hello ${assignee.name},</p>
-                        <p>This is a reminder that the following ticket is approaching its deadline:</p>
-                        <p><b>Ticket #${ticket.ticketNumber}: ${ticket.subject}</b></p>
-                        <p><b>Deadline:</b> ${new Date(ticket.deadline!).toLocaleString()}</p>
-                        <p>You can view and respond to the ticket here: <a href="${ticketUrl}">${ticketUrl}</a></p>
-                    `;
-
-                    try {
-                        await sendEmailAction(organizationId, {
-                            recipient: assignee.email,
-                            subject: subject,
-                            body: body,
-                        });
-
-                        // Add a tag to prevent re-sending notifications
-                        await updateDoc(ticketDoc.ref, {
-                            tags: arrayUnion('deadline-reminder-sent')
-                        });
-                    } catch (e) {
-                        console.error(`Failed to send deadline reminder for ticket ${ticket.id}:`, e);
+            const hasBeenNotifiedForDay = ticket.tags?.some(tag => tag.startsWith(`deadline-reminder-sent-day-`));
+            
+            // Overdue notification
+            if (isPast(ticketDeadline) && !ticket.tags?.includes('overdue-notification-sent')) {
+                if (ticket.assignee) {
+                    const assignee = members.find(m => m.uid === ticket.assignee);
+                    if (assignee?.email) {
+                        const ticketUrl = `/tickets/${ticket.id}`;
+                        const subject = `Overdue Ticket: #${ticket.ticketNumber} - ${ticket.subject}`;
+                        const body = `<p>Ticket #${ticket.ticketNumber} is now overdue.</p><p>View ticket: ${ticketUrl}</p>`;
+                        await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
+                        await updateDoc(ticketDoc.ref, { tags: arrayUnion('overdue-notification-sent') });
                     }
                 }
+                continue; // Skip daily reminders if overdue
+            }
+
+
+            // Daily reminder logic
+            const priorityDaysMap: { [key: string]: number } = { 'Low': 4, 'Medium': 3, 'High': 2, 'Urgent': 1 };
+            const reminderDays = priorityDaysMap[ticket.priority];
+
+            if (reminderDays && daysUntilDeadline > 0 && daysUntilDeadline <= reminderDays) {
+                 const dayToSend = Math.ceil(daysUntilDeadline);
+                 const notificationTag = `deadline-reminder-sent-day-${dayToSend}`;
+
+                 if (!ticket.tags?.includes(notificationTag)) {
+                     if (ticket.assignee) {
+                        const assignee = members.find(m => m.uid === ticket.assignee);
+                        if (assignee?.email) {
+                            const ticketUrl = `/tickets/${ticket.id}`;
+                            const subject = `Reminder: Ticket #${ticket.ticketNumber} is due in ${dayToSend} day(s)`;
+                            const body = `<p>Ticket #${ticket.ticketNumber} is due soon.</p><p>View ticket: ${ticketUrl}</p>`;
+                            await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
+                            
+                            // Add new tag and remove old ones
+                            const newTags = (ticket.tags || []).filter(t => !t.startsWith('deadline-reminder-sent-day-'));
+                            newTags.push(notificationTag);
+                            await updateDoc(ticketDoc.ref, { tags: newTags });
+                        }
+                     }
+                 }
             }
         }
     } catch (error) {

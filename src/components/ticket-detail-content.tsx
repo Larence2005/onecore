@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -301,44 +299,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const unsubscribe = onSnapshot(ticketDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const ticketData = { id: docSnap.id, ...docSnap.data() } as DetailedEmail;
-                const previousTicket = previousEmailRef.current;
-                const currentUserEmail = user.email!;
-
-                if (previousTicket) {
-                    if (ticketData.priority !== previousTicket.priority) {
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Priority', details: `changed from ${previousTicket.priority} to ${ticketData.priority}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-                    if (ticketData.status !== previousTicket.status) {
-                         await addActivityLog(userProfile.organizationId!, email.id, { type: 'Status', details: `changed from ${previousTicket.status} to ${ticketData.status}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-                     if (ticketData.type !== previousTicket.type) {
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Type', details: `changed from ${previousTicket.type} to ${ticketData.type}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-                     if (ticketData.deadline !== previousTicket.deadline) {
-                        const detail = ticketData.deadline ? `set to ${format(parseISO(ticketData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-                    if (ticketData.companyId !== previousTicket.companyId) {
-                        const prevCompanyName = companies.find(c => c.id === previousTicket.companyId)?.name || 'None';
-                        const newCompanyName = companies.find(c => c.id === ticketData.companyId)?.name || 'None';
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-                     if (ticketData.assignee !== previousTicket.assignee) {
-                        const prevAssigneeName = members.find(m => m.uid === previousTicket.assignee)?.name || 'Unassigned';
-                        const newAssigneeName = members.find(m => m.uid === ticketData.assignee)?.name || 'Unassigned';
-                        await addActivityLog(userProfile.organizationId!, email.id, { type: 'Assignee', details: `changed from ${prevAssigneeName} to ${newAssigneeName}`, date: new Date().toISOString(), user: currentUserEmail });
-                    }
-
-                    
-                    const prevTags = new Set(previousTicket.tags || []);
-                    const newTags = new Set(ticketData.tags || []);
-                    const addedTags = [...newTags].filter(x => !prevTags.has(x));
-                    const removedTags = [...prevTags].filter(x => !newTags.has(x));
-
-                    if(addedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString(), user: currentUserEmail });
-                    if(removedTags.length > 0) await addActivityLog(userProfile.organizationId!, email.id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString(), user: currentUserEmail });
-                }
-
+                
                 // Update UI state and ref
                  setEmail(prevEmail => prevEmail ? ({ ...prevEmail, ...ticketData }) : ticketData);
                  setCurrentDeadline(ticketData.deadline ? parseISO(ticketData.deadline) : undefined);
@@ -347,7 +308,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         });
 
         return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId, members, companies, user?.email]);
+    }, [email?.id, userProfile?.organizationId]);
 
      useEffect(() => {
         if (!email?.id || !userProfile?.organizationId) return;
