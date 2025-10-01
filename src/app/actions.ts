@@ -575,6 +575,16 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
 }
 
 
+const areRecipientsEqual = (recipientsA: Recipient[] | undefined, recipientsB: Recipient[] | undefined): boolean => {
+    if (!recipientsA && !recipientsB) return true;
+    if (!recipientsA || !recipientsB || recipientsA.length !== recipientsB.length) return false;
+
+    const emailsA = recipientsA.map(r => r.emailAddress.address.toLowerCase()).sort();
+    const emailsB = recipientsB.map(r => r.emailAddress.address.toLowerCase()).sort();
+
+    return emailsA.every((email, index) => email === emailsB[index]);
+};
+
 export async function fetchAndStoreFullConversation(organizationId: string, conversationId: string): Promise<DetailedEmail[]> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
@@ -626,7 +636,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         };
     }
 
-    const conversationMessages: DetailedEmail[] = conversationData.value.map(msg => ({
+    let conversationMessages: DetailedEmail[] = conversationData.value.map(msg => ({
         id: msg.id,
         subject: msg.subject,
         sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
@@ -649,13 +659,34 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
 
     // Sort messages by date client-side
     conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
+    
+    // De-duplication logic
+    const uniqueMessages: DetailedEmail[] = [];
+    const seenMessages = new Set<string>();
+
+    for (const msg of conversationMessages) {
+        // Create a unique signature for the message based on content, sender, and recipients
+        const signature = JSON.stringify({
+            sender: msg.senderEmail?.toLowerCase(),
+            to: (msg.toRecipients || []).map(r => r.emailAddress.address.toLowerCase()).sort(),
+            cc: (msg.ccRecipients || []).map(r => r.emailAddress.address.toLowerCase()).sort(),
+            subject: msg.subject,
+            body: msg.body.content.trim(),
+        });
+
+        if (!seenMessages.has(signature)) {
+            uniqueMessages.push(msg);
+            seenMessages.add(signature);
+        }
+    }
+
 
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-    await setDoc(conversationDocRef, { messages: conversationMessages });
+    await setDoc(conversationDocRef, { messages: uniqueMessages });
     
     // When a conversation is updated, we also need to update the main ticket's bodyPreview and received time
-    if (conversationMessages.length > 0 && !querySnapshot.empty) {
-        const lastMessage = conversationMessages[conversationMessages.length - 1];
+    if (uniqueMessages.length > 0 && !querySnapshot.empty) {
+        const lastMessage = uniqueMessages[uniqueMessages.length - 1];
         const ticketDocRef = querySnapshot.docs[0].ref;
         await updateDoc(ticketDocRef, {
             bodyPreview: lastMessage.bodyPreview,
@@ -670,7 +701,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
     }
 
 
-    return conversationMessages;
+    return uniqueMessages;
 }
 
 
@@ -2442,4 +2473,6 @@ export async function verifyUserEmail(
     
 
     
+
+
 
