@@ -874,7 +874,7 @@ export async function replyToEmailAction(
     comment: string,
     conversationId: string | undefined,
     attachments: NewAttachment[],
-    currentUser: { name: string; email: string; isClient: boolean; status?: string },
+    currentUser: { name: string; email: string; isClient: boolean; status?: string; isOwner: boolean; },
     to: string,
     cc: string | undefined,
     bcc: string | undefined
@@ -895,19 +895,18 @@ export async function replyToEmailAction(
     }
 
     let finalCc = cc;
-    const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-    const toSet = new Set(to.split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
 
-    // Always add the current user to the CC list if they aren't already there.
-    if (!toSet.has(currentUser.email.toLowerCase()) && !ccSet.has(currentUser.email.toLowerCase())) {
-        ccSet.add(currentUser.email.toLowerCase());
+    // If the current user is an admin and their email is in the CC, remove it.
+    if (currentUser.isOwner) {
+        const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
+        ccSet.delete(currentUser.email.toLowerCase());
         finalCc = Array.from(ccSet).join(', ');
     }
 
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
-            toRecipients: parseRecipients(to), // 'to' is now part of the payload
+            toRecipients: parseRecipients(to),
             ccRecipients: parseRecipients(finalCc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
@@ -2619,6 +2618,8 @@ export async function verifyUserEmail(
     
 
   
+
+    
 
     
 

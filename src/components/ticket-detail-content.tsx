@@ -471,6 +471,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             );
 
             const isClientReplying = userProfile.isClient === true;
+            const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
             
             // Immediately hide reply form and show toast
             setReplyingToMessageId(null);
@@ -483,7 +484,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 replyContent, 
                 email?.conversationId, 
                 attachmentPayloads,
-                { name: userProfile.name || user.email, email: user.email, isClient: isClientReplying, status: userProfile.status },
+                { 
+                    name: userProfile.name || user.email, 
+                    email: user.email, 
+                    isClient: isClientReplying, 
+                    status: userProfile.status,
+                    isOwner: isOwnerReplying,
+                },
                 replyTo,
                 replyCc, 
                 replyBcc
@@ -565,63 +572,67 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (message && user?.email && userProfile) {
-            setReplyingToMessageId(messageId);
-            setReplyType('reply');
-            setReplyTo(message.senderEmail || '');
-            setForwardingMessageId(null);
-            setNoteContent('');
-            setIsAddingNote(false);
-            setReplyContent('');
+        if (!message || !user?.email || !userProfile) return;
 
-            const ccRecipients = new Set<string>();
-            
-            // If the current user is a client, add them to CC
-            if (userProfile.isClient) {
-                 ccRecipients.add(user.email);
-            }
+        setReplyingToMessageId(messageId);
+        setReplyType('reply');
+        setReplyTo(message.senderEmail || '');
+        setForwardingMessageId(null);
+        setNoteContent('');
+        setIsAddingNote(false);
+        setReplyContent('');
 
-            setReplyCc(Array.from(ccRecipients).join(', '));
-            setReplyBcc('');
-            setShowReplyCc(ccRecipients.size > 0);
-            setShowReplyBcc(false);
+        const ccRecipients = new Set<string>();
+        const isOwner = user.uid === userProfile.organizationOwnerUid;
+        const isAgent = !isOwner && !userProfile.isClient;
+
+        // Add agent/client to CC, but not owner
+        if (isAgent || userProfile.isClient) {
+            ccRecipients.add(user.email);
         }
+
+        setReplyCc(Array.from(ccRecipients).join(', '));
+        setReplyBcc('');
+        setShowReplyCc(ccRecipients.size > 0);
+        setShowReplyBcc(false);
     };
     
     const handleReplyAllClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (message && user?.email && userProfile) {
-            setReplyingToMessageId(messageId);
-            setReplyType('reply-all');
-            setReplyTo(message.senderEmail || '');
+        if (!message || !user?.email || !userProfile) return;
+
+        setReplyingToMessageId(messageId);
+        setReplyType('reply-all');
+        setReplyTo(message.senderEmail || '');
     
-            const allRecipients = new Set<string>();
-            message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
-            message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
+        const allRecipients = new Set<string>();
+        message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
+        message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
-            // Prevent sender from being in CC if they're already the 'to' recipient
-            if (message.senderEmail) {
-                allRecipients.delete(message.senderEmail.toLowerCase());
-            }
-
-            // Don't add current user to CC if they are not the one sending the reply (unless they are a client)
-            if (!userProfile.isClient) {
-                allRecipients.delete(user.email.toLowerCase());
-            } else {
-                allRecipients.add(user.email.toLowerCase());
-            }
-
-            setReplyCc(Array.from(allRecipients).join(', '));
-            setReplyBcc('');
-            setForwardingMessageId(null);
-            setNoteContent('');
-            setIsAddingNote(false);
-            setReplyContent('');
-            setShowReplyCc(allRecipients.size > 0);
-            setShowReplyBcc(false);
+        // Don't CC the person we are replying to
+        if (message.senderEmail) {
+            allRecipients.delete(message.senderEmail.toLowerCase());
         }
+
+        const isOwner = user.uid === userProfile.organizationOwnerUid;
+        const isAgent = !isOwner && !userProfile.isClient;
+        
+        // Add agent/client to CC, but remove owner from CC
+        if (isAgent || userProfile.isClient) {
+            allRecipients.add(user.email.toLowerCase());
+        } else if (isOwner) {
+            allRecipients.delete(user.email.toLowerCase());
+        }
+
+        setReplyCc(Array.from(allRecipients).join(', '));
+        setReplyBcc('');
+        setForwardingMessageId(null);
+        setNoteContent('');
+        setIsAddingNote(false);
+        setReplyContent('');
+        setShowReplyCc(allRecipients.size > 0);
+        setShowReplyBcc(false);
     };
-    
 
     const handleCancelReply = () => {
         setReplyingToMessageId(null);
@@ -1436,15 +1447,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                 <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
                                             </CardHeader>
                                             <CardContent className="space-y-4">
-                                                {activityLog.filter(log => log.type !== 'Note').length > 0 ? (
-                                                    activityLog.filter(log => log.type !== 'Note').map((log) => (
-                                                        <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
-                                                            {log.details}
-                                                        </TimelineItem>
-                                                    ))
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground">No recent activity.</p>
-                                                )}
+                                                {activityLog.filter(log => log.type !== 'Note').map((log) => (
+                                                    <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                                        {log.details}
+                                                    </TimelineItem>
+                                                ))}
                                             </CardContent>
                                         </Card>
                                     )}
@@ -1457,3 +1464,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    
