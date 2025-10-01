@@ -1,3 +1,4 @@
+
 "use server";
 
 import {
@@ -1971,6 +1972,15 @@ export async function updateCompany(
 export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     if (!organizationId) return;
 
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    // Only run between 6 AM and 6 PM (18:00)
+    if (currentHour < 6 || currentHour >= 18) {
+        console.log("Skipping deadline checks: Outside of active hours (6am-6pm).");
+        return;
+    }
+
     const settings = await getAPISettings(organizationId);
     if (!settings) {
         console.log("Skipping deadline checks: API credentials not configured.");
@@ -1978,7 +1988,6 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     }
 
     try {
-        const now = new Date();
         const ticketsRef = collection(db, 'organizations', organizationId, 'tickets');
         const q = query(ticketsRef, 
             where('status', 'in', ['Open', 'Pending']),
@@ -2596,5 +2605,7 @@ export async function verifyUserEmail(
     
 
   
+
+    
 
     
