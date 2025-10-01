@@ -611,12 +611,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setIsAddingNote(false);
             setReplyContent('');
 
-            const isClientReplying = userProfile.isClient === true;
             const ccRecipients = new Set<string>();
-            
-            if (!isClientReplying) {
-                ccRecipients.add(user.email);
-            }
+            ccRecipients.add(user.email);
 
             setReplyCc(Array.from(ccRecipients).join(', '));
             setReplyBcc('');
@@ -636,19 +632,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
-            const isClientReplying = userProfile.isClient === true;
-
-            if (!isClientReplying) {
-                 allRecipients.add(user.email.toLowerCase());
-            }
+            allRecipients.add(user.email.toLowerCase());
 
             if (message.senderEmail) {
                 allRecipients.delete(message.senderEmail.toLowerCase());
-            }
-    
-            // Do not remove the current user's email if they are an agent
-            if(isClientReplying) {
-                allRecipients.delete(user.email.toLowerCase());
             }
 
             setReplyCc(Array.from(allRecipients).join(', '));
@@ -1492,7 +1479,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
-
-
-    
