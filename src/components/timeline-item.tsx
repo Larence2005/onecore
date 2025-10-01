@@ -1,8 +1,7 @@
 
 "use client";
 
-import { formatDistanceToNow } from 'date-fns';
-import { parseISO } from 'date-fns';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { Tag, CalendarClock, UserCheck, Shield, CheckCircle, FileType, Pencil, Building, Forward } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,7 +57,7 @@ export function TimelineItem({ type, date, children, user }: TimelineItemProps) 
                 </div>
                 <div className="text-sm text-foreground break-words">{children}</div>
                 <time className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(parseISO(date), { addSuffix: true })}
+                    {format(parseISO(date), "MMM d, yyyy 'at' h:mm a")}
                 </time>
             </div>
         </div>
