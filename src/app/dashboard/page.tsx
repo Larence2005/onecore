@@ -13,7 +13,7 @@ import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter, FilterState } from '@/components/tickets-filter';
 import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
-import { getLatestEmails, getCompanies, fetchAndStoreFullConversation, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
+import { getCompanies, fetchAndStoreFullConversation, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -57,16 +57,6 @@ function HomePageContent() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
 
-  const syncLatestEmails = useCallback(async () => {
-    if (userProfile?.organizationId) {
-        try {
-            await getLatestEmails(userProfile.organizationId);
-        } catch (syncError) {
-            // Silently fail, error is logged in the action
-        }
-    }
-  }, [userProfile]);
-  
   const runDeadlineChecks = useCallback(async () => {
     if (userProfile?.organizationId && user?.uid === userProfile.organizationOwnerUid) {
         try {
@@ -221,18 +211,13 @@ function HomePageContent() {
     
     const unsubscribePromise = setupListener();
     
-    // This part handles syncing new emails from the mail server.
-    syncLatestEmails();
-    const intervalId = setInterval(syncLatestEmails, 30000);
-    
     // Run deadline checks on component mount
     runDeadlineChecks();
 
     return () => {
       unsubscribePromise.then(unsub => unsub && unsub());
-      clearInterval(intervalId);
     }
-  }, [user, userProfile, syncLatestEmails, runDeadlineChecks]);
+  }, [user, userProfile, runDeadlineChecks]);
 
 
   useEffect(() => {
@@ -479,7 +464,7 @@ function HomePageContent() {
               emails={emails}
               isLoading={isLoading}
               error={error}
-              onRefresh={syncLatestEmails}
+              onRefresh={() => { /* No-op, handled by real-time listener */ }}
               filters={filters}
               dashboardFilters={{
                 companies,
@@ -503,3 +488,5 @@ export default function DashboardPage() {
       </React.Suspense>
   )
 }
+
+    
