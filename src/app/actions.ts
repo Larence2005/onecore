@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
-import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays } from 'date-fns';
+import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format } from 'date-fns';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 import axios from 'axios';
@@ -1172,11 +1172,13 @@ export async function updateTicket(
     },
     currentUser: { name: string; email: string }
 ) {
-    const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
+    const ticketDocRef = doc(db, 'organizations', organizationId, 'id');
     try {
         let ticketData: any;
         let originalStatus: string;
         let originalAssignee: string | null;
+        let originalPriority: string;
+        let originalDeadline: string | null;
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -1187,6 +1189,8 @@ export async function updateTicket(
             ticketData = ticketDoc.data();
             originalStatus = ticketData.status;
             originalAssignee = ticketData.assignee || null;
+            originalPriority = ticketData.priority;
+            originalDeadline = ticketData.deadline || null;
 
             const updateData: any = { ...data };
 
@@ -1313,6 +1317,17 @@ export async function updateTicket(
                     }
                 }
              }
+        }
+        
+        // --- Manual activity logging after transaction ---
+        const newData = await getDoc(ticketDocRef).then(d => d.data());
+        
+        if (data.priority && data.priority !== originalPriority) {
+            await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: new Date().toISOString(), user: currentUser.email });
+        }
+        if (data.deadline !== originalDeadline) {
+            const detail = data.deadline ? `set to ${format(parseISO(data.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
+            await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUser.email });
         }
 
 
