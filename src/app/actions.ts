@@ -2255,7 +2255,7 @@ export async function verifyUserEmail(
         console.warn("AZURE_SECURITY_OBJECT_ID environment variable not set. Skipping adding user to security group.");
     }
     
-    // 7. Add DNS Records for Email (strictly following user's snippet)
+    // 7. Add DNS Records for Email
     console.log("Adding essential DNS records for email...");
     const serviceRecords = await getDomainServiceRecords(client, newDomain);
     for (const rec of serviceRecords) {
@@ -2370,6 +2370,8 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
 
