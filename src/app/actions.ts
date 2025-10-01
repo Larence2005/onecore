@@ -657,29 +657,19 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         bccRecipients: msg.bccRecipients,
     }));
 
-    // Sort messages by date client-side
+    // Sort messages by date to process them chronologically
     conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
     
-    // De-duplication logic
+    // De-duplication logic based on unique message ID
     const uniqueMessages: DetailedEmail[] = [];
-    const seenMessages = new Set<string>();
+    const seenMessageIds = new Set<string>();
 
     for (const msg of conversationMessages) {
-        // Create a unique signature for the message based on content, sender, and recipients
-        const signature = JSON.stringify({
-            sender: msg.senderEmail?.toLowerCase(),
-            to: (msg.toRecipients || []).map(r => r.emailAddress.address.toLowerCase()).sort(),
-            cc: (msg.ccRecipients || []).map(r => r.emailAddress.address.toLowerCase()).sort(),
-            subject: msg.subject,
-            body: msg.body.content.trim(),
-        });
-
-        if (!seenMessages.has(signature)) {
+        if (!seenMessageIds.has(msg.id)) {
             uniqueMessages.push(msg);
-            seenMessages.add(signature);
+            seenMessageIds.add(msg.id);
         }
     }
-
 
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: uniqueMessages });
@@ -2382,6 +2372,8 @@ export async function verifyUserEmail(
 
     
 
+    
+
 
 
 
@@ -2473,6 +2465,7 @@ export async function verifyUserEmail(
     
 
     
+
 
 
 
