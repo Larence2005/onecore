@@ -131,25 +131,7 @@ function VerificationArea() {
     };
     
     if (userProfile?.status === 'Verified') {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <ShieldCheck className="text-green-500" />
-                        Account Verified
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="default" className="border-green-500">
-                        <ShieldCheck className="h-4 w-4 text-green-500" />
-                        <AlertTitle>Your account is verified.</AlertTitle>
-                        <AlertDescription>
-                        Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        )
+        return null;
     }
 
     if(userProfile?.status === 'Not Verified') {
@@ -244,7 +226,7 @@ function VerificationArea() {
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
+                                                   This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
                                                 </AlertDialogDescription>
                                                 <div className="space-y-2 pt-4 text-foreground text-left text-sm">
                                                     <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
@@ -339,9 +321,27 @@ export function SettingsForm() {
   
   return (
     <div className="w-full max-w-2xl space-y-6">
+        {isOwner && userProfile?.status === 'Verified' && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ShieldCheck className="text-green-500" />
+                        Account Verified
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="default" className="border-green-500">
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                        <AlertTitle>Your account is verified.</AlertTitle>
+                        <AlertDescription>
+                        Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+            </Card>
+        )}
+        
         {isOwner && <VerificationArea />}
-
-        <Separator className="my-6" />
         
         <Card className="border-destructive">
              <CardHeader>
