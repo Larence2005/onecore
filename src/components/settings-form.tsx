@@ -225,14 +225,14 @@ function VerificationArea() {
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Confirm New Credentials</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        <div>
+                                        <span>
                                             Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
-                                            <div className="space-y-2 mt-4 text-foreground">
-                                                <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
-                                                <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
-                                                <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
-                                                <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
-                                            </div>
+                                        </span>
+                                        <div className="space-y-2 mt-4 text-foreground text-left">
+                                            <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
+                                            <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
+                                            <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
+                                            <p><strong className="font-medium">Password:</strong> {passwordValue}</p>
                                         </div>
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
@@ -362,3 +362,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
