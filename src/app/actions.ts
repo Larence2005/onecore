@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
-import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds } from 'date-fns';
+import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays } from 'date-fns';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 import axios from 'axios';
@@ -1203,6 +1203,29 @@ export async function updateTicket(
                 updateData.closedAt = null;
                 updateData.tags = arrayRemove('Resolved Late');
             }
+            
+            // Set deadline based on priority change
+            if (data.priority && data.priority !== ticketData.priority) {
+                const now = new Date();
+                switch (data.priority) {
+                    case 'Low':
+                        updateData.deadline = addDays(now, 4).toISOString();
+                        break;
+                    case 'Medium':
+                        updateData.deadline = addDays(now, 3).toISOString();
+                        break;
+                    case 'High':
+                        updateData.deadline = addDays(now, 2).toISOString();
+                        break;
+                    case 'Urgent':
+                        updateData.deadline = addDays(now, 1).toISOString();
+                        break;
+                    default:
+                        updateData.deadline = null;
+                        break;
+                }
+            }
+
 
             transaction.update(ticketDocRef, updateData);
         });
@@ -2422,6 +2445,8 @@ export async function verifyUserEmail(
 
     
 
+    
+
 
 
 
@@ -2526,3 +2551,5 @@ export async function verifyUserEmail(
 
 
       
+
+    
