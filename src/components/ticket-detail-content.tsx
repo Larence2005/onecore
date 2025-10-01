@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -613,9 +614,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const isClientReplying = userProfile.isClient === true;
             const ccRecipients = new Set<string>();
             
-            if (isClientReplying) {
-                ccRecipients.add(user.email);
-            } else {
+            if (!isClientReplying) {
                 ccRecipients.add(user.email);
             }
 
@@ -639,9 +638,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             
             const isClientReplying = userProfile.isClient === true;
 
-            if (isClientReplying) {
-                allRecipients.add(user.email.toLowerCase());
-            } else {
+            if (!isClientReplying) {
                  allRecipients.add(user.email.toLowerCase());
             }
 
@@ -1493,4 +1490,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     );
 }
 
-    
