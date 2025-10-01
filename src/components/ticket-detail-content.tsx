@@ -636,10 +636,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
             
-            allRecipients.add(user.email.toLowerCase());
-
+            // Prevent sender from being in CC if they're already the 'to' recipient
             if (message.senderEmail) {
                 allRecipients.delete(message.senderEmail.toLowerCase());
+            }
+
+            // Don't add current user to CC if they are the one sending the reply (unless they are a client)
+            if (!userProfile.isClient) {
+                allRecipients.delete(user.email.toLowerCase());
+            } else {
+                allRecipients.add(user.email.toLowerCase());
             }
 
             setReplyCc(Array.from(allRecipients).join(', '));
@@ -1380,7 +1386,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                                             {types.map(t => (
                                                                 <SelectItem key={t.value} value={t.value}>
                                                                     <span className="flex items-center gap-2">
-                                                                        <t.icon className={cn("h-4 w-4", t.color)} />
+                                                                        <t.icon className={cn("h-4w-4", t.color)} />
                                                                         {t.label}
                                                                     </span>
                                                                 </SelectItem>

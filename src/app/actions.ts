@@ -897,13 +897,6 @@ export async function replyToEmailAction(
             throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
         }
     }
-
-    // Schedule a background sync to get the real data from the mail server
-    setTimeout(() => {
-        if (conversationId) {
-            fetchAndStoreFullConversation(organizationId, conversationId).catch(console.error);
-        }
-    }, 10000); // 10-second delay to allow Graph API to process
     
     // Invalidate caches to ensure next hard-refresh gets new data
     ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
@@ -2449,3 +2442,4 @@ export async function verifyUserEmail(
     
 
     
+
