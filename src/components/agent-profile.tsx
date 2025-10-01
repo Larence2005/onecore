@@ -20,7 +20,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem,
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Archive } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, or } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
@@ -95,8 +95,8 @@ export function AgentProfile({ email }: { email: string }) {
         const orgMembers = await getOrganizationMembers(userProfile.organizationId);
         const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
         
-        if (!member) {
-            throw new Error("Agent not found in your organization.");
+        if (!member || !member.uid) {
+            throw new Error("Agent not found or not fully registered in your organization.");
         }
         
         setProfileData(member);
@@ -106,47 +106,55 @@ export function AgentProfile({ email }: { email: string }) {
         setUpdatedMobile(member.mobile || '');
         setUpdatedLandline(member.landline || '');
 
+        const allTicketsQuery = query(collection(db, 'organizations', userProfile.organizationId, 'tickets'));
+        const allTicketsSnapshot = await getDocs(allTicketsQuery);
+        const allTickets = allTicketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Email));
 
-        const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
-        
         const tempAssignedTickets = allTickets.filter(ticket => ticket.assignee === member.uid);
-        const tempCcTickets: Email[] = [];
-        const tempBccTickets: Email[] = [];
-        const tempForwardedActivities: ActivityLog[] = [];
+        
+        const conversationsRef = collection(db, 'organizations', userProfile.organizationId, 'conversations');
+        const ccBccQuery = query(conversationsRef, or(
+            where('messages', 'array-contains', { emailAddress: { address: email.toLowerCase() }, type: 'cc' }),
+            where('messages', 'array-contains', { emailAddress: { address: email.toLowerCase() }, type: 'bcc' })
+        ));
+
+        const conversationSnapshot = await getDocs(conversationsRef);
         let tempResponseCount = 0;
-        let allActivities: ActivityLog[] = [];
-
-
-        for (const ticket of allTickets) {
-            const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
-            if (detailedTicket?.conversation) {
-                let isCc = false;
-                let isBcc = false;
-                for (const message of detailedTicket.conversation) {
-                    if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
-                        tempResponseCount++;
-                    }
-                    if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
-                        isCc = true;
-                    }
-                    if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
-                        isBcc = true;
-                    }
+        const ccTicketIds = new Set<string>();
+        const bccTicketIds = new Set<string>();
+        
+        conversationSnapshot.docs.forEach(doc => {
+            const messages = doc.data().messages as DetailedEmail[] || [];
+            messages.forEach(message => {
+                if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
+                    tempResponseCount++;
                 }
-                if (isCc) tempCcTickets.push(ticket);
-                if (isBcc) tempBccTickets.push(ticket);
-            }
+                const conversationId = message.conversationId;
+                if (!conversationId) return;
 
-            const activityLogs = await getActivityLog(userProfile.organizationId, ticket.id);
-            activityLogs.forEach(log => {
-                const activityWithTicketInfo = { ...log, ticketId: ticket.id, ticketSubject: ticket.subject };
-                allActivities.push(activityWithTicketInfo);
-                if (log.type === 'Forward' && log.details.toLowerCase().includes(email.toLowerCase())) {
-                    tempForwardedActivities.push(activityWithTicketInfo);
+                const ticket = allTickets.find(t => t.conversationId === conversationId);
+                if (!ticket) return;
+
+                if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                    ccTicketIds.add(ticket.id);
+                }
+                if (message.bccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
+                    bccTicketIds.add(ticket.id);
                 }
             });
-        }
+        });
         
+        const tempCcTickets = allTickets.filter(t => ccTicketIds.has(t.id));
+        const tempBccTickets = allTickets.filter(t => bccTicketIds.has(t.id));
+
+        let allActivities: ActivityLog[] = [];
+        for (const ticket of allTickets) {
+             const activityLogs = await getActivityLog(userProfile.organizationId, ticket.id);
+             allActivities.push(...activityLogs.map(log => ({ ...log, ticketId: ticket.id, ticketSubject: ticket.subject })));
+        }
+
+        const tempForwardedActivities = allActivities.filter(log => log.type === 'Forward' && log.details.toLowerCase().includes(email.toLowerCase()));
+
         setAssignedTickets(tempAssignedTickets);
         setCcTickets(tempCcTickets);
         setBccTickets(tempBccTickets);
