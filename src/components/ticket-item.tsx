@@ -127,7 +127,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                         {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
                         {isOverdue && <Badge variant="destructive">Overdue</Badge>}
                         {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
-                        {email.tags?.filter(t => t !== 'Resolved Late').map(tag => (
+                        {email.tags?.filter(t => t !== 'Resolved Late' && !t.startsWith('deadline-reminder-sent-day-')).map(tag => (
                            <Badge key={tag} variant="outline">{tag}</Badge>
                         ))}
                     </div>

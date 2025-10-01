@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -603,7 +604,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 allRecipients.delete(message.senderEmail.toLowerCase());
             }
 
-            // Don't add current user to CC if they are the one sending the reply (unless they are a client)
+            // Don't add current user to CC if they are not the one sending the reply (unless they are a client)
             if (!userProfile.isClient) {
                 allRecipients.delete(user.email.toLowerCase());
             } else {
@@ -1406,7 +1407,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                             <div className="space-y-2 col-span-2">
                                                 <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {currentTags.filter(tag => tag !== 'Resolved Late').map(tag => (
+                                                    {currentTags.filter(tag => tag !== 'Resolved Late' && !tag.startsWith('deadline-reminder-sent-day-')).map(tag => (
                                                         <Badge key={tag} variant="secondary">
                                                             {tag}
                                                             {!isClient && (
@@ -1456,5 +1457,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
-  
