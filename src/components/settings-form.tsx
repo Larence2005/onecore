@@ -132,16 +132,23 @@ function VerificationArea() {
     
     if (userProfile?.status === 'Verified') {
         return (
-             <div className="space-y-6">
-                <h2 className="text-xl font-bold">Account Verified</h2>
-                <Alert variant="default" className="border-green-500">
-                    <ShieldCheck className="h-4 w-4 text-green-500" />
-                    <AlertTitle>Your account is verified.</AlertTitle>
-                    <AlertDescription>
-                    Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
-                    </AlertDescription>
-                </Alert>
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ShieldCheck className="text-green-500" />
+                        Account Verified
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="default" className="border-green-500">
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                        <AlertTitle>Your account is verified.</AlertTitle>
+                        <AlertDescription>
+                        Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+            </Card>
         )
     }
 
@@ -245,10 +252,10 @@ function VerificationArea() {
                                                         Please review the details below. This will create a new Microsoft 365 email account for receiving tickets. This is a one-time action.
                                                     </span>
                                                     <div className="space-y-2 mt-4 text-foreground text-left">
-                                                        <p><strong className="font-medium">New Email:</strong> {newEmailPreview}</p>
-                                                        <p><strong className="font-medium">Username:</strong> {usernameValue}</p>
-                                                        <p><strong className="font-medium">Display Name:</strong> {displayNameValue}</p>
-                                                        <p><strong className="font-medium">Password:</strong> {passwordValue}</p>
+                                                        <div><strong className="font-medium">New Email:</strong> {newEmailPreview}</div>
+                                                        <div><strong className="font-medium">Username:</strong> {usernameValue}</div>
+                                                        <div><strong className="font-medium">Display Name:</strong> {displayNameValue}</div>
+                                                        <div><strong className="font-medium">Password:</strong> {passwordValue}</div>
                                                     </div>
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
@@ -343,8 +350,7 @@ export function SettingsForm() {
         <Separator className="my-6" />
         
         <Card className="border-destructive">
-             <CardHeader className="flex flex-row items-start justify-between">
-                <div className="space-y-1.5">
+             <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <AlertTriangle className="text-destructive" />
                         Delete Account
@@ -352,10 +358,11 @@ export function SettingsForm() {
                     <CardDescription>
                         Permanently delete your account and all associated data.
                     </CardDescription>
-                </div>
+             </CardHeader>
+             <CardFooter>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Delete</Button>
+                        <Button variant="destructive">Delete Account</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
@@ -377,7 +384,7 @@ export function SettingsForm() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-            </CardHeader>
+            </CardFooter>
         </Card>
     </div>
   );
