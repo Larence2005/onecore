@@ -82,6 +82,9 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             ? tickets
             : tickets.filter(t => t.companyId === selectedCompanyId);
 
+        // This is the total, calculated *before* date filtering.
+        const totalTickets = companyFilteredTickets.length;
+
         const dateFilteredTickets = companyFilteredTickets.filter(t => {
             const ticketDate = parseISO(t.receivedDateTime);
             
@@ -98,7 +101,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                 }
                 return isAfter(ticketDate, startDate);
             } else if (dateRangeOption === 'custom' && customDateRange?.from) {
-                 const toDate = customDateRange.to || customDateRange.from;
+                 const toDate = customDateRange.to || new Date(); // Use today if 'to' is not set
                  return isAfter(ticketDate, customDateRange.from) && isBefore(ticketDate, toDate);
             }
             // If 'all' or custom is not fully selected, include all tickets from company filter
@@ -107,7 +110,6 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
 
         const filteredTickets = dateFilteredTickets;
 
-        const totalTickets = filteredTickets.length;
         const unresolvedTickets = filteredTickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length;
         const pendingTickets = filteredTickets.filter(t => t.status === 'Pending').length;
         const resolvedToday = filteredTickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
@@ -370,3 +372,5 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         </div>
     );
 }
+
+    
