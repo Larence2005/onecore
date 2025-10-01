@@ -574,7 +574,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile) return;
-
+    
         setReplyingToMessageId(messageId);
         setReplyType('reply');
         setReplyTo(message.senderEmail || '');
@@ -582,19 +582,29 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setNoteContent('');
         setIsAddingNote(false);
         setReplyContent('');
-
-        const ccRecipients = new Set<string>();
-        const isOwner = user.uid === userProfile.organizationOwnerUid;
-        const isAgent = !isOwner && !userProfile.isClient;
-
-        // Add agent/client to CC, but not owner
-        if (isAgent || userProfile.isClient) {
-            ccRecipients.add(user.email);
+    
+        const allRecipients = new Set<string>();
+        message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
+        message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
+    
+        // Don't CC the person we are replying to or ourself
+        if (message.senderEmail) {
+            allRecipients.delete(message.senderEmail.toLowerCase());
         }
-
-        setReplyCc(Array.from(ccRecipients).join(', '));
+        allRecipients.delete(user.email.toLowerCase());
+    
+        const isOwner = user.uid === userProfile.organizationOwnerUid;
+        if (isOwner) {
+            // Admin: do not add self to CC
+            allRecipients.delete(user.email.toLowerCase());
+        } else {
+            // Agent/Client: add self to CC
+            allRecipients.add(user.email.toLowerCase());
+        }
+    
+        setReplyCc(Array.from(allRecipients).join(', '));
         setReplyBcc('');
-        setShowReplyCc(ccRecipients.size > 0);
+        setShowReplyCc(allRecipients.size > 0);
         setShowReplyBcc(false);
     };
     
@@ -617,20 +627,14 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         allRecipients.delete(user.email.toLowerCase());
 
         const isOwner = user.uid === userProfile.organizationOwnerUid;
-        const isAgent = !isOwner && !userProfile.isClient;
-        
-        // Add agent/client to CC, but remove owner from CC
-        if (isAgent || userProfile.isClient) {
-            allRecipients.add(user.email.toLowerCase());
-        } else if (isOwner) {
+        if (isOwner) {
+            // Admin: do not add self to CC
             allRecipients.delete(user.email.toLowerCase());
-        }
-        
-        // Add current user to CC if not admin
-        if (!isOwner) {
+        } else {
+            // Agent/Client: add self to CC
             allRecipients.add(user.email.toLowerCase());
         }
-
+        
         setReplyCc(Array.from(allRecipients).join(', '));
         setReplyBcc('');
         setForwardingMessageId(null);
