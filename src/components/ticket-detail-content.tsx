@@ -520,7 +520,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 replyContent, 
                 email?.conversationId, 
                 attachmentPayloads,
-                { name: userProfile.name || user.email, email: user.email, isClient: isClientReplying },
+                { name: userProfile.name || user.email, email: user.email, isClient: isClientReplying, status: userProfile.status },
                 replyTo,
                 replyCc, 
                 replyBcc
@@ -612,7 +612,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyContent('');
 
             const ccRecipients = new Set<string>();
-            ccRecipients.add(user.email);
+            
+            // If the current user is a client, add them to CC
+            if (userProfile.isClient) {
+                 ccRecipients.add(user.email);
+            }
 
             setReplyCc(Array.from(ccRecipients).join(', '));
             setReplyBcc('');
