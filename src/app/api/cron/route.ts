@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server';
-import { getLatestEmails, checkTicketDeadlinesAndNotify } from '@/app/actions';
+import { checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase-admin';
+import { db }mport { getEmailsFlow } from '@/ai/get-emails-flow';
 
 // This is a special variable that tells Next.js to not cache this route
 // and to treat it as a dynamic function that runs on the server.
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       const organizationId = doc.id;
       console.log(`Processing jobs for organization: ${organizationId}`);
       
-      const emailPromise = getLatestEmails(organizationId).catch(error => {
+      const emailPromise = getEmailsFlow.run({ organizationId }).catch(error => {
         // Log errors per organization but don't fail the entire job
         console.error(`Failed to process emails for organization ${organizationId}:`, error);
       });
