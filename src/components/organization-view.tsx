@@ -312,7 +312,7 @@ export function OrganizationView() {
 
 
     return (
-        <>
+        <AlertDialog open={!!deletingMember} onOpenChange={(isOpen) => !isOpen && setDeletingMember(null)}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex justify-between items-start">
@@ -629,23 +629,21 @@ export function OrganizationView() {
                 </DialogContent>
             </Dialog>
 
-            <AlertDialog open={!!deletingMember} onOpenChange={(isOpen) => !isOpen && setDeletingMember(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }
