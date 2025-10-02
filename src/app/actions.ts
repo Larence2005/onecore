@@ -339,7 +339,7 @@ export async function createTicket(
                     `;
                     await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
-                        cc: cc, // CC the client and any others
+                        cc: cc, 
                         bcc: bcc,
                         subject: emailSubject,
                         body: emailBody,
@@ -913,62 +913,41 @@ export async function replyToEmailAction(
         finalCc = Array.from(ccSet).join(', ');
     }
 
-    // Check if messageId is a real Graph ID or our internal placeholder
-    if (!messageId.startsWith('msg-')) {
-        // It's a real Graph ID, so we can use replyAll
-        const finalPayload = {
-            comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
-            message: {
-                toRecipients: parseRecipients(to),
-                ccRecipients: parseRecipients(finalCc),
-                bccRecipients: parseRecipients(bcc),
-                attachments: attachments.map(att => ({
-                    '@odata.type': '#microsoft.graph.fileAttachment',
-                    name: att.name,
-                    contentBytes: att.contentBytes,
-                    contentType: att.contentType,
-                })),
-            }
-        };
-
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${authResponse.accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(finalPayload),
-        });
-
-        if (response.status !== 202) { // Graph API returns 202 Accepted on success
-            const errorText = await response.text();
-            console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
-            try {
-                const error = JSON.parse(errorText);
-                throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
-            } catch (e) {
-                throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
-            }
+    const finalPayload = {
+        comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
+        message: {
+            toRecipients: parseRecipients(to),
+            ccRecipients: parseRecipients(finalCc),
+            bccRecipients: parseRecipients(bcc),
+            attachments: attachments.map(att => ({
+                '@odata.type': '#microsoft.graph.fileAttachment',
+                name: att.name,
+                contentBytes: att.contentBytes,
+                contentType: att.contentType,
+            })),
         }
-    } else {
-        // It's a portal-created ticket, so we must use sendMail instead
-        const ticketDoc = await getDoc(doc(db, 'organizations', organizationId, 'tickets', ticketId));
-        if (!ticketDoc.exists()) {
-            throw new Error("Ticket not found.");
+    };
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalPayload),
+    });
+
+    if (response.status !== 202) { // Graph API returns 202 Accepted on success
+        const errorText = await response.text();
+        console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
+        try {
+            const error = JSON.parse(errorText);
+            throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
+        } catch (e) {
+            throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
         }
-        const ticketData = ticketDoc.data();
-        const emailSubject = `Re: [Ticket #${ticketData.ticketNumber}] ${ticketData.title}`;
-        
-        await sendEmailAction(organizationId, {
-            recipient: to,
-            cc: finalCc,
-            bcc: bcc,
-            subject: emailSubject,
-            body: `Replied by ${currentUser.name}:<br><br>${comment}`,
-            attachments: attachments,
-        });
     }
-
+    
     // Invalidate caches to ensure next hard-refresh gets new data
     ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
     ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
@@ -2648,6 +2627,8 @@ export async function verifyUserEmail(
     
 
   
+
+    
 
     
 
