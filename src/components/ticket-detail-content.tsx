@@ -1,9 +1,8 @@
 
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -211,6 +210,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const [members, setMembers] = useState<OrganizationMember[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
+    const [adminEmail, setAdminEmail] = useState<string>('');
 
 
     const priorities = [
@@ -243,12 +243,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     useEffect(() => {
         const fetchDropdownData = async () => {
             if (userProfile?.organizationId) {
-                const [orgMembers, fetchedCompanies] = await Promise.all([
+                const [orgMembers, fetchedCompanies, settings] = await Promise.all([
                     getOrganizationMembers(userProfile.organizationId),
                     getCompanies(userProfile.organizationId),
+                    getAPISettings(userProfile.organizationId),
                 ]);
                 setMembers(orgMembers);
                 setCompanies(fetchedCompanies);
+                if (settings?.userId) {
+                    setAdminEmail(settings.userId);
+                }
             }
         };
         fetchDropdownData();
@@ -352,7 +356,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                     const newConversation = conversationData.messages as DetailedEmail[];
                     setEmail(prevEmail => {
                         if (prevEmail) {
-                            return { ...prevEmail, conversation: newConversation };
+                            return { ...prevEmail, ...conversationData.messages as DetailedEmail[] };
                         }
                         return null;
                     });
@@ -573,75 +577,86 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (!message || !user?.email || !userProfile) return;
+        if (!message || !user?.email || !userProfile || !adminEmail) return;
+
+        const isPortalTicket = email?.conversationId?.startsWith('manual-');
+        const isAgent = !userProfile.isClient;
     
         setReplyingToMessageId(messageId);
         setReplyType('reply');
-        setReplyTo(message.senderEmail || '');
         setForwardingMessageId(null);
         setNoteContent('');
         setIsAddingNote(false);
         setReplyContent('');
-    
-        const allRecipients = new Set<string>();
-        message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
-        message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
-    
-        // Don't CC the person we are replying to or ourself
-        if (message.senderEmail) {
-            allRecipients.delete(message.senderEmail.toLowerCase());
+
+        // Default: reply to sender
+        let to = message.senderEmail || '';
+        const ccRecipients = new Set<string>();
+
+        // If an agent is replying to a portal ticket, redirect the 'To' to the admin inbox
+        if (isAgent && isPortalTicket) {
+            to = adminEmail;
+            if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmail.toLowerCase()) {
+                ccRecipients.add(message.senderEmail); // Add the client to CC
+            }
         }
-        allRecipients.delete(user.email.toLowerCase());
-    
-        const isOwner = user.uid === userProfile.organizationOwnerUid;
-        if (isOwner) {
-            // Admin: do not add self to CC
-            allRecipients.delete(user.email.toLowerCase());
-        } else {
-            // Agent/Client: add self to CC
-            allRecipients.add(user.email.toLowerCase());
-        }
-    
-        setReplyCc(Array.from(allRecipients).join(', '));
+
+        // Add original To/CC recipients to the new CC list, excluding self and new 'To' address
+        message.toRecipients?.forEach(r => {
+            if (r.emailAddress.address.toLowerCase() !== to.toLowerCase() && r.emailAddress.address.toLowerCase() !== user.email?.toLowerCase()) {
+                ccRecipients.add(r.emailAddress.address);
+            }
+        });
+        message.ccRecipients?.forEach(r => {
+             if (r.emailAddress.address.toLowerCase() !== to.toLowerCase() && r.emailAddress.address.toLowerCase() !== user.email?.toLowerCase()) {
+                ccRecipients.add(r.emailAddress.address);
+            }
+        });
+
+        setReplyTo(to);
+        setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
-        setShowReplyCc(allRecipients.size > 0);
+        setShowReplyCc(ccRecipients.size > 0);
         setShowReplyBcc(false);
     };
     
     const handleReplyAllClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (!message || !user?.email || !userProfile) return;
+        if (!message || !user?.email || !userProfile || !adminEmail) return;
+
+        const isPortalTicket = email?.conversationId?.startsWith('manual-');
+        const isAgent = !userProfile.isClient;
 
         setReplyingToMessageId(messageId);
         setReplyType('reply-all');
-        setReplyTo(message.senderEmail || '');
-    
-        const allRecipients = new Set<string>();
-        message.toRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
-        message.ccRecipients?.forEach(r => allRecipients.add(r.emailAddress.address.toLowerCase()));
-            
-        // Don't CC the person we are replying to or ourself
-        if (message.senderEmail) {
-            allRecipients.delete(message.senderEmail.toLowerCase());
-        }
-        allRecipients.delete(user.email.toLowerCase());
-
-        const isOwner = user.uid === userProfile.organizationOwnerUid;
-        if (isOwner) {
-            // Admin: do not add self to CC
-            allRecipients.delete(user.email.toLowerCase());
-        } else {
-            // Agent/Client: add self to CC
-            allRecipients.add(user.email.toLowerCase());
-        }
-        
-        setReplyCc(Array.from(allRecipients).join(', '));
-        setReplyBcc('');
         setForwardingMessageId(null);
         setNoteContent('');
         setIsAddingNote(false);
         setReplyContent('');
-        setShowReplyCc(allRecipients.size > 0);
+
+        let to = message.senderEmail || '';
+        const ccRecipients = new Set<string>();
+
+        // If agent replies to portal ticket, redirect 'To'
+        if (isAgent && isPortalTicket) {
+            to = adminEmail;
+            if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmail.toLowerCase()) {
+                ccRecipients.add(message.senderEmail); // Add client to CC
+            }
+        }
+
+        // Collect all recipients
+        message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
+        message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
+            
+        // Don't CC the person we are replying to or ourself
+        ccRecipients.delete(to.toLowerCase());
+        ccRecipients.delete(user.email.toLowerCase());
+        
+        setReplyTo(to);
+        setReplyCc(Array.from(ccRecipients).join(', '));
+        setReplyBcc('');
+        setShowReplyCc(ccRecipients.size > 0);
         setShowReplyBcc(false);
     };
 
@@ -745,14 +760,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const isForwardingThis = forwardingMessageId === message.id;
         const showReplyAll = (message.ccRecipients && message.ccRecipients.length > 0) || (message.toRecipients && message.toRecipients.length > 1);
 
-        const isPortalTicket = email?.conversationId?.startsWith('manual-');
-        const originalSenderIsClient = isPortalTicket && isFirstInThread;
-
-
         return (
             <div key={message.id}>
                 <Card className="overflow-hidden">
-                    <CardHeader className="flex flex-row items-center gap-4 p-4 bg-muted border-b">
+                    <CardHeader className="flex flex-row items-start gap-4 p-4 bg-muted border-b">
                         <Avatar className="h-10 w-10">
                             <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
                         </Avatar>
@@ -768,11 +779,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 {message.ccRecipients && message.ccRecipients.length > 0 && (
                                     <p>
                                         <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
-                                    </p>
-                                )}
-                                {message.bccRecipients && message.bccRecipients.length > 0 && (
-                                    <p>
-                                        <span className="font-semibold">BCC:</span> {renderRecipientList(message.bccRecipients)}
                                     </p>
                                 )}
                             </div>
@@ -1479,3 +1485,5 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
+
+    
