@@ -289,7 +289,6 @@ export async function createTicket(
         let conversationMessage: DetailedEmail;
 
         if (isClient && settings) {
-            // For clients, mimic an email sent TO the support inbox, CC'ing the client
             const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
             ccSet.add(author.email.toLowerCase());
             
@@ -308,7 +307,6 @@ export async function createTicket(
                 bccRecipients: parseRecipients(bcc),
             };
         } else {
-            // For agents, it's just a direct creation
              conversationMessage = {
                 id: `msg-${Date.now()}`,
                 subject: title,
@@ -335,15 +333,9 @@ export async function createTicket(
             user: author.email || 'System',
         });
         
-        // Send email for the ticket creation
         if (settings) {
             try {
-                const headersList = headers();
-                const host = headersList.get('host') || 'localhost:3000';
-                const protocol = headersList.get('x-forwarded-proto') || 'http';
-                
                 if (isClient) {
-                    // For clients, send the email TO the support inbox and CC the client.
                     const emailBody = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><hr>${body}`;
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
                     ccSet.add(author.email.toLowerCase());
@@ -356,7 +348,9 @@ export async function createTicket(
                         body: emailBody,
                     });
                 } else {
-                    // For agents, send a confirmation notification.
+                    const headersList = headers();
+                    const host = headersList.get('host') || 'localhost:3000';
+                    const protocol = headersList.get('x-forwarded-proto') || 'http';
                     const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
                     const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
@@ -760,6 +754,17 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         }
     }
     
+    // This is the important part: ensure the first message has the correct recipients for UI display
+    if (conversationId.startsWith('manual-') && conversationMessages.length > 0 && !conversationMessages[0].toRecipients) {
+        const settings = await getAPISettings(organizationId);
+        if(settings) {
+            conversationMessages[0].toRecipients = [{ emailAddress: { name: 'Support', address: settings.userId } }];
+            conversationMessages[0].ccRecipients = [{ emailAddress: { name: ticketData.sender, address: ticketData.senderEmail } }];
+            conversationMessages[0].sender = settings.userId;
+            conversationMessages[0].senderEmail = settings.userId;
+        }
+    }
+    
     if (conversationMessages.length === 0) {
         // If there are no conversation messages (e.g., manual ticket not fully processed),
         // create a placeholder from the ticket data itself.
@@ -891,66 +896,68 @@ export async function replyToEmailAction(
         throw new Error('You must be a verified employee to reply to tickets. Please complete your registration.');
     }
     
-    const authResponse = await getAccessToken(settings);
-    if (!authResponse?.accessToken) {
-        throw new Error('Failed to acquire access token. Check your API settings.');
-    }
-
-    // Determine if this ticket was created from the portal
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', ticketId);
     const ticketDoc = await getDoc(ticketDocRef);
     const ticketData = ticketDoc.data();
     const isPortalTicket = ticketData?.conversationId?.startsWith('manual-');
     
-    let finalTo = to;
-    let finalCc = cc;
-
-    if (isPortalTicket && !currentUser.isClient) {
-        // This is an agent replying to a portal-created ticket.
-        // Force the 'To' to be the admin's own email to keep it in the inbox.
-        finalTo = settings.userId;
+    if (isPortalTicket) {
+        // For portal tickets, we send a NEW email to maintain the thread.
+        const ticket = await getEmail(organizationId, ticketId);
+        if (!ticket) throw new Error("Ticket not found.");
         
-        // Ensure the original sender (the client) is in the CC list.
-        const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-        if (ticketData?.senderEmail) {
-            ccSet.add(ticketData.senderEmail.toLowerCase());
+        const subject = `Re: ${ticket.subject}`;
+        const emailBody = `<div>${comment}</div><br><hr>${ticket.body.content}`;
+        
+        await sendEmailAction(organizationId, {
+            recipient: to,
+            cc: cc,
+            bcc: bcc,
+            subject: subject,
+            body: emailBody,
+            attachments: attachments
+        });
+
+    } else {
+        // For regular email tickets, we use the replyAll API
+        const authResponse = await getAccessToken(settings);
+        if (!authResponse?.accessToken) {
+            throw new Error('Failed to acquire access token. Check your API settings.');
         }
-        finalCc = Array.from(ccSet).join(', ');
-    }
 
+        const finalPayload = {
+            comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
+            message: {
+                toRecipients: parseRecipients(to),
+                ccRecipients: parseRecipients(cc),
+                bccRecipients: parseRecipients(bcc),
+                attachments: attachments.map(att => ({
+                    '@odata.type': '#microsoft.graph.fileAttachment',
+                    name: att.name,
+                    contentBytes: att.contentBytes,
+                    contentType: att.contentType,
+                })),
+            }
+        };
 
-    const finalPayload = {
-        comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
-        message: {
-            toRecipients: parseRecipients(finalTo),
-            ccRecipients: parseRecipients(finalCc),
-            bccRecipients: parseRecipients(bcc),
-            attachments: attachments.map(att => ({
-                '@odata.type': '#microsoft.graph.fileAttachment',
-                name: att.name,
-                contentBytes: att.contentBytes,
-                contentType: att.contentType,
-            })),
-        }
-    };
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${authResponse.accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(finalPayload),
+        });
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${authResponse.accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(finalPayload),
-    });
-
-    if (response.status !== 202) { // Graph API returns 202 Accepted on success
-        const errorText = await response.text();
-        console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
-        try {
-            const error = JSON.parse(errorText);
-            throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
-        } catch (e) {
-            throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
+        if (response.status !== 202) { // Graph API returns 202 Accepted on success
+            const errorText = await response.text();
+            console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
+            try {
+                const error = JSON.parse(errorText);
+                throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
+            } catch (e) {
+                throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
+            }
         }
     }
     
@@ -2645,3 +2652,4 @@ export async function verifyUserEmail(
     
 
     
+

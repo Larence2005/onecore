@@ -591,32 +591,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         // Default: reply to sender
         let to = message.senderEmail || '';
-        const ccRecipients = new Set<string>();
 
         // If an agent is replying to a portal ticket, redirect the 'To' to the admin inbox
         if (isAgent && isPortalTicket) {
             to = adminEmail;
-            if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmail.toLowerCase()) {
-                ccRecipients.add(message.senderEmail); // Add the client to CC
-            }
         }
 
-        // Add original To/CC recipients to the new CC list, excluding self and new 'To' address
-        message.toRecipients?.forEach(r => {
-            if (r.emailAddress.address.toLowerCase() !== to.toLowerCase() && r.emailAddress.address.toLowerCase() !== user.email?.toLowerCase()) {
-                ccRecipients.add(r.emailAddress.address);
-            }
-        });
-        message.ccRecipients?.forEach(r => {
-             if (r.emailAddress.address.toLowerCase() !== to.toLowerCase() && r.emailAddress.address.toLowerCase() !== user.email?.toLowerCase()) {
-                ccRecipients.add(r.emailAddress.address);
-            }
-        });
-
         setReplyTo(to);
-        setReplyCc(Array.from(ccRecipients).join(', '));
+        setReplyCc('');
         setReplyBcc('');
-        setShowReplyCc(ccRecipients.size > 0);
+        setShowReplyCc(false);
         setShowReplyBcc(false);
     };
     
@@ -637,7 +621,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         let to = message.senderEmail || '';
         const ccRecipients = new Set<string>();
 
-        // If agent replies to portal ticket, redirect 'To'
+        // If agent replies to portal ticket, redirect 'To' and ensure client is in CC
         if (isAgent && isPortalTicket) {
             to = adminEmail;
             if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmail.toLowerCase()) {
@@ -645,7 +629,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             }
         }
 
-        // Collect all recipients
+        // Collect all original To/CC recipients for the new CC list
         message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
         message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
             
@@ -836,11 +820,14 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 <>
                                     <div className="flex items-center gap-2 border-b">
                                         <Label htmlFor="reply-to" className="py-2.5">To</Label>
-                                        <Input 
+                                        <AutocompleteInput
                                             id="reply-to"
+                                            suggestions={members.filter(m => m.uid)}
                                             value={replyTo}
-                                            readOnly
-                                            className="flex-1 h-auto px-0"/>
+                                            onChange={setReplyTo}
+                                            placeholder="to@example.com"
+                                            className="flex-1 h-auto px-0"
+                                        />
                                         <div className="flex-shrink-0">
                                             {!isReplyCcVisible && (
                                                 <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyCc(true)}>Cc</Button>
@@ -1486,4 +1473,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     );
 }
 
-    
