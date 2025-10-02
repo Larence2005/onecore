@@ -745,6 +745,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const isForwardingThis = forwardingMessageId === message.id;
         const showReplyAll = (message.ccRecipients && message.ccRecipients.length > 0) || (message.toRecipients && message.toRecipients.length > 1);
 
+        const isPortalTicket = email?.conversationId?.startsWith('manual-');
+        const originalSenderIsClient = isPortalTicket && isFirstInThread;
+
+
         return (
             <div key={message.id}>
                 <Card className="overflow-hidden">
@@ -1475,5 +1479,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
-    
