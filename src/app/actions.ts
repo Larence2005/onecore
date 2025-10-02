@@ -145,7 +145,7 @@ interface Settings {
   userId: string;
 }
 
-async function getAPISettings(organizationId: string): Promise<Settings | null> {
+export async function getAPISettings(organizationId: string): Promise<Settings | null> {
     const clientId = process.env.AZURE_CLIENT_ID;
     const tenantId = process.env.AZURE_TENANT_ID;
     const clientSecret = process.env.AZURE_CLIENT_SECRET;
@@ -238,7 +238,9 @@ export async function createTicket(
     organizationId: string, 
     author: { uid: string, name: string, email: string }, 
     title: string, 
-    body: string
+    body: string,
+    cc?: string,
+    bcc?: string
 ): Promise<{ success: boolean, id?: string, error?: string }> {
     if (!organizationId || !author.uid || !title.trim()) {
         return { success: false, error: 'Missing required fields to create a ticket.' };
@@ -337,7 +339,8 @@ export async function createTicket(
                     `;
                     await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
-                        cc: author.email, // CC the client
+                        cc: cc, // CC the client and any others
+                        bcc: bcc,
                         subject: emailSubject,
                         body: emailBody,
                     });
@@ -353,6 +356,8 @@ export async function createTicket(
                     `;
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
+                        cc: cc,
+                        bcc: bcc,
                         subject: `Ticket Created: #${ticketNumber} - ${title}`,
                         body: emailBody,
                     });
