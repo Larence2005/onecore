@@ -2316,7 +2316,7 @@ async function addDnsRecordToCloudflare(
   const payload: any = { type, name: cfName, ttl: 3600 };
 
   if (type === 'TXT') {
-      payload.content = `${content}`;
+      payload.content = `"${content}"`;
   } else if (type === 'CNAME') {
       payload.content = content;
   } else if (type === 'MX') {
@@ -2653,3 +2653,6 @@ export async function verifyUserEmail(
 
     
 
+
+
+    
