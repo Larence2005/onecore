@@ -337,9 +337,13 @@ export async function createTicket(
                         <hr>
                         ${body}
                     `;
+                    // Ensure the client who created it is always on CC
+                    const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
+                    ccSet.add(author.email.toLowerCase());
+
                     await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
-                        cc: cc, 
+                        cc: Array.from(ccSet).join(', '), 
                         bcc: bcc,
                         subject: emailSubject,
                         body: emailBody,
@@ -905,18 +909,33 @@ export async function replyToEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
+    // Determine if this ticket was created from the portal
+    const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', ticketId);
+    const ticketDoc = await getDoc(ticketDocRef);
+    const ticketData = ticketDoc.data();
+    const isPortalTicket = ticketData?.conversationId?.startsWith('manual-');
+    
+    let finalTo = to;
     let finalCc = cc;
 
-    if (currentUser.isOwner) {
+    if (isPortalTicket && !currentUser.isClient) {
+        // This is an agent replying to a portal-created ticket.
+        // Force the 'To' to be the admin's own email to keep it in the inbox.
+        finalTo = settings.userId;
+        
+        // Ensure the original sender (the client) is in the CC list.
         const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-        ccSet.delete(currentUser.email.toLowerCase());
+        if (ticketData?.senderEmail) {
+            ccSet.add(ticketData.senderEmail.toLowerCase());
+        }
         finalCc = Array.from(ccSet).join(', ');
     }
+
 
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
         message: {
-            toRecipients: parseRecipients(to),
+            toRecipients: parseRecipients(finalTo),
             ccRecipients: parseRecipients(finalCc),
             bccRecipients: parseRecipients(bcc),
             attachments: attachments.map(att => ({
@@ -2627,6 +2646,8 @@ export async function verifyUserEmail(
     
 
   
+
+    
 
     
 
