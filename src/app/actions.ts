@@ -207,7 +207,7 @@ async function getAccessToken(settings: Settings): Promise<AuthenticationResult 
     return await cca.acquireTokenByClientCredential(tokenRequest);
 }
 
-async function getAndIncrementTicketCounter(organizationId: string): Promise<number> {
+async function getNextTicketNumber(organizationId: string): Promise<number> {
     const counterRef = doc(db, 'organizations', organizationId, 'counters', 'tickets');
     try {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
@@ -230,10 +230,6 @@ async function getAndIncrementTicketCounter(organizationId: string): Promise<num
 }
 
 
-async function getNextTicketNumber(organizationId: string): Promise<number> {
-    return getAndIncrementTicketCounter(organizationId);
-}
-
 export async function createTicket(
     organizationId: string, 
     author: { uid: string, name: string, email: string }, 
@@ -248,6 +244,7 @@ export async function createTicket(
     
     // Find which company this employee belongs to
     let companyId: string | undefined = undefined;
+    let isClient = false;
     const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
     if (orgDoc.exists()) {
         const companiesSnapshot = await getDocs(collection(orgDoc.ref, 'companies'));
@@ -255,23 +252,24 @@ export async function createTicket(
             const employeeDoc = await getDoc(doc(companyDoc.ref, 'employees', author.email));
             if (employeeDoc.exists()) {
                 companyId = companyDoc.id;
+                isClient = true;
                 break;
             }
         }
     }
 
-
     try {
         const ticketNumber = await getNextTicketNumber(organizationId);
         const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
         const newTicketRef = doc(ticketsCollectionRef);
+        const conversationId = `manual-${newTicketRef.id}`;
         
         const newTicketData = {
             id: newTicketRef.id,
             title: title,
-            sender: author.name,
+            sender: author.name, // The original author
             senderEmail: author.email,
-            bodyPreview: body.substring(0, 255), // Use body as preview
+            bodyPreview: body.substring(0, 255),
             receivedDateTime: new Date().toISOString(),
             priority: 'Low',
             status: 'Open',
@@ -282,30 +280,53 @@ export async function createTicket(
             ticketNumber: ticketNumber,
             assignee: null,
             companyId: companyId,
+            conversationId: conversationId
         };
 
         await setDoc(newTicketRef, newTicketData);
 
-        // Store the body content in a conversation document, similar to how emails work
-        const conversationId = `manual-${newTicketRef.id}`;
-        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-        const conversationMessage: DetailedEmail = {
-            id: `msg-${Date.now()}`,
-            subject: title,
-            sender: author.name,
-            senderEmail: author.email,
-            body: { contentType: 'html', content: body }, // Assuming body is HTML from a rich text editor
-            receivedDateTime: newTicketData.receivedDateTime,
-            bodyPreview: newTicketData.bodyPreview,
-            priority: 'Low',
-            status: 'Open',
-            type: 'Incident',
-            conversationId: conversationId
-        };
-        await setDoc(conversationDocRef, { messages: [conversationMessage] });
+        const settings = await getAPISettings(organizationId);
+        let conversationMessage: DetailedEmail;
 
-        // Update ticket with conversation ID
-        await updateDoc(newTicketRef, { conversationId: conversationId });
+        if (isClient && settings) {
+            // For clients, mimic an email sent TO the support inbox, CC'ing the client
+            const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
+            ccSet.add(author.email.toLowerCase());
+            
+            conversationMessage = {
+                id: `msg-${Date.now()}`,
+                subject: title,
+                sender: settings.userId, // From admin email
+                senderEmail: settings.userId, // From admin email
+                body: { contentType: 'html', content: body },
+                receivedDateTime: newTicketData.receivedDateTime,
+                bodyPreview: newTicketData.bodyPreview,
+                priority: 'Low', status: 'Open', type: 'Incident',
+                conversationId: conversationId,
+                toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId }}], // To admin email
+                ccRecipients: Array.from(ccSet).map(email => ({ emailAddress: { name: email, address: email }})),
+                bccRecipients: parseRecipients(bcc),
+            };
+        } else {
+            // For agents, it's just a direct creation
+             conversationMessage = {
+                id: `msg-${Date.now()}`,
+                subject: title,
+                sender: author.name,
+                senderEmail: author.email,
+                body: { contentType: 'html', content: body },
+                receivedDateTime: newTicketData.receivedDateTime,
+                bodyPreview: newTicketData.bodyPreview,
+                priority: 'Low', status: 'Open', type: 'Incident',
+                conversationId: conversationId,
+                toRecipients: parseRecipients(settings?.userId), // To admin email by default
+                ccRecipients: parseRecipients(cc),
+                bccRecipients: parseRecipients(bcc),
+            };
+        }
+
+        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
+        await setDoc(conversationDocRef, { messages: [conversationMessage] });
 
         await addActivityLog(organizationId, newTicketRef.id, {
             type: 'Create',
@@ -315,29 +336,15 @@ export async function createTicket(
         });
         
         // Send email for the ticket creation
-        const settings = await getAPISettings(organizationId);
         if (settings) {
             try {
                 const headersList = headers();
                 const host = headersList.get('host') || 'localhost:3000';
                 const protocol = headersList.get('x-forwarded-proto') || 'http';
-                const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
-
-                const emailSubject = `[Ticket #${ticketNumber}] ${title}`;
-                let emailBody: string;
-
-                // Check if the author is a client
-                const isClient = !!companyId;
-
+                
                 if (isClient) {
                     // For clients, send the email TO the support inbox and CC the client.
-                    // This makes it act like they sent it from their email client.
-                    emailBody = `
-                        <p>A new ticket has been created by ${author.name} (${author.email}).</p>
-                        <hr>
-                        ${body}
-                    `;
-                    // Ensure the client who created it is always on CC
+                    const emailBody = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><hr>${body}`;
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
                     ccSet.add(author.email.toLowerCase());
 
@@ -345,19 +352,14 @@ export async function createTicket(
                         recipient: settings.userId, // Send TO the support email
                         cc: Array.from(ccSet).join(', '), 
                         bcc: bcc,
-                        subject: emailSubject,
+                        subject: `[Ticket #${ticketNumber}] ${title}`,
                         body: emailBody,
                     });
                 } else {
-                    // For agents creating a ticket, send a confirmation notification TO them.
-                    emailBody = `
-                        <p>Hello ${author.name},</p>
-                        <p>Your ticket with the subject "${title}" has been created successfully.</p>
-                        <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
-                        <p>You can view your ticket and any updates at this URL: ${ticketUrl}</p>
-                        <br>
-                        <p>This is an automated notification. Replies to this email are not monitored.</p>
-                    `;
+                    // For agents, send a confirmation notification.
+                    const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
+                    const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
                         cc: cc,
@@ -368,12 +370,9 @@ export async function createTicket(
                 }
             } catch(e) {
                 console.error("Failed to send ticket creation email for manually created ticket:", e);
-                // Don't fail the whole operation if email fails
             }
         }
 
-
-        // Invalidate caches
         ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
         activityCache.invalidatePrefix(`activity:${organizationId}`);
 
@@ -760,8 +759,10 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             }
         }
     }
-
+    
     if (conversationMessages.length === 0) {
+        // If there are no conversation messages (e.g., manual ticket not fully processed),
+        // create a placeholder from the ticket data itself.
         const placeholderEmail: DetailedEmail = {
             id: ticketData.id || id,
             subject: ticketData.title || 'No Subject',
@@ -784,36 +785,22 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         conversationMessages.push(placeholderEmail);
     }
     
-    // The first message in the sorted conversation is the one we use for body content
-    const firstMessage = conversationMessages[0];
-
-    // The main email object uses the ticket's data for core properties
-    // and the first message's data for the initial body content.
     const mainEmailDetails: DetailedEmail = {
+        ...ticketData,
         id: ticketData.id || id,
-        subject: ticketData.title || 'No Subject',
-        sender: ticketData.sender || 'Unknown Sender', // Always use the ticket's original sender
-        senderEmail: ticketData.senderEmail || 'Unknown Email', // Always use the ticket's original sender email
-        bodyPreview: ticketData.bodyPreview,
-        receivedDateTime: ticketData.receivedDateTime,
-        priority: ticketData.priority,
-        status: ticketData.status,
-        type: ticketData.type,
-        tags: ticketData.tags,
-        deadline: ticketData.deadline,
-        closedAt: ticketData.closedAt,
-        conversationId: ticketData.conversationId,
-        ticketNumber: ticketData.ticketNumber,
-        companyId: ticketData.companyId,
-        assignee: ticketData.assignee,
-        body: firstMessage.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' },
-        // The conversation array is the thread of messages.
+        subject: ticketData.title,
+        body: conversationMessages[0]?.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content not available.</p>' },
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
-            priority: ticketData.priority || 'Low',
-            status: ticketData.status || 'Open',
-            type: ticketData.type || 'Incident',
+            // Ensure properties from main ticket data are consistently applied
+            priority: ticketData.priority,
+            status: ticketData.status,
+            type: ticketData.type,
         })),
+        // Add top-level recipient details from the first message for quick access
+        toRecipients: conversationMessages[0]?.toRecipients,
+        ccRecipients: conversationMessages[0]?.ccRecipients,
+        bccRecipients: conversationMessages[0]?.bccRecipients,
     };
     
     ticketsCache.set(cacheKey, mainEmailDetails);
@@ -830,7 +817,7 @@ const parseRecipients = (recipients: string | undefined): { emailAddress: { addr
         if (match) {
             return { emailAddress: { name: match[1].trim(), address: match[2].trim() } };
         }
-        return { emailAddress: { address: email.trim() } };
+        return { emailAddress: { address: email.trim(), name: email.trim() } };
     });
 };
 
