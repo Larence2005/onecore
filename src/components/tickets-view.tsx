@@ -22,10 +22,10 @@ type TicketsViewProps = {
     isLoading: boolean;
     error: string | null;
     onRefresh: () => void;
-    filters: FilterState;
+    filters: Omit<FilterState, 'groups'>;
 };
 
-const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
+const filterEmails = (emails: Email[], filters: Omit<FilterState, 'groups'>): Email[] => {
     return emails.filter(email => {
         // Search filter (Subject, Sender, Ticket Number)
         if (filters.search) {
@@ -83,11 +83,6 @@ const filterEmails = (emails: Email[], filters: FilterState): Email[] => {
         // Agent filter
         if (filters.agents.length > 0 && !filters.agents.includes(email.assignee!)) {
             return false;
-        }
-
-        // Group filter - Assuming no group data for now, so this is a placeholder
-        if (filters.groups.length > 0) {
-            // return false; // No group data on email object
         }
 
         // Date created filter

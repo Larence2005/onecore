@@ -21,7 +21,6 @@ import { format } from 'date-fns';
 export interface FilterState {
   search: string;
   agents: string[];
-  groups: string[];
   statuses: string[];
   priorities: string[];
   types: string[];
@@ -34,7 +33,6 @@ interface TicketsFilterProps {
   onApplyFilters: (filters: FilterState) => void;
 }
 
-const groupOptions = ['Support', 'Sales', 'Engineering'];
 const statusOptions = ['Open', 'Pending', 'Resolved', 'Closed'];
 const priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
 const typeOptions = ['Questions', 'Incident', 'Problem', 'Feature Request'];
@@ -43,7 +41,6 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   const { user, userProfile } = useAuth();
   const [search, setSearch] = useState('');
   const [agents, setAgents] = useState<string[]>([]);
-  const [groups, setGroups] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [priorities, setPriorities] = useState<string[]>([]);
   const [types, setTypes] = useState<string[]>([]);
@@ -65,14 +62,13 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   };
 
   const handleApply = useCallback(() => {
-    onApplyFilters({ search, agents, groups, statuses, priorities, types, tags, created, dateRange });
-  }, [search, agents, groups, statuses, priorities, types, tags, created, dateRange, onApplyFilters]);
+    onApplyFilters({ search, agents, statuses, priorities, types, tags, created, dateRange });
+  }, [search, agents, statuses, priorities, types, tags, created, dateRange, onApplyFilters]);
 
 
   const clearFilters = () => {
     setSearch('');
     setAgents([]);
-    setGroups([]);
     setStatuses([]);
     setPriorities([]);
     setTypes([]);
@@ -86,7 +82,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
   }, [handleApply]);
 
 
-  const appliedFiltersCount = [search, tags, ...agents, ...groups, ...statuses, ...priorities, ...types, created !== 'any' ? created : null, dateRange].filter(Boolean).length;
+  const appliedFiltersCount = [search, tags, ...agents, ...statuses, ...priorities, ...types, created !== 'any' ? created : null, dateRange].filter(Boolean).length;
 
   return (
     <aside className="hidden lg:block w-72 border-l">
@@ -111,7 +107,7 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
           </div>
         </div>
         <div className="flex-grow overflow-y-auto no-scrollbar">
-          <Accordion type="multiple" defaultValue={['status', 'priority', 'type', 'agents', 'groups', 'tags', 'created']} className="w-full">
+          <Accordion type="multiple" defaultValue={['status', 'priority', 'type', 'agents', 'tags', 'created']} className="w-full">
             {isOwner && (
               <AccordionItem value="agents">
                 <AccordionTrigger className="px-4 text-base font-semibold">Agents</AccordionTrigger>
@@ -177,23 +173,6 @@ export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {
                         onCheckedChange={() => handleCheckboxChange(setTypes, type)}
                       />
                       <Label htmlFor={`type-${type}`} className="font-normal">{type}</Label>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="groups">
-              <AccordionTrigger className="px-4 text-base font-semibold">Groups</AccordionTrigger>
-              <AccordionContent className="px-4">
-                <div className="space-y-2">
-                  {groupOptions.map(group => (
-                    <div key={group} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`group-${group}`} 
-                        checked={groups.includes(group)}
-                        onCheckedChange={() => handleCheckboxChange(setGroups, group)}
-                       />
-                      <Label htmlFor={`group-${group}`} className="font-normal">{group}</Label>
                     </div>
                   ))}
                 </div>
