@@ -580,6 +580,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
 
+        const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
+
         setReplyingToMessageId(messageId);
         setForwardingMessageId(null);
         setNoteContent('');
@@ -590,25 +592,30 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyType('reply');
 
         const ccRecipients = new Set<string>();
-        // Add current user (agent)
-        ccRecipients.add(user.email.toLowerCase());
+
+        // Add the agent sending the reply if they aren't the admin
+        if (!isOwnerReplying) {
+            ccRecipients.add(user.email.toLowerCase());
+        }
         
         // Add the sender of the specific message
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
-        // Don't CC the admin, as they are the 'To' recipient
+        // Remove the admin email from CC, as they are the 'To' recipient
         ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
-        setShowReplyCc(true);
+        setShowReplyCc(true); // Make sure the CC field is visible
     };
 
     const handleReplyAllClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
+        
+        const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
 
         setReplyingToMessageId(messageId);
         setReplyType('reply-all');
@@ -622,20 +629,18 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         // Add all original CC recipients
         message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
         
-        // Add all original To recipients (except admin)
-        message.toRecipients?.forEach(r => {
-            if(r.emailAddress.address.toLowerCase() !== adminEmail.toLowerCase()){
-                ccRecipients.add(r.emailAddress.address.toLowerCase())
-            }
-        });
+        // Add all original To recipients
+        message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
 
-        // Add the message sender (client)
+        // Add the message sender
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
         
-        // Add the current user (agent)
-        ccRecipients.add(user.email.toLowerCase());
+        // Add the current user (agent) if they are not the admin
+        if (!isOwnerReplying) {
+            ccRecipients.add(user.email.toLowerCase());
+        }
 
         // Do not include the admin email in the CC list
         ccRecipients.delete(adminEmail.toLowerCase());
@@ -643,7 +648,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
-        setShowReplyCc(true);
+        setShowReplyCc(true); // Make sure the CC field is visible
         setShowReplyBcc(false);
     };
 
