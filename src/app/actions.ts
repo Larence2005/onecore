@@ -236,6 +236,7 @@ export async function createTicket(
     author: { uid: string, name: string, email: string }, 
     title: string, 
     body: string,
+    attachments: NewAttachment[],
     cc?: string,
     bcc?: string
 ): Promise<{ success: boolean, id?: string, error?: string }> {
@@ -304,6 +305,7 @@ export async function createTicket(
                         bcc: bcc,
                         subject: `[Ticket #${ticketNumber}] ${title}`,
                         body: emailBodyToAdmin,
+                        attachments,
                     });
 
                     // Send a separate confirmation notification TO the client who created the ticket
@@ -332,6 +334,7 @@ export async function createTicket(
                         bcc: bcc,
                         subject: `[Ticket #${ticketNumber}] ${title}`,
                         body: emailBody,
+                        attachments,
                     });
                 }
 

@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +18,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createTicket, getAPISettings, getOrganizationMembers } from "@/app/actions";
-import type { OrganizationMember } from "@/app/actions";
+import type { OrganizationMember, NewAttachment } from "@/app/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Send, RefreshCw } from "lucide-react";
+import { Send, RefreshCw, X, Paperclip } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
 import { useAuth } from "@/providers/auth-provider";
 import { AutocompleteInput } from "./autocomplete-input";
+import { Badge } from "./ui/badge";
 
 const emailListRegex = /^$|^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(, *[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})*$/;
 
@@ -43,6 +44,8 @@ export function CreateTicketForm() {
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function fetchAdminEmail() {
@@ -76,6 +79,18 @@ export function CreateTicketForm() {
       }
   }, [userProfile?.email, form]);
 
+  const convertFileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+              const base64String = (reader.result as string).split(',')[1];
+              resolve(base64String);
+          };
+          reader.onerror = error => reject(error);
+      });
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!userProfile?.organizationId || !user) {
         toast({
@@ -89,7 +104,16 @@ export function CreateTicketForm() {
     setIsSending(true);
     try {
       const author = { uid: user.uid, name: userProfile.name || user.email!, email: user.email! };
-      const result = await createTicket(userProfile.organizationId, author, values.title, values.body, values.cc, values.bcc);
+      
+      const attachmentPayloads: NewAttachment[] = await Promise.all(
+          attachments.map(async (file) => ({
+              name: file.name,
+              contentType: file.type,
+              contentBytes: await convertFileToBase64(file),
+          }))
+      );
+
+      const result = await createTicket(userProfile.organizationId, author, values.title, values.body, attachmentPayloads, values.cc, values.bcc);
       
       if (result.success && result.id) {
         toast({
@@ -111,6 +135,16 @@ export function CreateTicketForm() {
       setIsSending(false);
     }
   }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (event.target.files) {
+          setAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+      }
+  };
+
+  const removeAttachment = (fileToRemove: File) => {
+      setAttachments(prev => prev.filter(file => file !== fileToRemove));
+  };
   
   const isCcVisible = showCc || !!form.watch('cc');
   const isBccVisible = showBcc || !!form.watch('bcc');
@@ -207,18 +241,44 @@ export function CreateTicketForm() {
                     <RichTextEditor
                       value={field.value}
                       onChange={field.onChange}
-                      onAttachmentClick={() => {
-                        toast({
-                          title: "Attachments not supported yet",
-                          description: "This feature is not yet implemented.",
-                        })
-                      }}
+                      onAttachmentClick={() => fileInputRef.current?.click()}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <input
+                type="file"
+                ref={fileInputRef}
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+            />
+            {attachments.length > 0 && (
+                <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Attachments</h4>
+                    <div className="flex flex-wrap gap-2">
+                        {attachments.map((file, index) => (
+                            <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                                <Paperclip className="h-3 w-3" />
+                                <span>{file.name}</span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-4 w-4 rounded-full"
+                                    onClick={() => removeAttachment(file)}
+                                >
+                                    <X className="h-3 w-3" />
+                                    <span className="sr-only">Remove attachment</span>
+                                </Button>
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <Button type="submit" disabled={isSending}>
               {isSending ? (
                 <>
