@@ -588,11 +588,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         const ccRecipients = new Set<string>();
 
-        // CC the message sender (the client) and the agent replying
+        // CC the agent replying
+        ccRecipients.add(user.email.toLowerCase());
+
+        // CC the specific client who sent this message
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
-        ccRecipients.add(user.email.toLowerCase());
 
         // Do not include the admin email in the CC list
         ccRecipients.delete(adminEmail.toLowerCase());
