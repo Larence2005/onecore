@@ -665,803 +665,803 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setForwardBcc('');
             setForwardComment('');
             setForwardingMessageId(messageId);
-            setShowForwardCc(false);
-            setShowForwardBcc(false);
-        }
-    };
-    
-    const handleSaveNote = async () => {
-        if (!noteContent.trim() || !user || !userProfile?.organizationId || !email) return;
-        
-        setIsSavingNote(true);
-        try {
-            await addNoteToTicket(userProfile.organizationId, email.id, {
-                content: noteContent,
-                date: new Date().toISOString(),
-                user: user.email || 'Unknown User'
-            });
-            toast({ title: 'Note added successfully' });
-            setNoteContent('');
-            setIsAddingNote(false);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            toast({ variant: 'destructive', title: 'Failed to add note', description: errorMessage });
-        } finally {
-            setIsSavingNote(false);
-        }
-    };
+setShowForwardCc(false);
+setShowForwardBcc(false);
+}
+};
 
-
-    const handleCancelForward = () => {
-        setForwardingMessageId(null);
-        setForwardTo('');
-        setForwardCc('');
-        setForwardBcc('');
-        setForwardComment('');
-        setShowForwardCc(false);
-        setShowForwardBcc(false);
-    };
-
-    const renderRecipientList = (recipients: Recipient[] | undefined) => {
-        if (!recipients || recipients.length === 0) return null;
-        return recipients.map(r => r.emailAddress.address).join(', ');
-    }
+const handleSaveNote = async () => {
+    if (!noteContent.trim() || !user || !userProfile?.organizationId || !email) return;
     
-    const timeline: TimelineItemType[] = useMemo(() => {
-        if (!email) return [];
-    
-        const emailItems: TimelineItemType[] = (email.conversation || [email]).map(e => ({
-            ...e,
-            itemType: 'email',
-            date: e.receivedDateTime, // Normalize date property for sorting
-        }));
-    
-        const noteItems: TimelineItemType[] = notes.map(note => ({
-            ...note,
-            itemType: 'note',
-        }));
-    
-        return [...emailItems, ...noteItems].sort((a, b) => {
-            return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+    setIsSavingNote(true);
+    try {
+        await addNoteToTicket(userProfile.organizationId, email.id, {
+            content: noteContent,
+            date: new Date().toISOString(),
+            user: user.email || 'Unknown User'
         });
-    }, [email, notes]);
+        toast({ title: 'Note added successfully' });
+        setNoteContent('');
+        setIsAddingNote(false);
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+        toast({ variant: 'destructive', title: 'Failed to add note', description: errorMessage });
+    } finally {
+        setIsSavingNote(false);
+    }
+};
 
-    const isReplyCcVisible = showReplyCc || !!replyCc;
-    const isReplyBccVisible = showReplyBcc || !!replyBcc;
-    const isForwardCcVisible = showForwardCc || !!forwardCc;
-    const isForwardBccVisible = showForwardBcc || !!forwardBcc;
-    
-    const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => {
-        const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
-        const isReplyingToThis = replyingToMessageId === message.id;
-        const isForwardingThis = forwardingMessageId === message.id;
-        const showReplyAll = (message.ccRecipients && message.ccRecipients.length > 0) || (message.toRecipients && message.toRecipients.length > 1);
 
-        return (
-            <div key={message.id}>
-                <Card className="overflow-hidden">
-                    <CardHeader className="flex flex-row items-start gap-4 p-4 bg-muted border-b">
-                        <Avatar className="h-10 w-10">
-                            <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 grid gap-1 text-sm">
-                            <div className="font-semibold">{message.sender}</div>
-                            <div className="text-xs text-muted-foreground">
+const handleCancelForward = () => {
+    setForwardingMessageId(null);
+    setForwardTo('');
+    setForwardCc('');
+    setForwardBcc('');
+    setForwardComment('');
+    setShowForwardCc(false);
+    setShowForwardBcc(false);
+};
+
+const renderRecipientList = (recipients: Recipient[] | undefined) => {
+    if (!recipients || recipients.length === 0) return null;
+    return recipients.map(r => r.emailAddress.address).join(', ');
+}
+
+const timeline: TimelineItemType[] = useMemo(() => {
+    if (!email) return [];
+
+    const emailItems: TimelineItemType[] = (email.conversation || [email]).map(e => ({
+        ...e,
+        itemType: 'email',
+        date: e.receivedDateTime, // Normalize date property for sorting
+    }));
+
+    const noteItems: TimelineItemType[] = notes.map(note => ({
+        ...note,
+        itemType: 'note',
+    }));
+
+    return [...emailItems, ...noteItems].sort((a, b) => {
+        return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+    });
+}, [email, notes]);
+
+const isReplyCcVisible = showReplyCc || !!replyCc;
+const isReplyBccVisible = showReplyBcc || !!replyBcc;
+const isForwardCcVisible = showForwardCc || !!forwardCc;
+const isForwardBccVisible = showForwardBcc || !!forwardBcc;
+
+const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => {
+    const regularAttachments = message.attachments?.filter(att => !att.isInline) || [];
+    const isReplyingToThis = replyingToMessageId === message.id;
+    const isForwardingThis = forwardingMessageId === message.id;
+    const showReplyAll = (message.ccRecipients && message.ccRecipients.length > 0) || (message.toRecipients && message.toRecipients.length > 1);
+
+    return (
+        <div key={message.id}>
+            <Card className="overflow-hidden">
+                <CardHeader className="flex flex-row items-start gap-4 p-4 bg-muted border-b">
+                    <Avatar className="h-10 w-10">
+                        <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 grid gap-1 text-sm">
+                        <div className="font-semibold">{message.sender}</div>
+                        <div className="text-xs text-muted-foreground">
+                            <p>
+                                <span className="font-semibold">From:</span> {message.senderEmail}
+                            </p>
+                            <p>
+                                <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
+                            </p>
+                            {message.ccRecipients && message.ccRecipients.length > 0 && (
                                 <p>
-                                    <span className="font-semibold">From:</span> {message.senderEmail}
+                                    <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
                                 </p>
-                                <p>
-                                    <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
-                                </p>
-                                {message.ccRecipients && message.ccRecipients.length > 0 && (
-                                    <p>
-                                        <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
-                            <span>{format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}</span>
-                             <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyClick(message.id)}>
-                                    <Reply className="h-4 w-4" />
-                                </Button>
-                                {showReplyAll && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyAllClick(message.id)}>
-                                        <ReplyAll className="h-4 w-4" />
-                                    </Button>
-                                )}
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleForwardClick(message.id)}>
-                                    <Share className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                            {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
-                            {message.body.contentType === 'html' ? (
-                                <CollapsibleEmailContent htmlContent={message.body.content} attachments={message.attachments} />
-                            ) : (
-                                <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
                             )}
                         </div>
-                        {regularAttachments.length > 0 && (
-                            <div className="p-4 border-t">
-                                <h3 className="text-sm font-medium mb-2">Attachments</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {regularAttachments.map(att => (
-                                        <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
-                                            <Paperclip className="mr-2 h-4 w-4" />
-                                            {att.name}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
+                        <span>{format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}</span>
+                         <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyClick(message.id)}>
+                                <Reply className="h-4 w-4" />
+                            </Button>
+                            {showReplyAll && (
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyAllClick(message.id)}>
+                                    <ReplyAll className="h-4 w-4" />
+                                </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleForwardClick(message.id)}>
+                                <Share className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                        {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
+                        {message.body.contentType === 'html' ? (
+                            <CollapsibleEmailContent htmlContent={message.body.content} attachments={message.attachments} />
+                        ) : (
+                            <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                    {regularAttachments.length > 0 && (
+                        <div className="p-4 border-t">
+                            <h3 className="text-sm font-medium mb-2">Attachments</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {regularAttachments.map(att => (
+                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
+                                        <Paperclip className="mr-2 h-4 w-4" />
+                                        {att.name}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
-                 {isReplyingToThis && (
-                    <Card className="mt-4">
-                        <CardHeader>
-                            <CardTitle>
-                                {replyType === 'reply-all' ? 'Reply All Email' : 'Reply Email'}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-4">
-                                <>
+             {isReplyingToThis && (
+                <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle>
+                            {replyType === 'reply-all' ? 'Reply All Email' : 'Reply Email'}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                            <>
+                                <div className="flex items-center gap-2 border-b">
+                                    <Label htmlFor="reply-to" className="py-2.5">To</Label>
+                                    <AutocompleteInput
+                                        id="reply-to"
+                                        suggestions={members.filter(m => m.uid)}
+                                        value={replyTo}
+                                        onChange={setReplyTo}
+                                        placeholder="to@example.com"
+                                        className="flex-1 h-auto px-0"
+                                    />
+                                    <div className="flex-shrink-0">
+                                        {!isReplyCcVisible && (
+                                            <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyCc(true)}>Cc</Button>
+                                        )}
+                                        {!isReplyBccVisible && (
+                                            <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyBcc(true)}>Bcc</Button>
+                                        )}
+                                    </div>
+                                </div>
+                                {isReplyCcVisible && (
                                     <div className="flex items-center gap-2 border-b">
-                                        <Label htmlFor="reply-to" className="py-2.5">To</Label>
-                                        <AutocompleteInput
-                                            id="reply-to"
+                                        <Label htmlFor="reply-cc" className="py-2.5">Cc</Label>
+                                        <AutocompleteInput 
+                                            id="reply-cc"
                                             suggestions={members.filter(m => m.uid)}
-                                            value={replyTo}
-                                            onChange={setReplyTo}
-                                            placeholder="to@example.com"
+                                            value={replyCc}
+                                            onChange={setReplyCc}
+                                            placeholder="cc@example.com" 
                                             className="flex-1 h-auto px-0"
                                         />
-                                        <div className="flex-shrink-0">
-                                            {!isReplyCcVisible && (
-                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyCc(true)}>Cc</Button>
-                                            )}
-                                            {!isReplyBccVisible && (
-                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowReplyBcc(true)}>Bcc</Button>
-                                            )}
+                                    </div>
+                                )}
+                                {isReplyBccVisible && (
+                                    <div className="flex items-center gap-2 border-b">
+                                        <Label htmlFor="reply-bcc" className="py-2.5">Bcc</Label>
+                                        <AutocompleteInput
+                                            id="reply-bcc"
+                                            suggestions={members.filter(m => m.uid)}
+                                            value={replyBcc}
+                                            onChange={setReplyBcc}
+                                            placeholder="bcc@example.com"
+                                            className="flex-1 h-auto px-0"
+                                        />
+                                    </div>
+                                )}
+                                <RichTextEditor
+                                    value={replyContent}
+                                    onChange={setReplyContent}
+                                    onAttachmentClick={() => fileInputRef.current?.click()}
+                                />
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    multiple
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                                {attachments.length > 0 && (
+                                    <div className="space-y-2">
+                                        <h4 className="text-sm font-medium">Attachments</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {attachments.map((file, index) => (
+                                                <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                                                    <span>{file.name}</span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-4 w-4 rounded-full"
+                                                        onClick={() => removeAttachment(file)}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                        <span className="sr-only">Remove attachment</span>
+                                                    </Button>
+                                                </Badge>
+                                            ))}
                                         </div>
                                     </div>
-                                    {isReplyCcVisible && (
-                                        <div className="flex items-center gap-2 border-b">
-                                            <Label htmlFor="reply-cc" className="py-2.5">Cc</Label>
-                                            <AutocompleteInput 
-                                                id="reply-cc"
-                                                suggestions={members.filter(m => m.uid)}
-                                                value={replyCc}
-                                                onChange={setReplyCc}
-                                                placeholder="cc@example.com" 
-                                                className="flex-1 h-auto px-0"
-                                            />
-                                        </div>
-                                    )}
-                                    {isReplyBccVisible && (
-                                        <div className="flex items-center gap-2 border-b">
-                                            <Label htmlFor="reply-bcc" className="py-2.5">Bcc</Label>
-                                            <AutocompleteInput
-                                                id="reply-bcc"
-                                                suggestions={members.filter(m => m.uid)}
-                                                value={replyBcc}
-                                                onChange={setReplyBcc}
-                                                placeholder="bcc@example.com"
-                                                className="flex-1 h-auto px-0"
-                                            />
-                                        </div>
-                                    )}
+                                )}
+                                    <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
+                                    <Button onClick={handleSendReply} disabled={isSending}>
+                                        {isSending ? (
+                                            <>
+                                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                Sending...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="mr-2 h-4 w-4" />
+                                                Send Reply
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </>
+                    </CardContent>
+                </Card>
+            )}
+
+             {isForwardingThis && (
+                <Card className="mt-4">
+                    <CardHeader>
+                        <CardTitle>Forward Email</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                            <>
+                                <div className="flex items-center gap-2 border-b">
+                                    <Label htmlFor="forward-to" className="py-2.5">To</Label>
+                                    <AutocompleteInput 
+                                        id="forward-to"
+                                        suggestions={members.filter(m => m.uid)}
+                                        value={forwardTo}
+                                        onChange={setForwardTo}
+                                        placeholder="recipient@example.com"
+                                        className="flex-1 h-auto px-0"
+                                    />
+                                    <div className="flex-shrink-0">
+                                        {!isForwardCcVisible && (
+                                            <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowForwardCc(true)}>Cc</Button>
+                                        )}
+                                        {!isForwardBccVisible && (
+                                            <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowForwardBcc(true)}>Bcc</Button>
+                                        )}
+                                    </div>
+                                </div>
+                                {isForwardCcVisible && (
+                                    <div className="flex items-center gap-2 border-b">
+                                        <Label htmlFor="forward-cc" className="py-2.5">Cc</Label>
+                                        <AutocompleteInput
+                                            id="forward-cc"
+                                            suggestions={members.filter(m => m.uid)}
+                                            value={forwardCc}
+                                            onChange={setForwardCc}
+                                            placeholder="cc@example.com"
+                                            className="flex-1 h-auto px-0"
+                                        />
+                                    </div>
+                                )}
+                                {isForwardBccVisible && (
+                                    <div className="flex items-center gap-2 border-b">
+                                        <Label htmlFor="forward-bcc" className="py-2.5">Bcc</Label>
+                                        <AutocompleteInput
+                                            id="forward-bcc"
+                                            suggestions={members.filter(m => m.uid)}
+                                            value={forwardBcc}
+                                            onChange={setForwardBcc}
+                                            placeholder="bcc@example.com"
+                                            className="flex-1 h-auto px-0"
+                                        />
+                                    </div>
+                                )}
+                                <div className="space-y-2 pt-4">
+                                    <Label htmlFor="forward-comment">Comment (optional)</Label>
                                     <RichTextEditor
-                                        value={replyContent}
-                                        onChange={setReplyContent}
-                                        onAttachmentClick={() => fileInputRef.current?.click()}
+                                        value={forwardComment}
+                                        onChange={setForwardComment}
+                                        onAttachmentClick={() => toast({ title: "Attachments not supported for forwarding yet."})}
                                     />
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        multiple
-                                        onChange={handleFileChange}
-                                        className="hidden"
-                                    />
-                                    {attachments.length > 0 && (
-                                        <div className="space-y-2">
-                                            <h4 className="text-sm font-medium">Attachments</h4>
-                                            <div className="flex flex-wrap gap-2">
-                                                {attachments.map((file, index) => (
-                                                    <Badge key={index} variant="secondary" className="flex items-center gap-2">
-                                                        <span>{file.name}</span>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-4 w-4 rounded-full"
-                                                            onClick={() => removeAttachment(file)}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                            <span className="sr-only">Remove attachment</span>
+                                </div>
+                                    <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" onClick={handleCancelForward}>Cancel</Button>
+                                    <Button onClick={handleSendForward} disabled={isSending}>
+                                        {isSending ? (
+                                            <>
+                                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                Forwarding...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Send className="mr-2 h-4 w-4" />
+                                                Forward
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+}
+
+const renderNoteCard = (note: Note) => {
+    const member = members.find(m => m.email === note.user);
+    return (
+        <Card key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+            <CardHeader className="flex flex-row items-center gap-4 p-4">
+                <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-yellow-100 dark:bg-yellow-800">{member?.name?.[0]?.toUpperCase() || 'N'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 grid gap-1 text-sm">
+                    <div className="font-semibold">{member?.name || note.user} <span className="text-muted-foreground font-normal">added a note</span></div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                    {format(parseISO(note.date), 'eee, MMM d, yyyy h:mm a')}
+                </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {parse(note.content)}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+
+const handleLogout = async () => {
+    try {
+    await logout();
+    router.push('/');
+    } catch (error) {
+    console.error("Failed to log out", error);
+    }
+};
+
+if (loading || !user) {
+    return (
+    <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
+    </div>
+    );
+}
+
+const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+const isClient = userProfile?.isClient === true;
+
+const handleMenuClick = (view: string) => {
+    if(view === 'tickets' || view === '/') {
+        router.push('/dashboard');
+    } else if (view === 'archive') {
+        router.push('/archive');
+    } else if (view === 'create-ticket') {
+        router.push('/create-ticket');
+    } else {
+        router.push(`/dashboard?view=${view}`); 
+    }
+};
+
+const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
+const typeDetails = types.find(t => t.value === currentType) || types[1];
+const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
+const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unassigned';
+
+
+return (
+    <SidebarProvider>
+        <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
+            <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
+                <div className="flex-grow flex flex-col">
+                    <SidebarHeader className="p-4 flex flex-col gap-4">
+                        <div className="flex items-center justify-center">
+                            <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-9 w-9">
+                            <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                                <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                            </div>
+                        </div>
+                    </SidebarHeader>
+                    <SidebarContent className="flex-grow">
+                         <SidebarMenu className="flex flex-col gap-2 px-4">
+                            {isClient ? (
+                                <>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                                            <List className="text-green-500" />
+                                            <span>Tickets</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('create-ticket')}>
+                                            <PlusCircle className="text-blue-500" />
+                                            <span>Create Ticket</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </>
+                            ) : (
+                                <>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
+                                        <LayoutDashboard className="text-purple-500" />
+                                        <span>Dashboard</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                                        <List className="text-green-500" />
+                                        <span>Tickets</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                                        <Pencil className="text-blue-500" />
+                                        <span>Compose</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                                            <Archive className="text-orange-500" />
+                                            <span>Archive</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
+                                        <Users className="text-pink-500" />
+                                        <span>Clients</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
+                                        <Building2 className="text-yellow-500" />
+                                        <span>Organization</span>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </>
+                            )}
+                            <SidebarMenuItem>
+                                <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
+                                <SettingsIcon className="text-gray-500" />
+                                <span>Settings</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarContent>
+                </div>
+            </Sidebar>
+
+            <main className="flex-1 flex flex-col min-w-0">
+                 <Header>
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" size="icon" asChild>
+                            <Link href="/dashboard?view=tickets">
+                                <ArrowLeft className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <h1 className="text-xl font-bold truncate">
+                            {email?.ticketNumber && <span className="text-muted-foreground">#{email.ticketNumber}</span>} {email?.subject || "Ticket Details"}
+                        </h1>
+                    </div>
+                </Header>
+                <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto">
+                    <div className="p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                            {isLoading && (
+                                <div className="space-y-4">
+                                    {[...Array(2)].map((_, i) => (
+                                        <Card key={i}>
+                                            <CardHeader className="flex flex-row items-center gap-4 p-4">
+                                                <Skeleton className="h-10 w-10 rounded-full" />
+                                                <div className="flex-1 space-y-2">
+                                                    <Skeleton className="h-4 w-1/4" />
+                                                    <Skeleton className="h-3 w-1/3" />
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="p-4">
+                                                <Skeleton className="h-24 w-full" />
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
+
+                            {error && (
+                                <Alert variant="destructive">
+                                    <Terminal className="h-4 w-4" />
+                                    <AlertTitle>Error</AlertTitle>
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
+
+                            {!isLoading && !error && email && (
+                                <>
+                                    <div className="space-y-4">
+                                        {timeline.map((item, index) => {
+                                            if (item.itemType === 'email') {
+                                                return renderMessageCard(item, index === 0);
+                                            }
+                                            if (item.itemType === 'note') {
+                                                return renderNoteCard(item);
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+                                    <div className="mt-4">
+                                        {!isAddingNote && !replyingToMessageId && !forwardingMessageId && !isClient && (
+                                            <Button variant="outline" onClick={() => setIsAddingNote(true)}>
+                                                <MessageSquare className="mr-2 h-4 w-4" />
+                                                Add Note
+                                            </Button>
+                                        )}
+                                        {isAddingNote && (
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Add Internal Note</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} />
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
+                                                        <Button onClick={handleSaveNote} disabled={isSavingNote}>
+                                                            {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                            Save Note
                                                         </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        
+                        <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                            {isLoading && (
+                                <>
+                                <Card>
+                                    <CardHeader>
+                                        <Skeleton className="h-6 w-1/2" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <Skeleton className="h-6 w-1/2" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-4 w-full" />
+                                    </CardContent>
+                                </Card>
+                                </>
+                            )}
+                            {!isLoading && email && (
+                                <>
+                                <Card>
+                                    <CardHeader>
+                                        <h2 className="text-lg font-bold">Properties</h2>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 text-sm">
+                                        <div className="grid grid-cols-1 gap-y-4">
+                                            <div className="space-y-1">
+                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
+                                                <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
+                                                <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
+                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
+                                            </div>
+                                        </div>
+
+                                        <Separator />
+                                        
+                                        <div className="grid grid-cols-1 gap-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                {isOwner ? (
+                                                    <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
+                                                                <span className="flex items-center gap-2">
+                                                                    {assigneeName}
+                                                                </span>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                            {members.filter(m => m.uid).map(m => (
+                                                                <SelectItem key={m.uid} value={m.uid!}>
+                                                                    {m.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                ) : (
+                                                    <span className="font-medium text-sm">{assigneeName}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
+                                                <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}} disabled={isClient}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
+                                                                {priorityDetails.label}
+                                                            </span>
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {priorities.map(p => (
+                                                            <SelectItem key={p.value} value={p.value}>
+                                                                <span className="flex items-center gap-2">
+                                                                    <span className={cn("h-2 w-2 rounded-full",p.color)} />
+                                                                    {p.label}
+                                                                </span>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
+                                                <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}} disabled={isClient}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
+                                                                {statusDetails?.label}
+                                                            </span>
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {statuses.map(s => (
+                                                            <SelectItem key={s.value} value={s.value}>
+                                                                <span className="flex items-center gap-2">
+                                                                    <s.icon className={cn("h-4 w-4", s.color)} />
+                                                                    {s.label}
+                                                                </span>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
+                                                <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}} disabled={isClient}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
+                                                                {typeDetails?.label}
+                                                            </span>
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {types.map(t => (
+                                                            <SelectItem key={t.value} value={t.value}>
+                                                                <span className="flex items-center gap-2">
+                                                                    <t.icon className={cn("h-4w-4", t.color)} />
+                                                                    {t.label}
+                                                                </span>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
+                                                <Popover>
+                                                    <PopoverTrigger asChild disabled={isClient || !!currentPriority}>
+                                                        <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0 disabled:opacity-100 disabled:cursor-default text-right">
+                                                            {currentDeadline ? (
+                                                                <div>
+                                                                    <div>{format(currentDeadline, 'PP')}</div>
+                                                                    <div className="text-muted-foreground text-xs">{format(currentDeadline, 'p')}</div>
+                                                                </div>
+                                                            ) : 'Set deadline'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="end">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={currentDeadline}
+                                                            onSelect={handleDeadlineChange}
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
+                                                <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}} disabled={isClient}>
+                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                        <SelectValue>
+                                                            <span className="flex items-center gap-2">
+                                                                {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
+                                                            </span>
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">None</SelectItem>
+                                                        {companies.map(c => (
+                                                            <SelectItem key={c.id} value={c.id}>
+                                                                {c.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        
+                                        <Separator />
+
+                                        <div className="space-y-2 col-span-2">
+                                            <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
+                                            <div className="flex flex-wrap gap-2">
+                                                {currentTags.filter(tag => tag !== 'Resolved Late' && !tag.startsWith('deadline-reminder-sent-day-')).map(tag => (
+                                                    <Badge key={tag} variant="secondary">
+                                                        {tag}
+                                                        {!isClient && (
+                                                            <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        )}
                                                     </Badge>
                                                 ))}
                                             </div>
-                                        </div>
-                                    )}
-                                        <div className="flex justify-end gap-2">
-                                        <Button variant="ghost" onClick={handleCancelReply}>Cancel</Button>
-                                        <Button onClick={handleSendReply} disabled={isSending}>
-                                            {isSending ? (
-                                                <>
-                                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                                    Sending...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Send className="mr-2 h-4 w-4" />
-                                                    Send Reply
-                                                </>
+                                            {!isClient && (
+                                                <Input
+                                                    value={tagInput}
+                                                    onChange={(e) => setTagInput(e.target.value)}
+                                                    onKeyDown={handleTagKeyDown}
+                                                    placeholder="Add a tag..."
+                                                    className="h-8 text-sm"
+                                                />
                                             )}
-                                        </Button>
-                                    </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                {!isClient && (
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            {activityLog.filter(log => log.type !== 'Note').map((log) => (
+                                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                                    {log.details}
+                                                </TimelineItem>
+                                            ))}
+                                        </CardContent>
+                                    </Card>
+                                )}
                                 </>
-                        </CardContent>
-                    </Card>
-                )}
-
-                 {isForwardingThis && (
-                    <Card className="mt-4">
-                        <CardHeader>
-                            <CardTitle>Forward Email</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 space-y-4">
-                                <>
-                                    <div className="flex items-center gap-2 border-b">
-                                        <Label htmlFor="forward-to" className="py-2.5">To</Label>
-                                        <AutocompleteInput 
-                                            id="forward-to"
-                                            suggestions={members.filter(m => m.uid)}
-                                            value={forwardTo}
-                                            onChange={setForwardTo}
-                                            placeholder="recipient@example.com"
-                                            className="flex-1 h-auto px-0"
-                                        />
-                                        <div className="flex-shrink-0">
-                                            {!isForwardCcVisible && (
-                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowForwardCc(true)}>Cc</Button>
-                                            )}
-                                            {!isForwardBccVisible && (
-                                                <Button variant="link" size="sm" type="button" className="h-auto p-1 text-xs" onClick={() => setShowForwardBcc(true)}>Bcc</Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {isForwardCcVisible && (
-                                        <div className="flex items-center gap-2 border-b">
-                                            <Label htmlFor="forward-cc" className="py-2.5">Cc</Label>
-                                            <AutocompleteInput
-                                                id="forward-cc"
-                                                suggestions={members.filter(m => m.uid)}
-                                                value={forwardCc}
-                                                onChange={setForwardCc}
-                                                placeholder="cc@example.com"
-                                                className="flex-1 h-auto px-0"
-                                            />
-                                        </div>
-                                    )}
-                                    {isForwardBccVisible && (
-                                        <div className="flex items-center gap-2 border-b">
-                                            <Label htmlFor="forward-bcc" className="py-2.5">Bcc</Label>
-                                            <AutocompleteInput
-                                                id="forward-bcc"
-                                                suggestions={members.filter(m => m.uid)}
-                                                value={forwardBcc}
-                                                onChange={setForwardBcc}
-                                                placeholder="bcc@example.com"
-                                                className="flex-1 h-auto px-0"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="space-y-2 pt-4">
-                                        <Label htmlFor="forward-comment">Comment (optional)</Label>
-                                        <RichTextEditor
-                                            value={forwardComment}
-                                            onChange={setForwardComment}
-                                            onAttachmentClick={() => toast({ title: "Attachments not supported for forwarding yet."})}
-                                        />
-                                    </div>
-                                        <div className="flex justify-end gap-2">
-                                        <Button variant="ghost" onClick={handleCancelForward}>Cancel</Button>
-                                        <Button onClick={handleSendForward} disabled={isSending}>
-                                            {isSending ? (
-                                                <>
-                                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                                                    Forwarding...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Send className="mr-2 h-4 w-4" />
-                                                    Forward
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
-        );
-    }
-    
-    const renderNoteCard = (note: Note) => {
-        const member = members.find(m => m.email === note.user);
-        return (
-            <Card key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-                <CardHeader className="flex flex-row items-center gap-4 p-4">
-                    <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-yellow-100 dark:bg-yellow-800">{member?.name?.[0]?.toUpperCase() || 'N'}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 grid gap-1 text-sm">
-                        <div className="font-semibold">{member?.name || note.user} <span className="text-muted-foreground font-normal">added a note</span></div>
+                            )}
+                        </aside>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                        {format(parseISO(note.date), 'eee, MMM d, yyyy h:mm a')}
-                    </div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                        {parse(note.content)}
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    };
-
-
-    const handleLogout = async () => {
-        try {
-        await logout();
-        router.push('/');
-        } catch (error) {
-        console.error("Failed to log out", error);
-        }
-    };
-
-    if (loading || !user) {
-        return (
-        <div className="flex items-center justify-center min-h-screen">
-            <p>Loading...</p>
+            </main>
         </div>
-        );
-    }
-    
-    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
-    const isClient = userProfile?.isClient === true;
-
-    const handleMenuClick = (view: string) => {
-        if(view === 'tickets' || view === '/') {
-            router.push('/dashboard');
-        } else if (view === 'archive') {
-            router.push('/archive');
-        } else if (view === 'create-ticket') {
-            router.push('/create-ticket');
-        } else {
-            router.push(`/dashboard?view=${view}`); 
-        }
-    };
-    
-    const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
-    const typeDetails = types.find(t => t.value === currentType) || types[1];
-    const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
-    const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unassigned';
-
-
-    return (
-        <SidebarProvider>
-            <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
-                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
-                    <div className="flex-grow flex flex-col">
-                        <SidebarHeader className="p-4 flex flex-col gap-4">
-                            <div className="flex items-center justify-center">
-                                <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-9 w-9">
-                                <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                                    <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
-                                </div>
-                            </div>
-                        </SidebarHeader>
-                        <SidebarContent className="flex-grow">
-                             <SidebarMenu className="flex flex-col gap-2 px-4">
-                                {isClient ? (
-                                    <>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
-                                                <List className="text-green-500" />
-                                                <span>Tickets</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('create-ticket')}>
-                                                <PlusCircle className="text-blue-500" />
-                                                <span>Create Ticket</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    </>
-                                ) : (
-                                    <>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                            <LayoutDashboard className="text-purple-500" />
-                                            <span>Dashboard</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
-                                            <List className="text-green-500" />
-                                            <span>Tickets</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                            <Pencil className="text-blue-500" />
-                                            <span>Compose</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                                <Archive className="text-orange-500" />
-                                                <span>Archive</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                                            <Users className="text-pink-500" />
-                                            <span>Clients</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                                            <Building2 className="text-yellow-500" />
-                                            <span>Organization</span>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    </>
-                                )}
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                                    <SettingsIcon className="text-gray-500" />
-                                    <span>Settings</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            </SidebarMenu>
-                        </SidebarContent>
-                    </div>
-                </Sidebar>
-
-                <main className="flex-1 flex flex-col min-w-0">
-                     <Header>
-                        <div className="flex items-center gap-4">
-                            <Button variant="outline" size="icon" asChild>
-                                <Link href="/dashboard?view=tickets">
-                                    <ArrowLeft className="h-4 w-4" />
-                                </Link>
-                            </Button>
-                            <h1 className="text-xl font-bold truncate">
-                                {email?.ticketNumber && <span className="text-muted-foreground">#{email.ticketNumber}</span>} {email?.subject || "Ticket Details"}
-                            </h1>
-                        </div>
-                    </Header>
-                    <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto">
-                        <div className="p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                                {isLoading && (
-                                    <div className="space-y-4">
-                                        {[...Array(2)].map((_, i) => (
-                                            <Card key={i}>
-                                                <CardHeader className="flex flex-row items-center gap-4 p-4">
-                                                    <Skeleton className="h-10 w-10 rounded-full" />
-                                                    <div className="flex-1 space-y-2">
-                                                        <Skeleton className="h-4 w-1/4" />
-                                                        <Skeleton className="h-3 w-1/3" />
-                                                    </div>
-                                                </CardHeader>
-                                                <CardContent className="p-4">
-                                                    <Skeleton className="h-24 w-full" />
-                                                </CardContent>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {error && (
-                                    <Alert variant="destructive">
-                                        <Terminal className="h-4 w-4" />
-                                        <AlertTitle>Error</AlertTitle>
-                                        <AlertDescription>{error}</AlertDescription>
-                                    </Alert>
-                                )}
-
-                                {!isLoading && !error && email && (
-                                    <>
-                                        <div className="space-y-4">
-                                            {timeline.map((item, index) => {
-                                                if (item.itemType === 'email') {
-                                                    return renderMessageCard(item, index === 0);
-                                                }
-                                                if (item.itemType === 'note') {
-                                                    return renderNoteCard(item);
-                                                }
-                                                return null;
-                                            })}
-                                        </div>
-                                        <div className="mt-4">
-                                            {!isAddingNote && !replyingToMessageId && !forwardingMessageId && !isClient && (
-                                                <Button variant="outline" onClick={() => setIsAddingNote(true)}>
-                                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                                    Add Note
-                                                </Button>
-                                            )}
-                                            {isAddingNote && (
-                                                <Card>
-                                                    <CardHeader>
-                                                        <CardTitle>Add Internal Note</CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-4">
-                                                        <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} />
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
-                                                            <Button onClick={handleSaveNote} disabled={isSavingNote}>
-                                                                {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                Save Note
-                                                            </Button>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                            
-                            <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                                {isLoading && (
-                                    <>
-                                    <Card>
-                                        <CardHeader>
-                                            <Skeleton className="h-6 w-1/2" />
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                        </CardContent>
-                                    </Card>
-                                    <Card>
-                                        <CardHeader>
-                                            <Skeleton className="h-6 w-1/2" />
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                        </CardContent>
-                                    </Card>
-                                    </>
-                                )}
-                                {!isLoading && email && (
-                                    <>
-                                    <Card>
-                                        <CardHeader>
-                                            <h2 className="text-lg font-bold">Properties</h2>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4 text-sm">
-                                            <div className="grid grid-cols-1 gap-y-4">
-                                                <div className="space-y-1">
-                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
-                                                    <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
-                                                    <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
-                                                    <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
-                                                </div>
-                                            </div>
-
-                                            <Separator />
-                                            
-                                            <div className="grid grid-cols-1 gap-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                    {isOwner ? (
-                                                        <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
-                                                            <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                                <SelectValue>
-                                                                    <span className="flex items-center gap-2">
-                                                                        {assigneeName}
-                                                                    </span>
-                                                                </SelectValue>
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                                {members.filter(m => m.uid).map(m => (
-                                                                    <SelectItem key={m.uid} value={m.uid!}>
-                                                                        {m.name}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <span className="font-medium text-sm">{assigneeName}</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                    <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}} disabled={isClient}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue>
-                                                                <span className="flex items-center gap-2">
-                                                                    <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
-                                                                    {priorityDetails.label}
-                                                                </span>
-                                                            </SelectValue>
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {priorities.map(p => (
-                                                                <SelectItem key={p.value} value={p.value}>
-                                                                    <span className="flex items-center gap-2">
-                                                                        <span className={cn("h-2 w-2 rounded-full",p.color)} />
-                                                                        {p.label}
-                                                                    </span>
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                    <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}} disabled={isClient}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue>
-                                                                <span className="flex items-center gap-2">
-                                                                    {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
-                                                                    {statusDetails?.label}
-                                                                </span>
-                                                            </SelectValue>
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {statuses.map(s => (
-                                                                <SelectItem key={s.value} value={s.value}>
-                                                                    <span className="flex items-center gap-2">
-                                                                        <s.icon className={cn("h-4 w-4", s.color)} />
-                                                                        {s.label}
-                                                                    </span>
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                    <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}} disabled={isClient}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue>
-                                                                <span className="flex items-center gap-2">
-                                                                    {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
-                                                                    {typeDetails?.label}
-                                                                </span>
-                                                            </SelectValue>
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {types.map(t => (
-                                                                <SelectItem key={t.value} value={t.value}>
-                                                                    <span className="flex items-center gap-2">
-                                                                        <t.icon className={cn("h-4w-4", t.color)} />
-                                                                        {t.label}
-                                                                    </span>
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
-                                                    <Popover>
-                                                        <PopoverTrigger asChild disabled={isClient || !!currentPriority}>
-                                                            <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0 disabled:opacity-100 disabled:cursor-default text-right">
-                                                                {currentDeadline ? (
-                                                                    <div>
-                                                                        <div>{format(currentDeadline, 'PP')}</div>
-                                                                        <div className="text-muted-foreground text-xs">{format(currentDeadline, 'p')}</div>
-                                                                    </div>
-                                                                ) : 'Set deadline'}
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="end">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={currentDeadline}
-                                                                onSelect={handleDeadlineChange}
-                                                                initialFocus
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
-                                                    <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}} disabled={isClient}>
-                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                            <SelectValue>
-                                                                <span className="flex items-center gap-2">
-                                                                    {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
-                                                                </span>
-                                                            </SelectValue>
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="none">None</SelectItem>
-                                                            {companies.map(c => (
-                                                                <SelectItem key={c.id} value={c.id}>
-                                                                    {c.name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-                                            
-                                            <Separator />
-
-                                            <div className="space-y-2 col-span-2">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {currentTags.filter(tag => tag !== 'Resolved Late' && !tag.startsWith('deadline-reminder-sent-day-')).map(tag => (
-                                                        <Badge key={tag} variant="secondary">
-                                                            {tag}
-                                                            {!isClient && (
-                                                                <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
-                                                                    <X className="h-3 w-3" />
-                                                                </button>
-                                                            )}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                                {!isClient && (
-                                                    <Input
-                                                        value={tagInput}
-                                                        onChange={(e) => setTagInput(e.target.value)}
-                                                        onKeyDown={handleTagKeyDown}
-                                                        placeholder="Add a tag..."
-                                                        className="h-8 text-sm"
-                                                    />
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                    {!isClient && (
-                                        <Card>
-                                            <CardHeader>
-                                                <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4">
-                                                {activityLog.filter(log => log.type !== 'Note').map((log) => (
-                                                    <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
-                                                        {log.details}
-                                                    </TimelineItem>
-                                                ))}
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                    </>
-                                )}
-                            </aside>
-                        </div>
-                </main>
-            </div>
-        </SidebarProvider>
-    );
+    </SidebarProvider>
+);
 }
