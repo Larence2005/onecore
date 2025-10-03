@@ -594,23 +594,24 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const ccRecipients = new Set<string>();
 
         if (isClientReplying) {
-            // Client is replying, CC themselves and the assigned agent.
             ccRecipients.add(user.email.toLowerCase());
             const assignedAgent = members.find(m => m.uid === email.assignee);
             if (assignedAgent?.email) {
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
         } else {
-            // Agent is replying, CC themselves (if not owner) and the original ticket creator.
             if (user.uid !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email.toLowerCase());
             }
             if (email?.creator?.email) {
                 ccRecipients.add(email.creator.email.toLowerCase());
             }
+            const assignedAgent = members.find(m => m.uid === email.assignee);
+             if (assignedAgent?.email) {
+                ccRecipients.add(assignedAgent.email.toLowerCase());
+            }
         }
         
-        // Always remove the admin from CC to avoid redundancy
         ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(adminEmail);
@@ -633,33 +634,32 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         const ccRecipients = new Set<string>();
 
-        // Add all original CC recipients and To recipients from the message
         message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
         message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
         
-        // Add the message sender
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
         if (isClientReplying) {
-            // Client is replying, so also CC themselves and the assigned agent.
             ccRecipients.add(user.email.toLowerCase());
             const assignedAgent = members.find(m => m.uid === email.assignee);
             if (assignedAgent?.email) {
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
         } else {
-            // Agent is replying, CC themselves (if not owner) and the ticket creator.
             if (user.uid !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email.toLowerCase());
             }
             if (email?.creator?.email) {
                 ccRecipients.add(email.creator.email.toLowerCase());
             }
+            const assignedAgent = members.find(m => m.uid === email.assignee);
+             if (assignedAgent?.email) {
+                ccRecipients.add(assignedAgent.email.toLowerCase());
+            }
         }
 
-        // Always remove the admin from CC to avoid redundancy
         ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(adminEmail);
