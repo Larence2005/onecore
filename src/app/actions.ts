@@ -262,7 +262,6 @@ export async function createTicket(
         const ticketNumber = await getNextTicketNumber(organizationId);
         const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
         const newTicketRef = doc(ticketsCollectionRef);
-        const conversationId = `manual-${newTicketRef.id}`;
         
         const newTicketData = {
             id: newTicketRef.id,
@@ -280,7 +279,7 @@ export async function createTicket(
             ticketNumber: ticketNumber,
             assignee: null,
             companyId: companyId,
-            conversationId: conversationId
+            conversationId: null // Will be set after sending the first email
         };
 
         await setDoc(newTicketRef, newTicketData);
@@ -288,59 +287,15 @@ export async function createTicket(
         const settings = await getAPISettings(organizationId);
         let conversationMessage: DetailedEmail;
 
-        if (isClient && settings) {
-            const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-            ccSet.add(author.email.toLowerCase());
-            
-            conversationMessage = {
-                id: `msg-${Date.now()}`,
-                subject: title,
-                sender: settings.userId, // From admin email
-                senderEmail: settings.userId, // From admin email
-                body: { contentType: 'html', content: body },
-                receivedDateTime: newTicketData.receivedDateTime,
-                bodyPreview: newTicketData.bodyPreview,
-                priority: 'Low', status: 'Open', type: 'Incident',
-                conversationId: conversationId,
-                toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId }}], // To admin email
-                ccRecipients: Array.from(ccSet).map(email => ({ emailAddress: { name: email, address: email }})),
-                bccRecipients: parseRecipients(bcc),
-            };
-        } else {
-             conversationMessage = {
-                id: `msg-${Date.now()}`,
-                subject: title,
-                sender: author.name,
-                senderEmail: author.email,
-                body: { contentType: 'html', content: body },
-                receivedDateTime: newTicketData.receivedDateTime,
-                bodyPreview: newTicketData.bodyPreview,
-                priority: 'Low', status: 'Open', type: 'Incident',
-                conversationId: conversationId,
-                toRecipients: parseRecipients(settings?.userId), // To admin email by default
-                ccRecipients: parseRecipients(cc),
-                bccRecipients: parseRecipients(bcc),
-            };
-        }
-
-        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-        await setDoc(conversationDocRef, { messages: [conversationMessage] });
-
-        await addActivityLog(organizationId, newTicketRef.id, {
-            type: 'Create',
-            details: 'Ticket created',
-            date: newTicketData.receivedDateTime,
-            user: author.email || 'System',
-        });
-        
         if (settings) {
             try {
+                let sentEmailResponse: { success: boolean; conversationId?: string };
                 if (isClient) {
-                    const emailBody = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><hr>${body}`;
+                    const emailBody = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><p>Ticket: #${ticketNumber}</p><hr>${body}`;
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
                     ccSet.add(author.email.toLowerCase());
 
-                    await sendEmailAction(organizationId, {
+                    sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
                         cc: Array.from(ccSet).join(', '), 
                         bcc: bcc,
@@ -354,7 +309,7 @@ export async function createTicket(
                     const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
                     const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
-                    await sendEmailAction(organizationId, {
+                    sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: author.email,
                         cc: cc,
                         bcc: bcc,
@@ -362,11 +317,26 @@ export async function createTicket(
                         body: emailBody,
                     });
                 }
+
+                if (sentEmailResponse.success && sentEmailResponse.conversationId) {
+                    await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
+                    await fetchAndStoreFullConversation(organizationId, sentEmailResponse.conversationId);
+                }
+
             } catch(e) {
                 console.error("Failed to send ticket creation email for manually created ticket:", e);
+                // The ticket is created, but email failed. The ticket will exist without a conversationId.
+                // This might need a background process to retry or flag for manual review.
             }
         }
 
+        await addActivityLog(organizationId, newTicketRef.id, {
+            type: 'Create',
+            details: 'Ticket created',
+            date: newTicketData.receivedDateTime,
+            user: author.email || 'System',
+        });
+        
         ticketsCache.invalidatePrefix(`tickets:${organizationId}`);
         activityCache.invalidatePrefix(`activity:${organizationId}`);
 
@@ -754,14 +724,17 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         }
     }
     
-    // This is the important part: ensure the first message has the correct recipients for UI display
-    if (conversationId.startsWith('manual-') && conversationMessages.length > 0 && !conversationMessages[0].toRecipients) {
+    if (conversationId && conversationId.startsWith('manual-') && conversationMessages.length > 0) {
         const settings = await getAPISettings(organizationId);
-        if(settings) {
-            conversationMessages[0].toRecipients = [{ emailAddress: { name: 'Support', address: settings.userId } }];
-            conversationMessages[0].ccRecipients = [{ emailAddress: { name: ticketData.sender, address: ticketData.senderEmail } }];
-            conversationMessages[0].sender = settings.userId;
-            conversationMessages[0].senderEmail = settings.userId;
+        if (settings) {
+            const firstMessage = conversationMessages[0];
+            if (!firstMessage.toRecipients) {
+                 // It was created by a client - sent from admin, to admin, cc client
+                firstMessage.toRecipients = [{ emailAddress: { name: 'Support', address: settings.userId } }];
+                firstMessage.ccRecipients = [{ emailAddress: { name: ticketData.sender, address: ticketData.senderEmail } }];
+                firstMessage.sender = settings.userId;
+                firstMessage.senderEmail = settings.userId;
+            }
         }
     }
     
@@ -826,7 +799,10 @@ const parseRecipients = (recipients: string | undefined): { emailAddress: { addr
     });
 };
 
-export async function sendEmailAction(organizationId: string, emailData: {recipient: string, subject: string, body: string, cc?: string, bcc?: string, attachments?: NewAttachment[]}): Promise<{ success: boolean }> {
+export async function sendEmailAction(
+    organizationId: string,
+    emailData: { recipient: string, subject: string, body: string, cc?: string, bcc?: string, attachments?: NewAttachment[] }
+): Promise<{ success: boolean, conversationId?: string }> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
         throw new Error('Failed to acquire access token. Check your API settings.');
@@ -838,26 +814,24 @@ export async function sendEmailAction(organizationId: string, emailData: {recipi
     }
 
     const message = {
-        message: {
-            subject: emailData.subject,
-            body: {
-                contentType: 'HTML', // Send as HTML
-                content: emailData.body,
-            },
-            toRecipients: parseRecipients(emailData.recipient),
-            ccRecipients: parseRecipients(emailData.cc),
-            bccRecipients: parseRecipients(emailData.bcc),
-            attachments: (emailData.attachments || []).map(att => ({
-                '@odata.type': '#microsoft.graph.fileAttachment',
-                name: att.name,
-                contentBytes: att.contentBytes,
-                contentType: att.contentType,
-            })),
+        subject: emailData.subject,
+        body: {
+            contentType: 'HTML',
+            content: emailData.body,
         },
-        saveToSentItems: 'true',
+        toRecipients: parseRecipients(emailData.recipient),
+        ccRecipients: parseRecipients(emailData.cc),
+        bccRecipients: parseRecipients(emailData.bcc),
+        attachments: (emailData.attachments || []).map(att => ({
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: att.name,
+            contentBytes: att.contentBytes,
+            contentType: att.contentType,
+        })),
     };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/sendMail`, {
+    // 1. Create Draft
+    const draftResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
@@ -866,13 +840,31 @@ export async function sendEmailAction(organizationId: string, emailData: {recipi
         body: JSON.stringify(message),
     });
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to send email: ${error.error?.message || response.statusText}`);
+    if (!draftResponse.ok) {
+        const error = await draftResponse.json();
+        throw new Error(`Failed to create draft: ${error.error?.message || draftResponse.statusText}`);
     }
 
-    return { success: true };
+    const draftMessage = await draftResponse.json();
+
+    // 2. Send Draft
+    const sendResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${draftMessage.id}/send`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+        },
+    });
+
+    if (sendResponse.status !== 202) {
+        // Attempt to delete draft if sending fails
+        await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${draftMessage.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authResponse.accessToken}` } });
+        const errorText = await sendResponse.text();
+        throw new Error(`Failed to send email: ${errorText || sendResponse.statusText}`);
+    }
+
+    return { success: true, conversationId: draftMessage.conversationId };
 }
+
 
 export async function replyToEmailAction(
     organizationId: string,
@@ -2632,3 +2624,4 @@ export async function verifyUserEmail(
 
 
     
+
