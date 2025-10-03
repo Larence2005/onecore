@@ -588,18 +588,21 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         const ccRecipients = new Set<string>();
         
+        // Add current user (agent)
         ccRecipients.add(user.email.toLowerCase());
 
+        // Add the sender of the specific message
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
+        // Don't CC the admin, as they are the 'To' recipient
         ccRecipients.delete(adminEmail.toLowerCase());
 
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
-        setShowReplyCc(ccRecipients.size > 0);
+        setShowReplyCc(true);
         setShowReplyBcc(false);
     };
 
@@ -633,7 +636,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
-        setShowReplyCc(ccRecipients.size > 0);
+        setShowReplyCc(true);
         setShowReplyBcc(false);
     };
 
