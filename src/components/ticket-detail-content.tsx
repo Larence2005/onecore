@@ -579,9 +579,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
-
+    
         const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
-
+        const ticketCreator = email?.creator;
+        
         setReplyingToMessageId(messageId);
         setForwardingMessageId(null);
         setNoteContent('');
@@ -590,17 +591,17 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyBcc('');
         setShowReplyBcc(false);
         setReplyType('reply');
-
+    
         const ccRecipients = new Set<string>();
 
-        // Add the sender of the specific message
-        if (message.senderEmail) {
-            ccRecipients.add(message.senderEmail.toLowerCase());
-        }
-
-        // For non-admins, add themselves to CC.
+        // For non-admins, add themselves to CC
         if (!isOwnerReplying) {
             ccRecipients.add(user.email.toLowerCase());
+        }
+
+        // Add the creator of the ticket to CC, if they exist
+        if(ticketCreator?.email) {
+            ccRecipients.add(ticketCreator.email.toLowerCase());
         }
         
         // Remove the admin email from CC, as they are the 'To' recipient
@@ -608,7 +609,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
-        setShowReplyCc(true); // Make sure the CC field is visible
+        setShowReplyCc(true);
     };
 
     const handleReplyAllClick = (messageId: string) => {
@@ -1007,7 +1008,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
             )}
         </div>
     );
-}
+};
 
 const renderNoteCard = (note: Note) => {
     const member = members.find(m => m.email === note.user);
@@ -1481,3 +1482,6 @@ return (
 );
 }
 
+
+
+    

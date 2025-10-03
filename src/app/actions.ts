@@ -48,6 +48,7 @@ export interface Email {
     companyName?: string;
     assignee?: string; // UID of the assigned user
     assigneeName?: string; // Name of the assigned user
+    creator?: { name: string; email: string; };
 }
 
 export interface Attachment {
@@ -263,7 +264,7 @@ export async function createTicket(
         const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
         const newTicketRef = doc(ticketsCollectionRef);
         
-        const newTicketData = {
+        const newTicketData: Partial<Email> = {
             id: newTicketRef.id,
             title: title,
             sender: author.name, // The original author
@@ -279,7 +280,8 @@ export async function createTicket(
             ticketNumber: ticketNumber,
             assignee: null,
             companyId: companyId,
-            conversationId: null // Will be set after sending the first email
+            conversationId: null, // Will be set after sending the first email
+            creator: { name: author.name, email: author.email }
         };
 
         await setDoc(newTicketRef, newTicketData);
@@ -364,7 +366,7 @@ export async function createTicket(
         await addActivityLog(organizationId, newTicketRef.id, {
             type: 'Create',
             details: 'Ticket created',
-            date: newTicketData.receivedDateTime,
+            date: newTicketData.receivedDateTime!,
             user: author.email || 'System',
         });
         
@@ -447,7 +449,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                 const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
                 const ticketId = ticketDocRef.id;
 
-                const preliminaryTicketData = {
+                const preliminaryTicketData: Partial<Email> = {
                     id: ticketId,
                     title: email.subject || 'No Subject',
                     sender: email.from.emailAddress.name || 'Unknown Sender',
@@ -464,6 +466,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                     ticketNumber: ticketNumber,
                     assignee: null,
                     companyId: companyId, // Associate company if found
+                    creator: { name: email.from.emailAddress.name, email: email.from.emailAddress.address }
                 };
 
                 try {
@@ -494,7 +497,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                         `;
 
                         await sendEmailAction(organizationId, {
-                            recipient: preliminaryTicketData.senderEmail,
+                            recipient: preliminaryTicketData.senderEmail!,
                             subject: notificationSubject,
                             body: notificationBody,
                         });
@@ -567,6 +570,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             companyId: data.companyId,
             companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
             assignee: data.assignee,
+            creator: data.creator,
         };
     }));
     
@@ -787,6 +791,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             ticketNumber: ticketData.ticketNumber,
             companyId: ticketData.companyId,
             assignee: ticketData.assignee,
+            creator: ticketData.creator,
             body: { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content is not available yet.</p>' }
         };
         conversationMessages.push(placeholderEmail);
@@ -2725,5 +2730,7 @@ export async function verifyUserEmail(
 
 
 
+
+    
 
     
