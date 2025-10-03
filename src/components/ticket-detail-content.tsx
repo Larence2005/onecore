@@ -577,7 +577,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (!message || !user?.email || !userProfile || !adminEmail || !email) return;
+        if (!message || !user?.email || !userProfile || !adminEmail) return;
 
         setReplyingToMessageId(messageId);
         setReplyType('reply');
@@ -596,7 +596,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
-        // Don't CC the admin, as they are the 'To' recipient
+        // Don't CC the admin, as they might be the 'To' recipient
         ccRecipients.delete(adminEmail.toLowerCase());
 
         setReplyTo(adminEmail);
