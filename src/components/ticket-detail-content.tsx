@@ -578,33 +578,32 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail || !email) return;
-    
+
         setReplyingToMessageId(messageId);
         setReplyType('reply');
         setForwardingMessageId(null);
         setNoteContent('');
         setIsAddingNote(false);
         setReplyContent('');
-    
-        const ticketCreatorEmail = email.senderEmail?.toLowerCase();
+
         const ccRecipients = new Set<string>();
-        
-        if (ticketCreatorEmail) {
-            ccRecipients.add(ticketCreatorEmail);
+
+        // CC the message sender (the client) and the agent replying
+        if (message.senderEmail) {
+            ccRecipients.add(message.senderEmail.toLowerCase());
         }
-        
-        // Remove self from CC
-        ccRecipients.delete(user.email.toLowerCase());
-        // Remove admin from CC
+        ccRecipients.add(user.email.toLowerCase());
+
+        // Do not include the admin email in the CC list
         ccRecipients.delete(adminEmail.toLowerCase());
-    
-        setReplyTo(message.senderEmail || '');
+
+        setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
         setShowReplyCc(ccRecipients.size > 0);
         setShowReplyBcc(false);
     };
-    
+
     const handleReplyAllClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
@@ -616,21 +615,23 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setIsAddingNote(false);
         setReplyContent('');
 
-        const to = message.senderEmail || '';
         const ccRecipients = new Set<string>();
 
-        // Add all original recipients to the new CC list
-        message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
-        message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
+        // Add all original CC recipients
+        message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
+
+        // Add the message sender (client)
+        if (message.senderEmail) {
+            ccRecipients.add(message.senderEmail.toLowerCase());
+        }
         
-        // Add current user to CC
-        ccRecipients.add(user.email);
-            
-        // Don't CC the person we are replying to, and don't CC the admin
-        ccRecipients.delete(to.toLowerCase());
+        // Add the current user (agent)
+        ccRecipients.add(user.email.toLowerCase());
+
+        // Do not include the admin email in the CC list
         ccRecipients.delete(adminEmail.toLowerCase());
         
-        setReplyTo(to);
+        setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
         setShowReplyCc(ccRecipients.size > 0);
