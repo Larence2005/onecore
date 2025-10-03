@@ -593,16 +593,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         const ccRecipients = new Set<string>();
 
-        // Add the agent sending the reply if they aren't the admin
-        if (!isOwnerReplying) {
-            ccRecipients.add(user.email.toLowerCase());
-        }
-        
         // Add the sender of the specific message
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
+        // For non-admins, add themselves to CC.
+        if (!isOwnerReplying) {
+            ccRecipients.add(user.email.toLowerCase());
+        }
+        
         // Remove the admin email from CC, as they are the 'To' recipient
         ccRecipients.delete(adminEmail.toLowerCase());
         
@@ -1480,3 +1480,4 @@ return (
     </SidebarProvider>
 );
 }
+
