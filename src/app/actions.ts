@@ -290,10 +290,11 @@ export async function createTicket(
                 let sentEmailResponse: { success: boolean; conversationId?: string };
                 if (isClient) {
                     // This is the notification TO the admin
-                    const emailBodyToAdmin = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><p>Ticket: #${ticketNumber}</p><hr>${body}`;
+                    const emailBodyToAdmin = `<p>Ticket #${ticketNumber} created by ${author.name}.</p><br>${body}`;
                     
+                    // Add the client's email to the CC list for the admin notification
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-                    ccSet.delete(author.email.toLowerCase()); // Don't cc the author on the admin notification
+                    ccSet.add(author.email.toLowerCase());
 
                     sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
@@ -303,7 +304,7 @@ export async function createTicket(
                         body: emailBodyToAdmin,
                     });
 
-                    // Send notification TO the client who created the ticket
+                    // Send a separate confirmation notification TO the client who created the ticket
                     const headersList = headers();
                     const host = headersList.get('host') || 'localhost:3000';
                     const protocol = headersList.get('x-forwarded-proto') || 'http';
@@ -314,7 +315,6 @@ export async function createTicket(
                         recipient: author.email,
                         subject: `Ticket Created: #${ticketNumber} - ${title}`,
                         body: emailBodyToClient,
-                        conversationId: sentEmailResponse.conversationId, // Use the same conversation ID
                     });
 
                 } else { // This is for an agent creating a ticket
@@ -328,7 +328,7 @@ export async function createTicket(
                         recipient: author.email,
                         cc: cc,
                         bcc: bcc,
-                        subject: `Ticket Created: #${ticketNumber} - ${title}`,
+                        subject: `[Ticket #${ticketNumber}] ${title}`,
                         body: emailBody,
                     });
                 }
@@ -755,8 +755,17 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         }
     }
     
-    // This block is no longer necessary as manual- tickets should have correct info from creation
-    // if (conversationId && conversationId.startsWith('manual-') && conversationMessages.length > 0) { ... }
+    // For manual tickets, if the conversation is still empty, the placeholder
+    // might not have all info. Let's build a better one.
+    if (conversationId && conversationId.startsWith('manual-') && conversationMessages.length > 0) {
+        const firstMessage = conversationMessages[0];
+        if (!firstMessage.toRecipients) {
+            const settings = await getAPISettings(organizationId);
+            if (settings) {
+                firstMessage.toRecipients = [{ emailAddress: { name: 'Support', address: settings.userId } }];
+            }
+        }
+    }
     
     if (conversationMessages.length === 0) {
         // If there are no conversation messages (e.g., manual ticket not fully processed),
@@ -829,6 +838,8 @@ export async function sendEmailAction(
         bcc?: string, 
         attachments?: NewAttachment[],
         conversationId?: string,
+        inReplyTo?: string,
+        references?: string,
     }
 ): Promise<{ success: boolean, conversationId?: string }> {
     const settings = await getAPISettings(organizationId);
@@ -841,7 +852,7 @@ export async function sendEmailAction(
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
 
-    const message = {
+    const message: any = {
         subject: emailData.subject,
         body: {
             contentType: 'HTML',
@@ -856,8 +867,24 @@ export async function sendEmailAction(
             contentBytes: att.contentBytes,
             contentType: att.contentType,
         })),
-        conversationId: emailData.conversationId, // Pass conversationId if provided
     };
+    
+    if (emailData.conversationId) {
+        message.conversationId = emailData.conversationId;
+    }
+    if (emailData.inReplyTo) {
+        message.singleValueExtendedProperties = [
+            {
+                id: 'String 0x1042', // In-Reply-To
+                value: emailData.inReplyTo
+            },
+            {
+                id: 'String 0x1039', // References
+                value: emailData.references
+            }
+        ];
+    }
+
 
     // 1. Create Draft
     const draftResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages`, {
@@ -922,6 +949,48 @@ export async function replyToEmailAction(
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
     }
+    
+    const isPortalTicket = conversationId?.startsWith('manual-');
+    let messageIdToReply = messageId;
+    
+    if (isPortalTicket) {
+        // For portal tickets, find the first *real* message ID in the conversation to use for threading.
+        const conversationDoc = await getDoc(doc(db, 'organizations', organizationId, 'conversations', conversationId!));
+        if (conversationDoc.exists()) {
+            const messages = conversationDoc.data().messages as DetailedEmail[];
+            const firstRealMessage = messages.find(m => !m.id.startsWith('manual-'));
+            if (firstRealMessage) {
+                messageIdToReply = firstRealMessage.id;
+            } else {
+                // If there's no real message yet, we cannot use replyAll.
+                // We'll have to send a new email but with threading headers.
+                const ticketDoc = await getDoc(doc(db, 'organizations', organizationId, 'tickets', ticketId));
+                const ticketData = ticketDoc.data();
+                if (!ticketData) throw new Error("Ticket not found.");
+                
+                const subject = `Re: ${ticketData.title}`;
+                const inReplyTo = `<${conversationId}@${settings.userId.split('@')[1]}>`; // Create a fake In-Reply-To
+                const references = inReplyTo;
+
+                await sendEmailAction(organizationId, {
+                    recipient: to,
+                    cc,
+                    bcc,
+                    subject,
+                    body: comment,
+                    attachments,
+                    conversationId: conversationId,
+                    inReplyTo,
+                    references,
+                });
+                // Invalidate caches
+                ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
+                ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
+                return { success: true };
+            }
+        }
+    }
+
 
     const finalPayload = {
         comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
@@ -938,7 +1007,7 @@ export async function replyToEmailAction(
         }
     };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageIdToReply}/replyAll`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
@@ -2655,3 +2724,6 @@ export async function verifyUserEmail(
     
 
 
+
+
+    
