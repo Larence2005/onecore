@@ -621,9 +621,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         // Add current user to CC
         ccRecipients.add(user.email);
             
-        // Don't CC the person we are replying to or ourself
+        // Don't CC the person we are replying to
         ccRecipients.delete(to.toLowerCase());
-        ccRecipients.delete(user.email.toLowerCase());
         
         setReplyTo(to);
         setReplyCc(Array.from(ccRecipients).join(', '));
@@ -1460,4 +1459,3 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         </SidebarProvider>
     );
 }
-
