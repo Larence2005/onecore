@@ -285,24 +285,39 @@ export async function createTicket(
         await setDoc(newTicketRef, newTicketData);
 
         const settings = await getAPISettings(organizationId);
-        let conversationMessage: DetailedEmail;
-
         if (settings) {
             try {
                 let sentEmailResponse: { success: boolean; conversationId?: string };
                 if (isClient) {
-                    const emailBody = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><p>Ticket: #${ticketNumber}</p><hr>${body}`;
+                    // This is the notification TO the admin
+                    const emailBodyToAdmin = `<p>A new ticket has been created by ${author.name} (${author.email}).</p><p>Ticket: #${ticketNumber}</p><hr>${body}`;
+                    
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-                    ccSet.add(author.email.toLowerCase());
+                    ccSet.delete(author.email.toLowerCase()); // Don't cc the author on the admin notification
 
                     sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: settings.userId, // Send TO the support email
                         cc: Array.from(ccSet).join(', '), 
                         bcc: bcc,
                         subject: `[Ticket #${ticketNumber}] ${title}`,
-                        body: emailBody,
+                        body: emailBodyToAdmin,
                     });
-                } else {
+
+                    // Send notification TO the client who created the ticket
+                    const headersList = headers();
+                    const host = headersList.get('host') || 'localhost:3000';
+                    const protocol = headersList.get('x-forwarded-proto') || 'http';
+                    const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
+                    const emailBodyToClient = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    
+                    await sendEmailAction(organizationId, {
+                        recipient: author.email,
+                        subject: `Ticket Created: #${ticketNumber} - ${title}`,
+                        body: emailBodyToClient,
+                        conversationId: sentEmailResponse.conversationId, // Use the same conversation ID
+                    });
+
+                } else { // This is for an agent creating a ticket
                     const headersList = headers();
                     const host = headersList.get('host') || 'localhost:3000';
                     const protocol = headersList.get('x-forwarded-proto') || 'http';
@@ -320,13 +335,29 @@ export async function createTicket(
 
                 if (sentEmailResponse.success && sentEmailResponse.conversationId) {
                     await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
-                    await fetchAndStoreFullConversation(organizationId, sentEmailResponse.conversationId);
+
+                    // Manually create the first message in the conversation subcollection
+                    // to ensure the user's original message is displayed.
+                    const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
+                    const initialMessage: Partial<DetailedEmail> = {
+                        id: `manual-${newTicketRef.id}`, // A unique placeholder ID
+                        subject: title,
+                        sender: author.name,
+                        senderEmail: author.email,
+                        body: { contentType: 'html', content: body },
+                        receivedDateTime: newTicketData.receivedDateTime,
+                        bodyPreview: newTicketData.bodyPreview,
+                        conversationId: sentEmailResponse.conversationId,
+                        toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }], // Sent to support
+                        ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
+                    };
+                    await setDoc(conversationDocRef, { messages: [initialMessage] });
+
                 }
 
             } catch(e) {
                 console.error("Failed to send ticket creation email for manually created ticket:", e);
                 // The ticket is created, but email failed. The ticket will exist without a conversationId.
-                // This might need a background process to retry or flag for manual review.
             }
         }
 
@@ -724,19 +755,8 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         }
     }
     
-    if (conversationId && conversationId.startsWith('manual-') && conversationMessages.length > 0) {
-        const settings = await getAPISettings(organizationId);
-        if (settings) {
-            const firstMessage = conversationMessages[0];
-            if (!firstMessage.toRecipients) {
-                 // It was created by a client - sent from admin, to admin, cc client
-                firstMessage.toRecipients = [{ emailAddress: { name: 'Support', address: settings.userId } }];
-                firstMessage.ccRecipients = [{ emailAddress: { name: ticketData.sender, address: ticketData.senderEmail } }];
-                firstMessage.sender = settings.userId;
-                firstMessage.senderEmail = settings.userId;
-            }
-        }
-    }
+    // This block is no longer necessary as manual- tickets should have correct info from creation
+    // if (conversationId && conversationId.startsWith('manual-') && conversationMessages.length > 0) { ... }
     
     if (conversationMessages.length === 0) {
         // If there are no conversation messages (e.g., manual ticket not fully processed),
@@ -801,7 +821,15 @@ const parseRecipients = (recipients: string | undefined): { emailAddress: { addr
 
 export async function sendEmailAction(
     organizationId: string,
-    emailData: { recipient: string, subject: string, body: string, cc?: string, bcc?: string, attachments?: NewAttachment[] }
+    emailData: { 
+        recipient: string, 
+        subject: string, 
+        body: string, 
+        cc?: string, 
+        bcc?: string, 
+        attachments?: NewAttachment[],
+        conversationId?: string,
+    }
 ): Promise<{ success: boolean, conversationId?: string }> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
@@ -828,6 +856,7 @@ export async function sendEmailAction(
             contentBytes: att.contentBytes,
             contentType: att.contentType,
         })),
+        conversationId: emailData.conversationId, // Pass conversationId if provided
     };
 
     // 1. Create Draft
@@ -2624,4 +2653,5 @@ export async function verifyUserEmail(
 
 
     
+
 
