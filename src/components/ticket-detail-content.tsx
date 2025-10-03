@@ -587,7 +587,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyContent('');
 
         const ccRecipients = new Set<string>();
-
+        
         // CC the agent replying
         ccRecipients.add(user.email.toLowerCase());
 
