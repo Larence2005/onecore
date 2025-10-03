@@ -1056,13 +1056,14 @@ const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 const isClient = userProfile?.isClient === true;
 
 const handleMenuClick = (view: string) => {
-    if(view === 'tickets' || view === '/') {
-        router.push('/dashboard');
-    } else if (view === 'archive') {
+    if (view === 'archive') {
         router.push('/archive');
     } else if (view === 'create-ticket') {
         router.push('/create-ticket');
-    } else {
+    } else if (view === 'tickets') {
+        router.push('/dashboard?view=tickets');
+    }
+    else {
         router.push(`/dashboard?view=${view}`); 
     }
 };
