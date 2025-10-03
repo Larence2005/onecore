@@ -896,68 +896,44 @@ export async function replyToEmailAction(
         throw new Error('You must be a verified employee to reply to tickets. Please complete your registration.');
     }
     
-    const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', ticketId);
-    const ticketDoc = await getDoc(ticketDocRef);
-    const ticketData = ticketDoc.data();
-    const isPortalTicket = ticketData?.conversationId?.startsWith('manual-');
-    
-    if (isPortalTicket) {
-        // For portal tickets, we send a NEW email to maintain the thread.
-        const ticket = await getEmail(organizationId, ticketId);
-        if (!ticket) throw new Error("Ticket not found.");
-        
-        const subject = `Re: ${ticket.subject}`;
-        const emailBody = `<div>${comment}</div><br><hr>${ticket.body.content}`;
-        
-        await sendEmailAction(organizationId, {
-            recipient: to,
-            cc: cc,
-            bcc: bcc,
-            subject: subject,
-            body: emailBody,
-            attachments: attachments
-        });
+    // For regular email tickets, we use the replyAll API
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token. Check your API settings.');
+    }
 
-    } else {
-        // For regular email tickets, we use the replyAll API
-        const authResponse = await getAccessToken(settings);
-        if (!authResponse?.accessToken) {
-            throw new Error('Failed to acquire access token. Check your API settings.');
+    const finalPayload = {
+        comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
+        message: {
+            toRecipients: parseRecipients(to),
+            ccRecipients: parseRecipients(cc),
+            bccRecipients: parseRecipients(bcc),
+            attachments: attachments.map(att => ({
+                '@odata.type': '#microsoft.graph.fileAttachment',
+                name: att.name,
+                contentBytes: att.contentBytes,
+                contentType: att.contentType,
+            })),
         }
+    };
 
-        const finalPayload = {
-            comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
-            message: {
-                toRecipients: parseRecipients(to),
-                ccRecipients: parseRecipients(cc),
-                bccRecipients: parseRecipients(bcc),
-                attachments: attachments.map(att => ({
-                    '@odata.type': '#microsoft.graph.fileAttachment',
-                    name: att.name,
-                    contentBytes: att.contentBytes,
-                    contentType: att.contentType,
-                })),
-            }
-        };
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalPayload),
+    });
 
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${authResponse.accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(finalPayload),
-        });
-
-        if (response.status !== 202) { // Graph API returns 202 Accepted on success
-            const errorText = await response.text();
-            console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
-            try {
-                const error = JSON.parse(errorText);
-                throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
-            } catch (e) {
-                throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
-            }
+    if (response.status !== 202) { // Graph API returns 202 Accepted on success
+        const errorText = await response.text();
+        console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
+        try {
+            const error = JSON.parse(errorText);
+            throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
+        } catch (e) {
+            throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
         }
     }
     
