@@ -579,8 +579,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
-    
-        // Common setup for both reply types
+
         setReplyingToMessageId(messageId);
         setForwardingMessageId(null);
         setNoteContent('');
@@ -588,9 +587,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyContent('');
         setReplyBcc('');
         setShowReplyBcc(false);
-        
         setReplyType('reply');
-        
+
         const ccRecipients = new Set<string>();
         // Add current user (agent)
         ccRecipients.add(user.email.toLowerCase());
@@ -600,7 +598,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
-        // Don't CC the admin, as they might be the 'To' recipient
+        // Don't CC the admin, as they are the 'To' recipient
         ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(adminEmail);
@@ -1477,5 +1475,3 @@ return (
     </SidebarProvider>
 );
 }
-
-    
