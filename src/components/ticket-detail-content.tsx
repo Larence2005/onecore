@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -578,19 +579,22 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
-
+    
+        // Common setup for both reply types
         setReplyingToMessageId(messageId);
-        setReplyType('reply');
         setForwardingMessageId(null);
         setNoteContent('');
         setIsAddingNote(false);
         setReplyContent('');
-
-        const ccRecipients = new Set<string>();
+        setReplyBcc('');
+        setShowReplyBcc(false);
         
+        setReplyType('reply');
+        
+        const ccRecipients = new Set<string>();
         // Add current user (agent)
         ccRecipients.add(user.email.toLowerCase());
-
+        
         // Add the sender of the specific message
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
@@ -598,12 +602,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         // Don't CC the admin, as they might be the 'To' recipient
         ccRecipients.delete(adminEmail.toLowerCase());
-
+        
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
-        setReplyBcc('');
         setShowReplyCc(true);
-        setShowReplyBcc(false);
     };
 
     const handleReplyAllClick = (messageId: string) => {
@@ -621,6 +623,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         // Add all original CC recipients
         message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
+        
+        // Add all original To recipients (except admin)
+        message.toRecipients?.forEach(r => {
+            if(r.emailAddress.address.toLowerCase() !== adminEmail.toLowerCase()){
+                ccRecipients.add(r.emailAddress.address.toLowerCase())
+            }
+        });
 
         // Add the message sender (client)
         if (message.senderEmail) {
@@ -668,10 +677,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setForwardBcc('');
             setForwardComment('');
             setForwardingMessageId(messageId);
-setShowForwardCc(false);
-setShowForwardBcc(false);
-}
-};
+			setShowForwardCc(false);
+			setShowForwardBcc(false);
+		}
+	};
 
 const handleSaveNote = async () => {
     if (!noteContent.trim() || !user || !userProfile?.organizationId || !email) return;
@@ -1468,3 +1477,5 @@ return (
     </SidebarProvider>
 );
 }
+
+    
