@@ -356,7 +356,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                     const newConversation = conversationData.messages as DetailedEmail[];
                     setEmail(prevEmail => {
                         if (prevEmail) {
-                            return { ...prevEmail, ...conversationData.messages as DetailedEmail[] };
+                            return { ...prevEmail, conversation: newConversation };
                         }
                         return null;
                     });
@@ -577,22 +577,27 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
     const handleReplyClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
-        if (!message || !user?.email || !userProfile || !adminEmail) return;
-
+        if (!message || !user?.email || !userProfile || !adminEmail || !email) return;
+    
         setReplyingToMessageId(messageId);
         setReplyType('reply');
         setForwardingMessageId(null);
         setNoteContent('');
         setIsAddingNote(false);
         setReplyContent('');
-
+    
+        const ticketCreatorEmail = email.senderEmail?.toLowerCase();
         const ccRecipients = new Set<string>();
-        // Add current user to CC
-        ccRecipients.add(user.email);
-
-        // Don't CC the person we are replying to
-        ccRecipients.delete(message.senderEmail?.toLowerCase() || '');
-
+        
+        if (ticketCreatorEmail) {
+            ccRecipients.add(ticketCreatorEmail);
+        }
+        
+        // Remove self from CC
+        ccRecipients.delete(user.email.toLowerCase());
+        // Remove admin from CC
+        ccRecipients.delete(adminEmail.toLowerCase());
+    
         setReplyTo(message.senderEmail || '');
         setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
@@ -621,8 +626,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         // Add current user to CC
         ccRecipients.add(user.email);
             
-        // Don't CC the person we are replying to
+        // Don't CC the person we are replying to, and don't CC the admin
         ccRecipients.delete(to.toLowerCase());
+        ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(to);
         setReplyCc(Array.from(ccRecipients).join(', '));
@@ -703,18 +709,18 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     
     const timeline: TimelineItemType[] = useMemo(() => {
         if (!email) return [];
-
+    
         const emailItems: TimelineItemType[] = (email.conversation || [email]).map(e => ({
             ...e,
             itemType: 'email',
             date: e.receivedDateTime, // Normalize date property for sorting
         }));
-
+    
         const noteItems: TimelineItemType[] = notes.map(note => ({
             ...note,
             itemType: 'note',
         }));
-
+    
         return [...emailItems, ...noteItems].sort((a, b) => {
             return parseISO(a.date).getTime() - parseISO(b.date).getTime();
         });
@@ -1183,9 +1189,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                                 {!isLoading && !error && email && (
                                     <>
                                         <div className="space-y-4">
-                                            {timeline.map((item) => {
+                                            {timeline.map((item, index) => {
                                                 if (item.itemType === 'email') {
-                                                    return renderMessageCard(item, timeline.indexOf(item) === 0);
+                                                    return renderMessageCard(item, index === 0);
                                                 }
                                                 if (item.itemType === 'note') {
                                                     return renderNoteCard(item);
