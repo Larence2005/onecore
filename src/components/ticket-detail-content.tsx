@@ -579,9 +579,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
 
-        const isPortalTicket = email?.conversationId?.startsWith('manual-');
-        const isAgent = !userProfile.isClient;
-    
         setReplyingToMessageId(messageId);
         setReplyType('reply');
         setForwardingMessageId(null);
@@ -589,27 +586,23 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setIsAddingNote(false);
         setReplyContent('');
 
-        // Default: reply to sender
-        let to = message.senderEmail || '';
+        const ccRecipients = new Set<string>();
+        // Add current user to CC
+        ccRecipients.add(user.email);
 
-        // If an agent is replying to a portal ticket, redirect the 'To' to the admin inbox
-        if (isAgent && isPortalTicket) {
-            to = adminEmail;
-        }
+        // Don't CC the person we are replying to
+        ccRecipients.delete(message.senderEmail?.toLowerCase() || '');
 
-        setReplyTo(to);
-        setReplyCc('');
+        setReplyTo(message.senderEmail || '');
+        setReplyCc(Array.from(ccRecipients).join(', '));
         setReplyBcc('');
-        setShowReplyCc(false);
+        setShowReplyCc(ccRecipients.size > 0);
         setShowReplyBcc(false);
     };
     
     const handleReplyAllClick = (messageId: string) => {
         const message = email?.conversation?.find(m => m.id === messageId);
         if (!message || !user?.email || !userProfile || !adminEmail) return;
-
-        const isPortalTicket = email?.conversationId?.startsWith('manual-');
-        const isAgent = !userProfile.isClient;
 
         setReplyingToMessageId(messageId);
         setReplyType('reply-all');
@@ -618,20 +611,15 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setIsAddingNote(false);
         setReplyContent('');
 
-        let to = message.senderEmail || '';
+        const to = message.senderEmail || '';
         const ccRecipients = new Set<string>();
 
-        // If agent replies to portal ticket, redirect 'To' and ensure client is in CC
-        if (isAgent && isPortalTicket) {
-            to = adminEmail;
-            if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmail.toLowerCase()) {
-                ccRecipients.add(message.senderEmail); // Add client to CC
-            }
-        }
-
-        // Collect all original To/CC recipients for the new CC list
+        // Add all original recipients to the new CC list
         message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
         message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address));
+        
+        // Add current user to CC
+        ccRecipients.add(user.email);
             
         // Don't CC the person we are replying to or ourself
         ccRecipients.delete(to.toLowerCase());
