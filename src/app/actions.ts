@@ -293,7 +293,7 @@ export async function createTicket(
                 let sentEmailResponse: { success: boolean; conversationId?: string };
                 if (isClient) {
                     // This is the notification TO the admin
-                    const emailBodyToAdmin = `<p>Ticket #${ticketNumber} created by ${author.name}.</p><br>${body}`;
+                    const emailBodyToAdmin = `<p>Created by ${author.name}.</p><br>${body}`;
                     
                     // Add the client's email to the CC list for the admin notification
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
@@ -303,7 +303,7 @@ export async function createTicket(
                         recipient: settings.userId, // Send TO the support email
                         cc: Array.from(ccSet).join(', '), 
                         bcc: bcc,
-                        subject: `[Ticket #${ticketNumber}] ${title}`,
+                        subject: `${title}`,
                         body: emailBodyToAdmin,
                         attachments,
                     });

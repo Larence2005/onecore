@@ -73,6 +73,8 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     }, [userProfile]);
 
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+    const isClient = userProfile?.isClient === true;
+
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
     const typeDetails = types.find(t => t.value === currentType) || types[1];
     const statusDetails = statuses.find(s => s.value === currentStatus) || statuses[0];
@@ -169,7 +171,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                         </Link>
 
                         <div className="flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
-                            <Select value={currentPriority} onValueChange={(value) => handleSelectChange('priority', value)} disabled={isArchivedView}>
+                            <Select value={currentPriority} onValueChange={(value) => handleSelectChange('priority', value)} disabled={isArchivedView || isClient}>
                                 <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                                     <SelectValue>
                                         <span className="flex items-center gap-2">
@@ -189,7 +191,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                                     ))}
                                 </SelectContent>
                             </Select>
-                             <Select value={currentType} onValueChange={(value) => handleSelectChange('type', value)} disabled={isArchivedView}>
+                             <Select value={currentType} onValueChange={(value) => handleSelectChange('type', value)} disabled={isArchivedView || isClient}>
                                 <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                                     <SelectValue>
                                         <span className="flex items-center gap-2">
@@ -209,7 +211,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={currentStatus} onValueChange={(value) => handleSelectChange('status', value)} disabled={isArchivedView}>
+                            <Select value={currentStatus} onValueChange={(value) => handleSelectChange('status', value)} disabled={isArchivedView || isClient}>
                                 <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                                     <SelectValue>
                                         <span className="flex items-center gap-2">
@@ -230,7 +232,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                                 </SelectContent>
                             </Select>
                             {isOwner ? (
-                                 <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleSelectChange('assignee', value)} disabled={isArchivedView}>
+                                 <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleSelectChange('assignee', value)} disabled={isArchivedView || isClient}>
                                      <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                                          <SelectValue>
                                              <span className="flex items-center gap-2">

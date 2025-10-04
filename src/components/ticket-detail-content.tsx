@@ -3,7 +3,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings, getAttachmentContent } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,7 +47,7 @@ type PendingUpdate = {
 } | null;
 
 
-const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
+const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined, onAttachmentDownload: (attachment: Attachment) => void): string => {
     if (!htmlContent) {
         return '';
     }
@@ -65,6 +65,27 @@ const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | und
             const regex = new RegExp(`src=["']cid:${cid}["']`, 'g');
             const dataUri = `src="data:${att.contentType};base64,${att.contentBytes}"`;
             processedHtml = processedHtml.replace(regex, dataUri);
+        });
+    }
+    
+    // This is a simple and brittle way to find attachment links. A more robust solution
+    // might require server-side pre-processing or a more sophisticated client-side parser.
+    // We will do this for now as a PoC.
+    if(attachments){
+        const nonInlineAttachments = attachments.filter(att => !att.isInline);
+        nonInlineAttachments.forEach(att => {
+            const linkRegex = new RegExp(`<a href=["'].*?${att.name}["'](.*?)>(.*?)<\\/a>`, 'gi');
+            
+            // This is a bit of a hack. We can't actually download from a string replacement.
+            // We'll just style the link differently to indicate it's an attachment.
+            // A better way would be to add a custom attribute to be picked up by the parser.
+            // For now, let's just make it look like a button.
+            // In a real app, you'd replace this with a link that triggers a download function.
+             processedHtml = processedHtml.replace(linkRegex, (match, group1, group2) => {
+                // For now, we just return the link as is, but we could style it.
+                // In the future, we could add an onClick handler here if we use a more advanced parser.
+                return match;
+            });
         });
     }
 
@@ -161,29 +182,24 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
     );
 };
 
-const downloadAttachment = async (organizationId: string, messageId: string, attachment: Attachment) => {
-    try {
-        const attachmentContent = await getAttachmentContent(organizationId, messageId, attachment.id);
-        if (!attachmentContent) throw new Error("Could not fetch attachment content.");
-        
-        const byteCharacters = atob(attachmentContent);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: attachment.contentType });
-
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = attachment.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch(e) {
-        console.error("Failed to download attachment", e);
+const downloadAttachment = (attachment: Attachment) => {
+    // Convert base64 to a Blob
+    const byteCharacters = atob(attachment.contentBytes);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
-}
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: attachment.contentType });
+
+    // Create a link and trigger the download
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = attachment.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
 
 
 export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: string }) {
@@ -863,7 +879,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                         {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
                         {message.body.contentType === 'html' ? (
-                            <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments)} attachments={message.attachments} />
+                            <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments, downloadAttachment)} attachments={message.attachments} />
                         ) : (
                             <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
                         )}
@@ -873,7 +889,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                             <h3 className="text-sm font-medium mb-2">Attachments</h3>
                             <div className="flex flex-wrap gap-2">
                                 {regularAttachments.map(att => (
-                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(userProfile!.organizationId!, message.id, att)}>
+                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
                                         <Paperclip className="mr-2 h-4 w-4" />
                                         {att.name}
                                     </Button>
@@ -1362,7 +1378,7 @@ return (
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
                                                     {isOwner ? (
-                                                        <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleSelectChange('assignee', value)}>
+                                                        <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleSelectChange('assignee', value)} disabled={isClient}>
                                                             <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                                 <SelectValue>
                                                                     <span className="flex items-center gap-2">
@@ -1455,7 +1471,7 @@ return (
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
                                                     <Popover>
-                                                        <PopoverTrigger asChild disabled={isClient || !!currentPriority}>
+                                                        <PopoverTrigger asChild disabled={isClient}>
                                                             <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0 disabled:opacity-100 disabled:cursor-default text-right">
                                                                 {currentDeadline ? (
                                                                     <div>
