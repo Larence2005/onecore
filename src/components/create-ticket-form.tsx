@@ -142,6 +142,10 @@ export function CreateTicketForm() {
       }
   };
 
+  const handleFileDrop = (files: FileList) => {
+    setAttachments(prev => [...prev, ...Array.from(files)]);
+  }
+
   const removeAttachment = (fileToRemove: File) => {
       setAttachments(prev => prev.filter(file => file !== fileToRemove));
   };
@@ -242,6 +246,7 @@ export function CreateTicketForm() {
                       value={field.value}
                       onChange={field.onChange}
                       onAttachmentClick={() => fileInputRef.current?.click()}
+                      onFileDrop={handleFileDrop}
                     />
                   </FormControl>
                   <FormMessage />

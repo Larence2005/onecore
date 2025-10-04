@@ -11,10 +11,11 @@ interface RichTextEditorProps {
     value: string; // Now expects HTML string
     onChange: (value: string) => void;
     onAttachmentClick: () => void;
+    onFileDrop?: (files: FileList) => void;
     className?: string;
 }
 
-const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichTextEditorProps) => {
+const RichTextEditor = ({ value, onChange, onAttachmentClick, onFileDrop, className }: RichTextEditorProps) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const isResizing = useRef(false);
@@ -94,7 +95,7 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
         setTimeout(makeImagesResizable, 0);
     };
 
-    const handleFile = (file: File) => {
+    const handleFile = (file: File): boolean => {
         if (file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -111,8 +112,27 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
+
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0]);
+            const imageFiles: File[] = [];
+            const otherFiles: File[] = [];
+
+            Array.from(e.dataTransfer.files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    imageFiles.push(file);
+                } else {
+                    otherFiles.push(file);
+                }
+            });
+
+            imageFiles.forEach(file => handleFile(file));
+
+            if (otherFiles.length > 0 && onFileDrop) {
+                const dataTransfer = new DataTransfer();
+                otherFiles.forEach(file => dataTransfer.items.add(file));
+                onFileDrop(dataTransfer.files);
+            }
+            
             e.dataTransfer.clearData();
         }
     };
@@ -127,7 +147,10 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files.length > 0) {
-            handleFile(event.target.files[0]);
+            const imageFile = Array.from(event.target.files).find(f => f.type.startsWith('image/'));
+            if (imageFile) {
+                handleFile(imageFile);
+            }
         }
     };
 
@@ -246,4 +269,3 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, className }: RichT
 };
 
 export default RichTextEditor;
-

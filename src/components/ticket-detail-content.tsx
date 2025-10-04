@@ -456,6 +456,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         }
     };
 
+    const handleFileDrop = (files: FileList) => {
+        setAttachments(prev => [...prev, ...Array.from(files)]);
+    }
+
     const removeAttachment = (fileToRemove: File) => {
         setAttachments(prev => prev.filter(file => file !== fileToRemove));
     };
@@ -913,6 +917,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                                     value={replyContent}
                                     onChange={setReplyContent}
                                     onAttachmentClick={() => fileInputRef.current?.click()}
+                                    onFileDrop={handleFileDrop}
                                 />
                                 <input
                                     type="file"
@@ -1021,6 +1026,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                                         value={forwardComment}
                                         onChange={setForwardComment}
                                         onAttachmentClick={() => toast({ title: "Attachments not supported for forwarding yet."})}
+                                        onFileDrop={handleFileDrop}
                                     />
                                 </div>
                                     <div className="flex justify-end gap-2">
@@ -1263,7 +1269,7 @@ return (
                                                     <CardTitle>Add Internal Note</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="space-y-4">
-                                                    <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} />
+                                                    <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} onFileDrop={handleFileDrop} />
                                                     <div className="flex justify-end gap-2">
                                                         <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
                                                         <Button onClick={handleSaveNote} disabled={isSavingNote}>
@@ -1516,7 +1522,3 @@ return (
     </SidebarProvider>
 );
 }
-
-
-
-    
