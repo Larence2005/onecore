@@ -3,7 +3,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings, getAttachmentContent } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,8 +88,12 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
         }
         return -1;
     };
+    
+    // Instead of calling prepareHtmlContent here, we assume it's been called on the full body before.
+    // However, if we need to process only a part of it, we need to pass attachments.
+    // For now, let's assume the passed htmlContent is already processed.
+    const processedHtml = htmlContent;
 
-    const processedHtml = prepareHtmlContent(htmlContent, attachments);
 
     const splitIndex = findSplitIndex(processedHtml);
 
@@ -121,6 +125,12 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
              table {
                 table-layout: fixed;
              }
+             a {
+                text-decoration: none !important;
+             }
+             a:hover {
+                text-decoration: underline !important;
+             }
         </style>
         ${content || ''}
     `;
@@ -144,21 +154,28 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
     );
 };
 
-const downloadAttachment = (attachment: Attachment) => {
-    const byteCharacters = atob(attachment.contentBytes);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: attachment.contentType });
+const downloadAttachment = async (organizationId: string, messageId: string, attachment: Attachment) => {
+    try {
+        const attachmentContent = await getAttachmentContent(organizationId, messageId, attachment.id);
+        if (!attachmentContent) throw new Error("Could not fetch attachment content.");
+        
+        const byteCharacters = atob(attachmentContent);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: attachment.contentType });
 
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = attachment.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = attachment.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch(e) {
+        console.error("Failed to download attachment", e);
+    }
 }
 
 
@@ -501,6 +518,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 replyCc, 
                 replyBcc
             );
+            
+            if (email.conversationId) {
+                await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
+            }
 
             // Clear state after action
             setReplyContent('');
@@ -813,7 +834,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                         {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
                         {message.body.contentType === 'html' ? (
-                            <CollapsibleEmailContent htmlContent={message.body.content} attachments={message.attachments} />
+                            <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments)} attachments={message.attachments} />
                         ) : (
                             <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
                         )}
@@ -823,7 +844,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                             <h3 className="text-sm font-medium mb-2">Attachments</h3>
                             <div className="flex flex-wrap gap-2">
                                 {regularAttachments.map(att => (
-                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
+                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(userProfile!.organizationId!, message.id, att)}>
                                         <Paperclip className="mr-2 h-4 w-4" />
                                         {att.name}
                                     </Button>
