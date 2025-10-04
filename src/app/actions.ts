@@ -1309,7 +1309,7 @@ export async function updateTicket(
                 updateData.tags = arrayRemove('Resolved Late');
             }
             
-            if (data.priority && data.priority !== ticketData.priority) {
+            if (data.priority) {
                 const now = new Date();
                 switch (data.priority) {
                     case 'Low':
@@ -2737,3 +2737,4 @@ export async function verifyUserEmail(
     
 
     
+
