@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createTicket, getAPISettings, getOrganizationMembers } from "@/app/actions";
 import type { OrganizationMember, NewAttachment } from "@/app/actions";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Send, RefreshCw, X, Paperclip } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
 import { useAuth } from "@/providers/auth-provider";
@@ -50,8 +49,6 @@ export function CreateTicketForm() {
   useEffect(() => {
     async function fetchAdminEmail() {
         if (userProfile?.organizationId) {
-            // This is a simplification. In a real app, you might fetch this from a dedicated settings endpoint.
-            // For now, we assume the owner's email is the support email.
             const orgMembers = await getOrganizationMembers(userProfile.organizationId);
             const owner = orgMembers.find(m => m.uid === userProfile.organizationOwnerUid);
             if(owner?.email) {
@@ -154,14 +151,14 @@ export function CreateTicketForm() {
   const isBccVisible = showBcc || !!form.watch('bcc');
 
   return (
-    <Card className="max-w-2xl w-full">
-      <CardHeader>
-        <CardTitle>Create a New Ticket</CardTitle>
-        <CardDescription>
+    <div className="max-w-2xl w-full">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Create a New Ticket</h2>
+        <p className="text-muted-foreground">
           Fill out the form below to submit a new support ticket.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </p>
+      </div>
+      <div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex items-center gap-2">
@@ -299,7 +296,7 @@ export function CreateTicketForm() {
             </Button>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
