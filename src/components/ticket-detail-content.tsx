@@ -142,7 +142,7 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
                  <Accordion type="single" collapsible className="my-4">
                     <AccordionItem value="item-1" className="border-0 pl-4">
                         <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
-                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Show quoted text</span>
                         </AccordionTrigger>
                         <AccordionContent>
                            {parse(styledHtml(quotedContent))}
