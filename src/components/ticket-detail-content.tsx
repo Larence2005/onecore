@@ -165,7 +165,7 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
 
     return (
         <div className="p-4">
-            {parse(styledHtml(mainContent))}
+            <div className="prose prose-sm dark:prose-invert max-w-none">{parse(styledHtml(mainContent))}</div>
             {quotedContent && (
                  <Accordion type="single" collapsible className="my-4">
                     <AccordionItem value="item-1" className="border-0 pl-4">
@@ -173,7 +173,7 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
                             <span className="sr-only">Show quoted text</span>
                         </AccordionTrigger>
                         <AccordionContent>
-                           {parse(styledHtml(quotedContent))}
+                           <div className="prose prose-sm dark:prose-invert max-w-none">{parse(styledHtml(quotedContent))}</div>
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
@@ -1565,7 +1565,7 @@ return (
                 <AlertDialogHeader>
                     <AlertDialogTitle>Confirm Change</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Are you sure you want to change the {pendingUpdate?.field} to "{pendingUpdate?.label}"?
+                        This will update the ticket. Are you sure?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
