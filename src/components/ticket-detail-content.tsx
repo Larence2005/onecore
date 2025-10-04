@@ -36,8 +36,15 @@ import { TableIcon } from './ui/table-icon';
 import { AutocompleteInput } from './autocomplete-input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import Image from 'next/image';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+
 
 type TimelineItemType = (DetailedEmail & { itemType: 'email' }) | (Note & { itemType: 'note' });
+type PendingUpdate = {
+  field: 'priority' | 'status' | 'type' | 'deadline' | 'companyId' | 'assignee';
+  value: any;
+  label: string;
+} | null;
 
 
 const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | undefined): string => {
@@ -230,6 +237,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const [companies, setCompanies] = useState<Company[]>([]);
     const [adminEmail, setAdminEmail] = useState<string>('');
 
+    const [pendingUpdate, setPendingUpdate] = useState<PendingUpdate>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+
 
     const priorities = [
         { value: 'Low', label: 'Low', color: 'bg-green-500' },
@@ -391,15 +401,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         const ticketIdToUpdate = email.id;
 
-        // Optimistic UI updates
-        if(field === 'priority') setCurrentPriority(value);
-        if(field === 'status') setCurrentStatus(value);
-        if(field === 'type') setCurrentType(value);
-        if(field === 'deadline') setCurrentDeadline(value);
-        if(field === 'companyId') setCurrentCompanyId(value);
-        if(field === 'assignee') setCurrentAssignee(value);
-
-
         const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email});
 
         if (!result.success) {
@@ -408,15 +409,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 title: 'Update Failed',
                 description: result.error,
             });
-            // Revert optimistic updates on failure
-            if(email){
-                 if(field === 'priority') setCurrentPriority(email.priority);
-                 if(field === 'status') setCurrentStatus(email.status);
-                 if(field === 'type') setCurrentType(email.type || 'Incident');
-                 if(field === 'deadline') setCurrentDeadline(email.deadline ? parseISO(email.deadline) : undefined);
-                 if(field === 'companyId') setCurrentCompanyId(email.companyId || null);
-                 if(field === 'assignee') setCurrentAssignee(email.assignee || null);
-            }
         } else {
             toast({
                 title: 'Ticket Updated',
@@ -424,10 +416,43 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             });
         }
     };
+
+    const handleConfirmUpdate = async () => {
+        if (!pendingUpdate) return;
+    
+        setIsUpdating(true);
+        const { field, value } = pendingUpdate;
+
+        // Optimistic UI updates
+        if(field === 'priority') setCurrentPriority(value);
+        if(field === 'status') setCurrentStatus(value);
+        if(field === 'type') setCurrentType(value);
+        if(field === 'deadline') setCurrentDeadline(value);
+        if(field === 'companyId') setCurrentCompanyId(value);
+        if(field === 'assignee') setCurrentAssignee(value);
+    
+        await handleUpdate(field, value);
+
+        setIsUpdating(false);
+        setPendingUpdate(null);
+    };
+
+    const handleSelectChange = (field: 'priority' | 'status' | 'type' | 'assignee' | 'companyId', value: any) => {
+        let label = '';
+        if (field === 'assignee') {
+            label = value === 'unassigned' ? 'Unassigned' : members.find(m => m.uid === value)?.name || '';
+        } else if (field === 'companyId') {
+            label = value === 'none' ? 'None' : companies.find(c => c.id === value)?.name || '';
+        } else {
+            const options = { priority: priorities, status: statuses, type: types }[field];
+            label = options.find(o => o.value === value)?.label || '';
+        }
+        setPendingUpdate({ field, value: value === 'unassigned' || value === 'none' ? null : value, label });
+    }
     
     const handleDeadlineChange = (date: Date | undefined) => {
-        setCurrentDeadline(date); // Optimistic update
-        handleUpdate('deadline', date ? date.toISOString() : null);
+        const label = date ? format(date, 'PP') : 'cleared';
+        setPendingUpdate({ field: 'deadline', value: date ? date.toISOString() : null, label });
     }
     
     const handleTagKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1116,409 +1141,426 @@ const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unas
 
 return (
     <SidebarProvider>
-        <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
-            <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
-                <div className="flex-grow flex flex-col">
-                    <SidebarHeader className="p-4 flex flex-col gap-4">
-                        <div className="flex items-center justify-center">
-                            <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-9 w-9">
-                            <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                                <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+        <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
+            <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
+                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
+                    <div className="flex-grow flex flex-col">
+                        <SidebarHeader className="p-4 flex flex-col gap-4">
+                            <div className="flex items-center justify-center">
+                                <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
                             </div>
-                        </div>
-                    </SidebarHeader>
-                    <SidebarContent className="flex-grow">
-                         <SidebarMenu className="flex flex-col gap-2 px-4">
-                            {isClient ? (
-                                <>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-9 w-9">
+                                <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                                    <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
+                                </div>
+                            </div>
+                        </SidebarHeader>
+                        <SidebarContent className="flex-grow">
+                             <SidebarMenu className="flex flex-col gap-2 px-4">
+                                {isClient ? (
+                                    <>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
+                                                <List className="text-green-500" />
+                                                <span>Tickets</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('create-ticket')}>
+                                                <PlusCircle className="text-blue-500" />
+                                                <span>Create Ticket</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
+                                            <LayoutDashboard className="text-purple-500" />
+                                            <span>Dashboard</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
                                             <List className="text-green-500" />
                                             <span>Tickets</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('create-ticket')}>
-                                            <PlusCircle className="text-blue-500" />
-                                            <span>Create Ticket</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                </>
-                            ) : (
-                                <>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                        <LayoutDashboard className="text-purple-500" />
-                                        <span>Dashboard</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('tickets')} isActive>
-                                        <List className="text-green-500" />
-                                        <span>Tickets</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                        <Pencil className="text-blue-500" />
-                                        <span>Compose</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                            <Archive className="text-orange-500" />
-                                            <span>Archive</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                                        <Users className="text-pink-500" />
-                                        <span>Clients</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                    <SidebarMenuItem>
-                                        <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                                        <Building2 className="text-yellow-500" />
-                                        <span>Organization</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                </>
-                            )}
-                            <SidebarMenuItem>
-                                <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                                <SettingsIcon className="text-gray-500" />
-                                <span>Settings</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarContent>
-                </div>
-            </Sidebar>
-
-            <main className="flex-1 flex flex-col min-w-0">
-                 <Header>
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" size="icon" asChild>
-                            <Link href="/dashboard?view=tickets">
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
-                        <h1 className="text-xl font-bold truncate">
-                            {email?.ticketNumber && <span className="text-muted-foreground">#{email.ticketNumber}</span>} {email?.subject || "Ticket Details"}
-                        </h1>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                                            <Pencil className="text-blue-500" />
+                                            <span>Compose</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                                                <Archive className="text-orange-500" />
+                                                <span>Archive</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
+                                            <Users className="text-pink-500" />
+                                            <span>Clients</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
+                                            <Building2 className="text-yellow-500" />
+                                            <span>Organization</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </>
+                                )}
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
+                                    <SettingsIcon className="text-gray-500" />
+                                    <span>Settings</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </SidebarContent>
                     </div>
-                </Header>
-                <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto">
-                    <div className="p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                            {isLoading && (
-                                <div className="space-y-4">
-                                    {[...Array(2)].map((_, i) => (
-                                        <Card key={i}>
-                                            <CardHeader className="flex flex-row items-center gap-4 p-4">
-                                                <Skeleton className="h-10 w-10 rounded-full" />
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-4 w-1/4" />
-                                                    <Skeleton className="h-3 w-1/3" />
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="p-4">
-                                                <Skeleton className="h-24 w-full" />
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
+                </Sidebar>
 
-                            {error && (
-                                <Alert variant="destructive">
-                                    <Terminal className="h-4 w-4" />
-                                    <AlertTitle>Error</AlertTitle>
-                                    <AlertDescription>{error}</AlertDescription>
-                                </Alert>
-                            )}
-
-                            {!isLoading && !error && email && (
-                                <>
+                <main className="flex-1 flex flex-col min-w-0">
+                     <Header>
+                        <div className="flex items-center gap-4">
+                            <Button variant="outline" size="icon" asChild>
+                                <Link href="/dashboard?view=tickets">
+                                    <ArrowLeft className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <h1 className="text-xl font-bold truncate">
+                                {email?.ticketNumber && <span className="text-muted-foreground">#{email.ticketNumber}</span>} {email?.subject || "Ticket Details"}
+                            </h1>
+                        </div>
+                    </Header>
+                    <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto">
+                        <div className="p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                                {isLoading && (
                                     <div className="space-y-4">
-                                        {timeline.map((item, index) => {
-                                            if (item.itemType === 'email') {
-                                                return renderMessageCard(item, index === 0);
-                                            }
-                                            if (item.itemType === 'note') {
-                                                return renderNoteCard(item);
-                                            }
-                                            return null;
-                                        })}
-                                    </div>
-                                    <div className="mt-4">
-                                        {!isAddingNote && !replyingToMessageId && !forwardingMessageId && !isClient && (
-                                            <Button variant="outline" onClick={() => setIsAddingNote(true)}>
-                                                <MessageSquare className="mr-2 h-4 w-4" />
-                                                Add Note
-                                            </Button>
-                                        )}
-                                        {isAddingNote && (
-                                            <Card>
-                                                <CardHeader>
-                                                    <CardTitle>Add Internal Note</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="space-y-4">
-                                                    <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} onFileDrop={handleFileDrop} />
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
-                                                        <Button onClick={handleSaveNote} disabled={isSavingNote}>
-                                                            {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                            Save Note
-                                                        </Button>
+                                        {[...Array(2)].map((_, i) => (
+                                            <Card key={i}>
+                                                <CardHeader className="flex flex-row items-center gap-4 p-4">
+                                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                                    <div className="flex-1 space-y-2">
+                                                        <Skeleton className="h-4 w-1/4" />
+                                                        <Skeleton className="h-3 w-1/3" />
                                                     </div>
+                                                </CardHeader>
+                                                <CardContent className="p-4">
+                                                    <Skeleton className="h-24 w-full" />
                                                 </CardContent>
                                             </Card>
-                                        )}
+                                        ))}
                                     </div>
-                                </>
-                            )}
-                        </div>
-                        
-                        <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
-                            {isLoading && (
-                                <>
-                                <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                                </>
-                            )}
-                            {!isLoading && email && (
-                                <>
-                                <Card>
-                                    <CardHeader>
-                                        <h2 className="text-lg font-bold">Properties</h2>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4 text-sm">
-                                        <div className="grid grid-cols-1 gap-y-4">
-                                            <div className="space-y-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
-                                                <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
-                                                <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
-                                                <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
-                                            </div>
-                                        </div>
+                                )}
 
-                                        <Separator />
-                                        
-                                        <div className="grid grid-cols-1 gap-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
-                                                {isOwner ? (
-                                                    <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => { handleUpdate('assignee', value === 'unassigned' ? null : value)}}>
+                                {error && (
+                                    <Alert variant="destructive">
+                                        <Terminal className="h-4 w-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>{error}</AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {!isLoading && !error && email && (
+                                    <>
+                                        <div className="space-y-4">
+                                            {timeline.map((item, index) => {
+                                                if (item.itemType === 'email') {
+                                                    return renderMessageCard(item, index === 0);
+                                                }
+                                                if (item.itemType === 'note') {
+                                                    return renderNoteCard(item);
+                                                }
+                                                return null;
+                                            })}
+                                        </div>
+                                        <div className="mt-4">
+                                            {!isAddingNote && !replyingToMessageId && !forwardingMessageId && !isClient && (
+                                                <Button variant="outline" onClick={() => setIsAddingNote(true)}>
+                                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                                    Add Note
+                                                </Button>
+                                            )}
+                                            {isAddingNote && (
+                                                <Card>
+                                                    <CardHeader>
+                                                        <CardTitle>Add Internal Note</CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4">
+                                                        <RichTextEditor value={noteContent} onChange={setNoteContent} onAttachmentClick={() => {}} onFileDrop={handleFileDrop} />
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" onClick={() => { setIsAddingNote(false); setNoteContent(''); }}>Cancel</Button>
+                                                            <Button onClick={handleSaveNote} disabled={isSavingNote}>
+                                                                {isSavingNote && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Save Note
+                                                            </Button>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                            
+                            <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                                {isLoading && (
+                                    <>
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-1/2" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-1/2" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                    </>
+                                )}
+                                {!isLoading && email && (
+                                    <>
+                                    <Card>
+                                        <CardHeader>
+                                            <h2 className="text-lg font-bold">Properties</h2>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4 text-sm">
+                                            <div className="grid grid-cols-1 gap-y-4">
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs"><User size={14} /> Client</div>
+                                                    <div className="font-medium text-sm truncate" title={email.sender}>{email.sender}</div>
+                                                    <div className="text-xs text-muted-foreground truncate" title={email.senderEmail}>{email.senderEmail}</div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarDays size={14} /> Submitted</div>
+                                                    <div className="font-medium text-sm">{format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</div>
+                                                </div>
+                                            </div>
+
+                                            <Separator />
+                                            
+                                            <div className="grid grid-cols-1 gap-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><UserCheck size={14} /> Assignee</span>
+                                                    {isOwner ? (
+                                                        <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleSelectChange('assignee', value)}>
+                                                            <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                                <SelectValue>
+                                                                    <span className="flex items-center gap-2">
+                                                                        {assigneeName}
+                                                                    </span>
+                                                                </SelectValue>
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                                                {members.filter(m => m.uid).map(m => (
+                                                                    <SelectItem key={m.uid} value={m.uid!}>
+                                                                        {m.name}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <span className="font-medium text-sm">{assigneeName}</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
+                                                    <Select value={currentPriority} onValueChange={(value) => handleSelectChange('priority', value)} disabled={isClient}>
                                                         <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
                                                             <SelectValue>
                                                                 <span className="flex items-center gap-2">
-                                                                    {assigneeName}
+                                                                    <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
+                                                                    {priorityDetails.label}
                                                                 </span>
                                                             </SelectValue>
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {members.filter(m => m.uid).map(m => (
-                                                                <SelectItem key={m.uid} value={m.uid!}>
-                                                                    {m.name}
+                                                            {priorities.map(p => (
+                                                                <SelectItem key={p.value} value={p.value}>
+                                                                    <span className="flex items-center gap-2">
+                                                                        <span className={cn("h-2 w-2 rounded-full",p.color)} />
+                                                                        {p.label}
+                                                                    </span>
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-                                                ) : (
-                                                    <span className="font-medium text-sm">{assigneeName}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
+                                                    <Select value={currentStatus} onValueChange={(value) => handleSelectChange('status', value)} disabled={isClient}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
+                                                                <span className="flex items-center gap-2">
+                                                                    {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
+                                                                    {statusDetails?.label}
+                                                                </span>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {statuses.map(s => (
+                                                                <SelectItem key={s.value} value={s.value}>
+                                                                    <span className="flex items-center gap-2">
+                                                                        <s.icon className={cn("h-4 w-4", s.color)} />
+                                                                        {s.label}
+                                                                    </span>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
+                                                    <Select value={currentType} onValueChange={(value) => handleSelectChange('type', value)} disabled={isClient}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
+                                                                <span className="flex items-center gap-2">
+                                                                    {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
+                                                                    {typeDetails?.label}
+                                                                </span>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {types.map(t => (
+                                                                <SelectItem key={t.value} value={t.value}>
+                                                                    <span className="flex items-center gap-2">
+                                                                        <t.icon className={cn("h-4w-4", t.color)} />
+                                                                        {t.label}
+                                                                    </span>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild disabled={isClient || !!currentPriority}>
+                                                            <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0 disabled:opacity-100 disabled:cursor-default text-right">
+                                                                {currentDeadline ? (
+                                                                    <div>
+                                                                        <div>{format(currentDeadline, 'PP')}</div>
+                                                                        <div className="text-muted-foreground text-xs">{format(currentDeadline, 'p')}</div>
+                                                                    </div>
+                                                                ) : 'Set deadline'}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="end">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={currentDeadline}
+                                                                onSelect={handleDeadlineChange}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
+                                                    <Select value={currentCompanyId || 'none'} onValueChange={(value) => handleSelectChange('companyId', value)} disabled={isClient}>
+                                                        <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
+                                                            <SelectValue>
+                                                                <span className="flex items-center gap-2">
+                                                                    {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
+                                                                </span>
+                                                            </SelectValue>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="none">None</SelectItem>
+                                                            {companies.map(c => (
+                                                                <SelectItem key={c.id} value={c.id}>
+                                                                    {c.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            
+                                            <Separator />
+
+                                            <div className="space-y-2 col-span-2">
+                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {currentTags.filter(tag => tag !== 'Resolved Late' && !tag.startsWith('deadline-reminder-sent-day-')).map(tag => (
+                                                        <Badge key={tag} variant="secondary">
+                                                            {tag}
+                                                            {!isClient && (
+                                                                <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
+                                                                    <X className="h-3 w-3" />
+                                                                </button>
+                                                            )}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                                {!isClient && (
+                                                    <Input
+                                                        value={tagInput}
+                                                        onChange={(e) => setTagInput(e.target.value)}
+                                                        onKeyDown={handleTagKeyDown}
+                                                        placeholder="Add a tag..."
+                                                        className="h-8 text-sm"
+                                                    />
                                                 )}
                                             </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Shield size={14} /> Priority</span>
-                                                <Select value={currentPriority} onValueChange={(value) => { handleUpdate('priority', value)}} disabled={isClient}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
-                                                                {priorityDetails.label}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {priorities.map(p => (
-                                                            <SelectItem key={p.value} value={p.value}>
-                                                                <span className="flex items-center gap-2">
-                                                                    <span className={cn("h-2 w-2 rounded-full",p.color)} />
-                                                                    {p.label}
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CheckCircle size={14} /> Status</span>
-                                                <Select value={currentStatus} onValueChange={(value) => { handleUpdate('status', value)}} disabled={isClient}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                {statusDetails && <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />}
-                                                                {statusDetails?.label}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {statuses.map(s => (
-                                                            <SelectItem key={s.value} value={s.value}>
-                                                                <span className="flex items-center gap-2">
-                                                                    <s.icon className={cn("h-4 w-4", s.color)} />
-                                                                    {s.label}
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><FileType size={14} /> Type</span>
-                                                <Select value={currentType} onValueChange={(value) => { handleUpdate('type', value)}} disabled={isClient}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                {typeDetails && <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />}
-                                                                {typeDetails?.label}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {types.map(t => (
-                                                            <SelectItem key={t.value} value={t.value}>
-                                                                <span className="flex items-center gap-2">
-                                                                    <t.icon className={cn("h-4w-4", t.color)} />
-                                                                    {t.label}
-                                                                </span>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><CalendarClock size={14} /> Deadline</span>
-                                                <Popover>
-                                                    <PopoverTrigger asChild disabled={isClient || !!currentPriority}>
-                                                        <Button variant="ghost" size="sm" className="font-normal w-auto justify-end text-sm h-auto p-0 disabled:opacity-100 disabled:cursor-default text-right">
-                                                            {currentDeadline ? (
-                                                                <div>
-                                                                    <div>{format(currentDeadline, 'PP')}</div>
-                                                                    <div className="text-muted-foreground text-xs">{format(currentDeadline, 'p')}</div>
-                                                                </div>
-                                                            ) : 'Set deadline'}
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="end">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={currentDeadline}
-                                                            onSelect={handleDeadlineChange}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-muted-foreground flex items-center gap-2 text-xs"><Building size={14} /> Company</span>
-                                                <Select value={currentCompanyId || 'none'} onValueChange={(value) => { handleUpdate('companyId', value === 'none' ? null : value)}} disabled={isClient}>
-                                                    <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 text-sm w-auto justify-end">
-                                                        <SelectValue>
-                                                            <span className="flex items-center gap-2">
-                                                                {companies.find(c => c.id === currentCompanyId)?.name || 'None'}
-                                                            </span>
-                                                        </SelectValue>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">None</SelectItem>
-                                                        {companies.map(c => (
-                                                            <SelectItem key={c.id} value={c.id}>
-                                                                {c.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        
-                                        <Separator />
-
-                                        <div className="space-y-2 col-span-2">
-                                            <span className="text-muted-foreground flex items-center gap-2 text-xs"><Tag size={14} /> Tags</span>
-                                            <div className="flex flex-wrap gap-2">
-                                                {currentTags.filter(tag => tag !== 'Resolved Late' && !tag.startsWith('deadline-reminder-sent-day-')).map(tag => (
-                                                    <Badge key={tag} variant="secondary">
-                                                        {tag}
-                                                        {!isClient && (
-                                                            <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-background/50 p-0.5">
-                                                                <X className="h-3 w-3" />
-                                                            </button>
-                                                        )}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                            {!isClient && (
-                                                <Input
-                                                    value={tagInput}
-                                                    onChange={(e) => setTagInput(e.target.value)}
-                                                    onKeyDown={handleTagKeyDown}
-                                                    placeholder="Add a tag..."
-                                                    className="h-8 text-sm"
-                                                />
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                {!isClient && (
-                                    <Card>
-                                        <CardHeader>
-                                            <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            {activityLog.filter(log => log.type !== 'Note').map((log) => (
-                                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
-                                                    {log.details}
-                                                </TimelineItem>
-                                            ))}
                                         </CardContent>
                                     </Card>
+                                    {!isClient && (
+                                        <Card>
+                                            <CardHeader>
+                                                <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                {activityLog.filter(log => log.type !== 'Note').map((log) => (
+                                                    <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                                        {log.details}
+                                                    </TimelineItem>
+                                                ))}
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                    </>
                                 )}
-                                </>
-                            )}
-                        </aside>
-                    </div>
-            </main>
-        </div>
+                            </aside>
+                        </div>
+                </main>
+            </div>
+             <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Change</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to change the {pendingUpdate?.field} to "{pendingUpdate?.label}"?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPendingUpdate(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmUpdate} disabled={isUpdating}>
+                        {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                        Confirm
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </SidebarProvider>
 );
 }

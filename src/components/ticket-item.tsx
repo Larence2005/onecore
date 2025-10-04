@@ -13,8 +13,10 @@ import Link from 'next/link';
 import { updateTicket, getOrganizationMembers } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building, FileType } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building, FileType, RefreshCw } from 'lucide-react';
 import { useAuth } from "@/providers/auth-provider";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { Button } from "./ui/button";
 
 
 type TicketItemProps = {
@@ -23,6 +25,12 @@ type TicketItemProps = {
     onSelect: (ticketId: string, checked: boolean) => void;
     isArchivedView?: boolean;
 };
+
+type PendingUpdate = {
+    field: 'priority' | 'status' | 'type' | 'assignee';
+    value: string;
+    label: string;
+} | null;
 
 const priorities = [
     { value: 'Low', label: 'Low', color: 'bg-green-500' },
@@ -52,6 +60,9 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const [currentType, setCurrentType] = useState(email.type);
     const [currentAssignee, setCurrentAssignee] = useState(email.assignee);
     const [members, setMembers] = useState<OrganizationMember[]>([]);
+
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [pendingUpdate, setPendingUpdate] = useState<PendingUpdate>(null);
     
     const { toast } = useToast();
 
@@ -71,8 +82,12 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
     const isOverdue = !isResolvedLate && email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
-    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'assignee', value: string) => {
-        if (!userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
+    const handleConfirmUpdate = async () => {
+        if (!pendingUpdate || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
+
+        setIsUpdating(true);
+        const { field, value } = pendingUpdate;
+        
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
         if (field === 'status') setCurrentStatus(value);
@@ -82,6 +97,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         const finalValue = field === 'assignee' && value === 'unassigned' ? null : value;
 
         const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, {name: userProfile.name, email: user.email});
+        
         if (result.success) {
             toast({
                 title: 'Ticket Updated',
@@ -100,8 +116,20 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 description: result.error,
             });
         }
+        setIsUpdating(false);
+        setPendingUpdate(null);
     };
 
+    const handleSelectChange = (field: 'priority' | 'status' | 'type' | 'assignee', value: string) => {
+        let label = '';
+        if (field === 'assignee') {
+            label = value === 'unassigned' ? 'Unassigned' : members.find(m => m.uid === value)?.name || '';
+        } else {
+            const options = { priority: priorities, status: statuses, type: types }[field];
+            label = options.find(o => o.value === value)?.label || '';
+        }
+        setPendingUpdate({ field, value, label });
+    }
 
     return (
         <li className={cn(
@@ -109,123 +137,140 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
             isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : '',
             isCompleted ? '' : 'hover:bg-muted/50'
         )}>
-           <Card className={cn(
-               "m-2 rounded-lg shadow-sm transition-all",
-               isCompleted 
-                ? 'bg-muted/60 hover:shadow-md'
-                : 'hover:shadow-md',
-               email.lastReplier === 'client' && !isCompleted && 'border-l-4 border-l-blue-500'
-            )}>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
-                <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
-                    <Checkbox id={`ticket-${email.id}`} checked={isSelected} onCheckedChange={(checked) => onSelect(email.id, !!checked)} />
-                    {email.ticketNumber && <span className="text-sm font-medium text-muted-foreground">#{email.ticketNumber}</span>}
-                </div>
-                
-                <Link href={`/tickets/${email.id}`} className="flex-1 min-w-0 w-full cursor-pointer">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
-                        {isOverdue && <Badge variant="destructive">Overdue</Badge>}
-                        {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
-                        {email.tags?.filter(t => t !== 'Resolved Late' && !t.startsWith('deadline-reminder-sent-day-')).map(tag => (
-                           <Badge key={tag} variant="outline">{tag}</Badge>
-                        ))}
-                    </div>
-                    <p className="font-medium text-foreground truncate">{email.subject}</p>
-
-                    <p className="text-sm text-muted-foreground truncate">
-                        {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}
-                        {email.deadline && ` • Deadline: ${format(parseISO(email.deadline), 'MMMM d, yyyy')}`}
-                    </p>
-                </Link>
-
-                <div className="flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
-                    <Select value={currentPriority} onValueChange={(value) => handleUpdate('priority', value)} disabled={isArchivedView}>
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                            <SelectValue>
-                                <span className="flex items-center gap-2">
-                                    <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
-                                    {priorityDetails.label}
-                                </span>
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {priorities.map(p => (
-                                 <SelectItem key={p.value} value={p.value}>
-                                    <span className="flex items-center gap-2">
-                                        <span className={cn("h-2 w-2 rounded-full",p.color)} />
-                                        {p.label}
-                                    </span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                     <Select value={currentType} onValueChange={(value) => handleUpdate('type', value)} disabled={isArchivedView}>
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                            <SelectValue>
-                                <span className="flex items-center gap-2">
-                                    <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />
-                                    {typeDetails.label}
-                                </span>
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {types.map(t => (
-                                <SelectItem key={t.value} value={t.value}>
-                                    <span className="flex items-center gap-2">
-                                        <t.icon className={cn("h-4 w-4", t.color)} />
-                                        {t.label}
-                                    </span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={currentStatus} onValueChange={(value) => handleUpdate('status', value)} disabled={isArchivedView}>
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                            <SelectValue>
-                                <span className="flex items-center gap-2">
-                                    <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />
-                                    {statusDetails.label}
-                                </span>
-                            </SelectValue>
-                        </SelectTrigger>
-                         <SelectContent>
-                            {statuses.map(s => (
-                                 <SelectItem key={s.value} value={s.value}>
-                                    <span className="flex items-center gap-2">
-                                        <s.icon className={cn("h-4 w-4", s.color)} />
-                                        {s.label}
-                                    </span>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {isOwner ? (
-                         <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleUpdate('assignee', value)} disabled={isArchivedView}>
-                             <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
-                                 <SelectValue>
-                                     <span className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                        {assigneeName}
-                                     </span>
-                                 </SelectValue>
-                             </SelectTrigger>
-                             <SelectContent>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {members.filter(m => m.uid).map(m => (
-                                    <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
-                                ))}
-                             </SelectContent>
-                         </Select>
-                    ) : (
-                        <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground px-2">
-                            <User className="h-4 w-4" />
-                            {assigneeName}
+            <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
+                <Card className={cn(
+                   "m-2 rounded-lg shadow-sm transition-all",
+                   isCompleted 
+                    ? 'bg-muted/60 hover:shadow-md'
+                    : 'hover:shadow-md',
+                   email.lastReplier === 'client' && !isCompleted && 'border-l-4 border-l-blue-500'
+                )}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
+                        <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
+                            <Checkbox id={`ticket-${email.id}`} checked={isSelected} onCheckedChange={(checked) => onSelect(email.id, !!checked)} />
+                            {email.ticketNumber && <span className="text-sm font-medium text-muted-foreground">#{email.ticketNumber}</span>}
                         </div>
-                    )}
-                </div>
-            </div>
-            </Card>
+                        
+                        <Link href={`/tickets/${email.id}`} className="flex-1 min-w-0 w-full cursor-pointer">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
+                                {isOverdue && <Badge variant="destructive">Overdue</Badge>}
+                                {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
+                                {email.tags?.filter(t => t !== 'Resolved Late' && !t.startsWith('deadline-reminder-sent-day-')).map(tag => (
+                                   <Badge key={tag} variant="outline">{tag}</Badge>
+                                ))}
+                            </div>
+                            <p className="font-medium text-foreground truncate">{email.subject}</p>
+
+                            <p className="text-sm text-muted-foreground truncate">
+                                {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}
+                                {email.deadline && ` • Deadline: ${format(parseISO(email.deadline), 'MMMM d, yyyy')}`}
+                            </p>
+                        </Link>
+
+                        <div className="flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
+                            <Select value={currentPriority} onValueChange={(value) => handleSelectChange('priority', value)} disabled={isArchivedView}>
+                                <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                                    <SelectValue>
+                                        <span className="flex items-center gap-2">
+                                            <span className={cn("h-2 w-2 rounded-full", priorityDetails.color)} />
+                                            {priorityDetails.label}
+                                        </span>
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {priorities.map(p => (
+                                         <SelectItem key={p.value} value={p.value}>
+                                            <span className="flex items-center gap-2">
+                                                <span className={cn("h-2 w-2 rounded-full",p.color)} />
+                                                {p.label}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                             <Select value={currentType} onValueChange={(value) => handleSelectChange('type', value)} disabled={isArchivedView}>
+                                <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                                    <SelectValue>
+                                        <span className="flex items-center gap-2">
+                                            <typeDetails.icon className={cn("h-4 w-4", typeDetails.color)} />
+                                            {typeDetails.label}
+                                        </span>
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {types.map(t => (
+                                        <SelectItem key={t.value} value={t.value}>
+                                            <span className="flex items-center gap-2">
+                                                <t.icon className={cn("h-4 w-4", t.color)} />
+                                                {t.label}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={currentStatus} onValueChange={(value) => handleSelectChange('status', value)} disabled={isArchivedView}>
+                                <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                                    <SelectValue>
+                                        <span className="flex items-center gap-2">
+                                            <statusDetails.icon className={cn("h-4 w-4", statusDetails.color)} />
+                                            {statusDetails.label}
+                                        </span>
+                                    </SelectValue>
+                                </SelectTrigger>
+                                 <SelectContent>
+                                    {statuses.map(s => (
+                                         <SelectItem key={s.value} value={s.value}>
+                                            <span className="flex items-center gap-2">
+                                                <s.icon className={cn("h-4 w-4", s.color)} />
+                                                {s.label}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {isOwner ? (
+                                 <Select value={currentAssignee || 'unassigned'} onValueChange={(value) => handleSelectChange('assignee', value)} disabled={isArchivedView}>
+                                     <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
+                                         <SelectValue>
+                                             <span className="flex items-center gap-2">
+                                                <User className="h-4 w-4 text-muted-foreground" />
+                                                {assigneeName}
+                                             </span>
+                                         </SelectValue>
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                                        {members.filter(m => m.uid).map(m => (
+                                            <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
+                                        ))}
+                                     </SelectContent>
+                                 </Select>
+                            ) : (
+                                <div className="h-7 text-xs flex items-center justify-end gap-2 text-muted-foreground px-2">
+                                    <User className="h-4 w-4" />
+                                    {assigneeName}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </Card>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Change</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to change the {pendingUpdate?.field} to "{pendingUpdate?.label}"?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setPendingUpdate(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmUpdate} disabled={isUpdating}>
+                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </li>
     );
 }
