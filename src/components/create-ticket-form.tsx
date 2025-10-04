@@ -164,7 +164,7 @@ export function CreateTicketForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex items-center gap-2 border-b">
+            <div className="flex items-center gap-2">
                 <FormLabel htmlFor="to-address" className="py-2.5 text-sm font-medium">To</FormLabel>
                 <Input id="to-address" value={adminEmail} readOnly disabled className="flex-1 h-auto px-0"/>
                  <div className="flex-shrink-0">
@@ -174,7 +174,7 @@ export function CreateTicketForm() {
             </div>
 
             {isCcVisible && (
-                <div className="flex items-center gap-2 border-b">
+                <div className="flex items-center gap-2">
                     <FormLabel className="py-2.5 text-sm font-medium">Cc</FormLabel>
                     <FormField
                         control={form.control}
@@ -197,7 +197,7 @@ export function CreateTicketForm() {
             )}
             
             {isBccVisible && (
-                <div className="flex items-center gap-2 border-b">
+                <div className="flex items-center gap-2">
                     <FormLabel className="py-2.5 text-sm font-medium">Bcc</FormLabel>
                     <FormField
                         control={form.control}
@@ -219,7 +219,7 @@ export function CreateTicketForm() {
                 </div>
             )}
 
-             <div className="flex items-center gap-2 border-b">
+             <div className="flex items-center gap-2">
                  <FormLabel className="py-2.5 text-sm font-medium">Title</FormLabel>
                  <FormField
                     control={form.control}
