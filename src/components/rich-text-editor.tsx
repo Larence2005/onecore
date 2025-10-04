@@ -235,7 +235,7 @@ const RichTextEditor = ({ value, onChange, onAttachmentClick, onFileDrop, classN
 
 
   return (
-    <div className={cn("rounded-md border border-input focus-within:ring-2 focus-within:ring-ring", className)}>
+    <div className={cn("rounded-md border border-input", className)}>
       <div className="p-2 border-b border-input flex justify-between items-center flex-wrap">
         <div className="flex items-center gap-1 flex-wrap">
             {toolbarButtons.map(btn => (
