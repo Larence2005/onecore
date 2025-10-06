@@ -74,7 +74,7 @@ type VerificationStatus = {
     error: string | null;
 };
 
-const VerificationStatusDisplay = ({ status, newEmail }: { status: VerificationStatus, newEmail: string }) => {
+const VerificationStatusDisplay = ({ status, newEmail, onClose }: { status: VerificationStatus, newEmail: string, onClose: () => void }) => {
     const steps: { id: VerificationStep; label: string }[] = [
         { id: 'domain', label: 'Creating & Verifying Domain' },
         { id: 'email', label: 'Configuring Email Records' },
@@ -92,6 +92,9 @@ const VerificationStatusDisplay = ({ status, newEmail }: { status: VerificationS
                 <p className="text-muted-foreground">Your new support email address is ready.</p>
                 <div className="font-semibold text-lg bg-secondary text-secondary-foreground rounded-md px-4 py-2">
                     {newEmail}
+                </div>
+                <div className="pt-4">
+                    <Button onClick={onClose}>Done</Button>
                 </div>
             </div>
         );
@@ -313,7 +316,7 @@ function VerificationArea() {
                                 </Button>
                                 <AlertDialogContent>
                                     {isVerifying ? (
-                                        <VerificationStatusDisplay status={verificationStatus} newEmail={newEmailPreview} />
+                                        <VerificationStatusDisplay status={verificationStatus} newEmail={newEmailPreview} onClose={() => {setIsVerifying(false); setIsConfirmOpen(false);}}/>
                                     ) : (
                                         <>
                                             <AlertDialogHeader>
@@ -478,5 +481,7 @@ export function SettingsForm() {
 }
 
   
+
+    
 
     
