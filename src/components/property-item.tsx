@@ -14,7 +14,7 @@ export const PropertyItem = ({ icon: Icon, label, value, isLink, children }: { i
             {children ? (
                 children
             ) : isLink && typeof value === 'string' ? 
-                <a href={value} target="_blank" rel="noopener noreferrer" className="underline">{value}</a> :
+                <a href={value} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 dark:text-blue-400">{value}</a> :
                 (value || 'N/A')
             }
         </dd>
