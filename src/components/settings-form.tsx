@@ -74,12 +74,6 @@ type VerificationStatus = {
 };
 
 const VerificationStatusDisplay = ({ status, newEmail, onClose }: { status: VerificationStatus, newEmail: string, onClose: () => void }) => {
-    const steps: { id: VerificationStep; label: string }[] = [
-        { id: 'domain', label: 'Creating & Verifying Domain' },
-        { id: 'email', label: 'Configuring Email Records' },
-        { id: 'user', label: 'Creating Licensed User' },
-        { id: 'finalize', label: 'Finalizing Setup' },
-    ];
     
     if (status.step === 'success') {
          return (
@@ -97,6 +91,13 @@ const VerificationStatusDisplay = ({ status, newEmail, onClose }: { status: Veri
             </div>
         );
     }
+    
+    const steps: { id: VerificationStep; label: string }[] = [
+        { id: 'domain', label: 'Creating & Verifying Domain' },
+        { id: 'email', label: 'Configuring Email Records' },
+        { id: 'user', label: 'Creating Licensed User' },
+        { id: 'finalize', label: 'Finalizing Setup' },
+    ];
     
     const currentStepIndex = steps.findIndex(s => s.id === status.step);
 
@@ -331,8 +332,8 @@ function VerificationArea() {
                                                 </div>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={form.handleSubmit(onVerificationSubmit)} disabled={isVerifying}>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={form.handleSubmit(onVerificationSubmit)}>
                                                     Confirm
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
