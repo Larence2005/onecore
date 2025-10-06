@@ -2353,16 +2353,6 @@ async function assignLicenseToUser(client: Client, userId: string): Promise<any>
     return client.api(`/users/${userId}/assignLicense`).post(license);
 }
 
-async function addUserToSecurityGroup(client: Client, userId: string, groupId: string): Promise<void> {
-    console.log(`Adding user ${userId} to security group ${groupId}...`);
-    
-    const member = {
-        '@odata.id': `https://graph.microsoft.com/v1.0/directoryObjects/${userId}`
-    };
-
-    await client.api(`/groups/${groupId}/members/$ref`).post(member);
-}
-
 
 // 3. Cloudflare DNS Functions
 async function recordExistsInCloudflare(type: string, name: string) {
@@ -2458,145 +2448,6 @@ async function pollDnsPropagation(domain: string, expectedTxt: string) {
     }
 }
 
-
-export async function verifyUserEmail(
-    organizationId: string,
-    userId: string,
-    username: string,
-    displayName: string,
-    password: string
-) {
-    // 1. Get organization details and check permissions
-    const orgRef = doc(db, "organizations", organizationId);
-    const orgDoc = await getDoc(orgRef);
-    if (!orgDoc.exists()) {
-        throw new Error("Organization not found.");
-    }
-    const orgData = orgDoc.data();
-    const isOwner = orgData.owner === userId;
-
-    // 2. Initialize Graph Client
-    const client = getGraphClient();
-    let newDomain = orgData.newDomain;
-
-    // 3. Create and verify domain (if owner and not already created)
-    if (isOwner && !newDomain) {
-        const orgDomainName = orgData.domain.split('.')[0];
-        newDomain = `${orgDomainName}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
-        
-        // Step 1: Add domain in Azure AD
-        await addDomain(client, newDomain);
-
-        // Step 2: Check domain status and get verification records
-        const domainInfo = await getDomain(client, newDomain);
-        console.log("Domain info:", JSON.stringify(domainInfo, null, 2));
-        
-        if (domainInfo.isVerified) {
-            console.log("✅ Domain is already verified. Skipping verification step.");
-        } else {
-            // Step 3: Add verification TXT records
-            const verificationRecords = await getDomainVerificationRecords(client, newDomain);
-            let msTxtValue = "";
-            for (const record of verificationRecords) {
-                if (record.recordType.toLowerCase() === "txt" && record.text.startsWith("MS=")) {
-                    msTxtValue = record.text;
-                    await addDnsRecordToCloudflare("TXT", newDomain, record.text);
-                    await pollDnsPropagation(newDomain, msTxtValue);
-                    break; 
-                }
-            }
-
-            // Step 4: Verify domain
-            let verified = false;
-            let verifyAttempts = 0;
-            const maxVerifyAttempts = 10;
-            while (!verified && verifyAttempts < maxVerifyAttempts) {
-                verifyAttempts++;
-                try {
-                    await verifyDomain(client, newDomain);
-                    const updatedDomainInfo = await getDomain(client, newDomain);
-                    if (updatedDomainInfo.isVerified) {
-                        console.log("✅ Domain verified successfully!");
-                        verified = true;
-                    } else {
-                         throw new Error("Verification API call succeeded but domain is still not verified.");
-                    }
-                } catch (err: any) {
-                    console.error(`Attempt ${verifyAttempts}: Verification failed:`, err.message);
-                    if (err.response) {
-                        console.error("Error response:", err.response.data);
-                    }
-                    console.log("⏳ Waiting for verification...");
-                    await new Promise(res => setTimeout(res, 30000));
-                }
-            }
-            if (!verified) {
-                throw new Error(`❌ Domain verification timeout after ${maxVerifyAttempts} attempts.`);
-            }
-        }
-        
-        // Save the new domain to Firestore right after verification
-        await updateDoc(orgRef, { newDomain: newDomain });
-        console.log("Domain created and saved to Firestore.");
-    }
-    
-    if (!newDomain) {
-        throw new Error("Organization domain has not been created by the admin yet.");
-    }
-    
-     // 4. Add DNS Records for Email (Moved before user creation)
-    const serviceRecords = await getDomainServiceRecords(client, newDomain);
-    for (const rec of serviceRecords) {
-        const type = rec.recordType.toLowerCase();
-
-        if (type === "mx") {
-            // Mail delivery (primary MX)
-            await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
-        } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
-            // Autodiscover for Outlook
-            await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
-        } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
-            // SPF for email sending
-            await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
-        } else {
-            console.log(`⏭️ Skipping non-email record: ${rec.recordType} ${rec.label || newDomain}`);
-        }
-    }
-
-
-    // 5. Create user in Microsoft 365
-    const newUser = await createGraphUser(client, displayName, username, newDomain, password);
-    await new Promise(r => setTimeout(r, 30000)); // Add delay for mailbox provisioning
-    
-    // 6. Assign a license to the new user
-    await assignLicenseToUser(client, newUser.id);
-    
-    // 7. Add user to security group
-    const securityGroupId = process.env.AZURE_SECURITY_GROUP_ID;
-    if (securityGroupId) {
-        await addUserToSecurityGroup(client, newUser.id, securityGroupId);
-        console.log(`User ${newUser.id} added to security group ${securityGroupId}.`);
-    } else {
-        console.warn("AZURE_SECURITY_GROUP_ID environment variable not set. Skipping adding user to security group.");
-    }
-
-
-    // 8. Update user status in Firestore
-    const members = orgData.members as OrganizationMember[];
-    const memberIndex = members.findIndex(m => m.uid === userId);
-    if (memberIndex === -1) {
-        throw new Error("User not found in organization members list.");
-    }
-    members[memberIndex].status = 'Verified';
-    members[memberIndex].email = `${username}@${newDomain}`; // Update their primary email
-    
-    await updateDoc(orgRef, { members });
-    
-    console.log("User status updated to 'Verified' in Firestore.");
-
-    return { success: true };
-}
-    
 // --- START: Refactored Verification Actions ---
 
 export async function createAndVerifyDomain(organizationId: string): Promise<{ success: boolean; newDomain?: string; error?: string }> {
@@ -2715,13 +2566,6 @@ export async function finalizeUserSetup(
     const client = getGraphClient();
 
     try {
-        const securityGroupId = process.env.AZURE_SECURITY_GROUP_ID;
-        if (securityGroupId) {
-            await addUserToSecurityGroup(client, graphUserId, securityGroupId);
-        } else {
-            console.warn("AZURE_SECURITY_GROUP_ID not set. Skipping adding user to security group.");
-        }
-
         const members = orgDoc.data().members as OrganizationMember[];
         const memberIndex = members.findIndex(m => m.uid === firebaseUid);
         if (memberIndex === -1) throw new Error("User not found in organization members list.");

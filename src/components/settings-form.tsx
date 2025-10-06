@@ -65,7 +65,8 @@ type VerificationStep =
     | 'email'
     | 'user'
     | 'finalize'
-    | 'done';
+    | 'done'
+    | 'success';
 
 type VerificationStatus = {
     step: VerificationStep;
@@ -73,13 +74,26 @@ type VerificationStatus = {
     error: string | null;
 };
 
-const VerificationStatusDisplay = ({ status }: { status: VerificationStatus }) => {
+const VerificationStatusDisplay = ({ status, newEmail }: { status: VerificationStatus, newEmail: string }) => {
     const steps: { id: VerificationStep; label: string }[] = [
         { id: 'domain', label: 'Creating & Verifying Domain' },
         { id: 'email', label: 'Configuring Email Records' },
         { id: 'user', label: 'Creating Licensed User' },
         { id: 'finalize', label: 'Finalizing Setup' },
     ];
+    
+    if (status.step === 'success') {
+         return (
+            <div className="flex flex-col items-center justify-center text-center space-y-4 p-8 animate-in fade-in zoom-in-95 duration-500">
+                <div className="relative">
+                    <CheckCircle className="h-24 w-24 text-green-500" />
+                </div>
+                <h2 className="text-2xl font-bold">Verified!</h2>
+                <p className="text-muted-foreground">Your new email address is ready.</p>
+                <p className="font-semibold text-lg">{newEmail}</p>
+            </div>
+        );
+    }
     
     const currentStepIndex = steps.findIndex(s => s.id === status.step);
 
@@ -191,16 +205,14 @@ function VerificationArea() {
             setVerificationStatus(prev => ({ ...prev, step: 'finalize', message: 'Finalizing user setup...' }));
             const finalizeResult = await finalizeUserSetup(userProfile.organizationId, user.uid, userResult.userId, values.username);
             if (!finalizeResult.success) throw new Error(finalizeResult.error || 'Failed to finalize setup.');
-
-            setVerificationStatus({ step: 'done', message: 'Verification complete!', error: null });
+            
+            setVerificationStatus({ step: 'success', message: 'Verification complete!', error: null });
             await fetchUserProfile(user);
 
         } catch(e: any) {
             const errorMessage = e.message || 'An unknown error occurred.';
             setVerificationStatus(prev => ({ ...prev, error: errorMessage }));
             toast({ variant: 'destructive', title: 'Verification Failed', description: errorMessage });
-        } finally {
-            // Don't set isVerifying to false immediately to show the status
         }
     };
     
@@ -295,7 +307,7 @@ function VerificationArea() {
                                 </Button>
                                 <AlertDialogContent>
                                     {isVerifying ? (
-                                        <VerificationStatusDisplay status={verificationStatus} />
+                                        <VerificationStatusDisplay status={verificationStatus} newEmail={newEmailPreview} />
                                     ) : (
                                         <>
                                             <AlertDialogHeader>
