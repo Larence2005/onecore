@@ -65,7 +65,6 @@ type VerificationStep =
     | 'email'
     | 'user'
     | 'finalize'
-    | 'done'
     | 'success';
 
 type VerificationStatus = {
@@ -89,7 +88,6 @@ const VerificationStatusDisplay = ({ status, newEmail, onClose }: { status: Veri
                     <CheckCircle className="h-24 w-24 text-green-500" />
                 </div>
                 <h2 className="text-2xl font-bold">Verified!</h2>
-                <p className="text-muted-foreground">Your new support email address is ready.</p>
                 <div className="font-semibold text-lg bg-secondary text-secondary-foreground rounded-md px-4 py-2">
                     {newEmail}
                 </div>
@@ -310,10 +308,11 @@ function VerificationArea() {
                         </div>
                         <div className="flex justify-end">
                             <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                                <Button onClick={handleVerifyClick} disabled={isVerifying}>
-                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin hidden" />
-                                    Verify and Create Email
-                                </Button>
+                                <AlertDialogTrigger asChild>
+                                    <Button onClick={handleVerifyClick}>
+                                        Verify and Create Email
+                                    </Button>
+                                </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     {isVerifying ? (
                                         <VerificationStatusDisplay status={verificationStatus} newEmail={newEmailPreview} onClose={() => {setIsVerifying(false); setIsConfirmOpen(false);}}/>
@@ -334,7 +333,6 @@ function VerificationArea() {
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel disabled={isVerifying}>Cancel</AlertDialogCancel>
                                                 <AlertDialogAction onClick={form.handleSubmit(onVerificationSubmit)} disabled={isVerifying}>
-                                                    {isVerifying && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                                     Confirm
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
@@ -479,9 +477,5 @@ export function SettingsForm() {
     </div>
   );
 }
-
-  
-
-    
 
     
