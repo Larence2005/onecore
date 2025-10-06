@@ -33,7 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/providers/auth-provider";
-import { deleteOrganization, verifyUserEmail } from "@/app/actions";
+import { deleteOrganization, createAndVerifyDomain, configureEmailRecords, createLicensedUser, finalizeUserSetup } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, deleteDoc } from 'firebase/firestore';
@@ -59,6 +59,67 @@ const verificationFormSchema = z.object({
     path: ["confirmPassword"],
 });
 
+type VerificationStep = 
+    | 'idle'
+    | 'domain'
+    | 'email'
+    | 'user'
+    | 'finalize'
+    | 'done';
+
+type VerificationStatus = {
+    step: VerificationStep;
+    message: string;
+    error: string | null;
+};
+
+const VerificationStatusDisplay = ({ status }: { status: VerificationStatus }) => {
+    const steps: { id: VerificationStep; label: string }[] = [
+        { id: 'domain', label: 'Creating & Verifying Domain' },
+        { id: 'email', label: 'Configuring Email Records' },
+        { id: 'user', label: 'Creating Licensed User' },
+        { id: 'finalize', label: 'Finalizing Setup' },
+    ];
+    
+    const currentStepIndex = steps.findIndex(s => s.id === status.step);
+
+    return (
+        <div className="flex flex-col items-center justify-center text-center space-y-4 p-8">
+             <div className="space-y-6 w-full max-w-sm">
+                {steps.map((step, index) => (
+                    <div key={step.id} className="flex items-center gap-4">
+                        <div className="flex-shrink-0">
+                            {currentStepIndex > index ? (
+                                <CheckCircle className="h-6 w-6 text-green-500" />
+                            ) : currentStepIndex === index ? (
+                                <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                            ) : (
+                                <div className="h-6 w-6 rounded-full border-2 border-muted-foreground" />
+                            )}
+                        </div>
+                        <div className="text-left">
+                            <p className={`font-medium ${currentStepIndex >= index ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                {step.label}
+                            </p>
+                             {currentStepIndex === index && (
+                                <p className="text-sm text-muted-foreground">{status.message}</p>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {status.error && (
+                <Alert variant="destructive" className="mt-6">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>An Error Occurred</AlertTitle>
+                    <AlertDescription>{status.error}</AlertDescription>
+                </Alert>
+            )}
+        </div>
+    );
+};
+
 
 function VerificationArea() {
     const { user, userProfile, fetchUserProfile } = useAuth();
@@ -66,6 +127,11 @@ function VerificationArea() {
     const [isVerifying, setIsVerifying] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [parentDomain, setParentDomain] = useState('');
+    const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>({
+        step: 'idle',
+        message: 'Starting verification...',
+        error: null,
+    });
 
     useEffect(() => {
         // This will only run on the client-side
@@ -104,22 +170,37 @@ function VerificationArea() {
         }
 
         setIsVerifying(true);
+        setVerificationStatus({ step: 'domain', message: 'This may take several minutes...', error: null });
+
         try {
-            await verifyUserEmail(
-                userProfile.organizationId,
-                user.uid,
-                values.username,
-                values.displayName,
-                values.password,
-            );
-            toast({ title: 'Verification Successful!', description: 'Your new email has been created and verified.' });
-            await fetchUserProfile(user); // Re-fetch profile to get new status
-            setIsConfirmOpen(false);
-        } catch(e) {
-            const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+            // Step 1: Create and Verify Domain
+            const domainResult = await createAndVerifyDomain(userProfile.organizationId);
+            if (!domainResult.success) throw new Error(domainResult.error || 'Failed to create domain.');
+            
+            // Step 2: Configure Email Records
+            setVerificationStatus(prev => ({ ...prev, step: 'email', message: 'Setting up mail records...' }));
+            const emailRecordsResult = await configureEmailRecords(userProfile.organizationId);
+            if (!emailRecordsResult.success) throw new Error(emailRecordsResult.error || 'Failed to configure email records.');
+
+            // Step 3: Create Licensed User
+            setVerificationStatus(prev => ({ ...prev, step: 'user', message: 'Creating M365 user and assigning license...' }));
+            const userResult = await createLicensedUser(userProfile.organizationId, values.username, values.displayName, values.password);
+            if (!userResult.success || !userResult.userId) throw new Error(userResult.error || 'Failed to create user.');
+
+            // Step 4: Finalize Setup
+            setVerificationStatus(prev => ({ ...prev, step: 'finalize', message: 'Finalizing user setup...' }));
+            const finalizeResult = await finalizeUserSetup(userProfile.organizationId, user.uid, userResult.userId, values.username);
+            if (!finalizeResult.success) throw new Error(finalizeResult.error || 'Failed to finalize setup.');
+
+            setVerificationStatus({ step: 'done', message: 'Verification complete!', error: null });
+            await fetchUserProfile(user);
+
+        } catch(e: any) {
+            const errorMessage = e.message || 'An unknown error occurred.';
+            setVerificationStatus(prev => ({ ...prev, error: errorMessage }));
             toast({ variant: 'destructive', title: 'Verification Failed', description: errorMessage });
         } finally {
-            setIsVerifying(false);
+            // Don't set isVerifying to false immediately to show the status
         }
     };
     
@@ -214,13 +295,7 @@ function VerificationArea() {
                                 </Button>
                                 <AlertDialogContent>
                                     {isVerifying ? (
-                                        <div className="flex flex-col items-center justify-center text-center space-y-4 p-8">
-                                            <RefreshCw className="h-10 w-10 animate-spin text-primary" />
-                                            <h2 className="text-xl font-semibold">Verification in Progress</h2>
-                                            <p className="text-muted-foreground">
-                                                This process can take several minutes. Please do not close this window.
-                                            </p>
-                                        </div>
+                                        <VerificationStatusDisplay status={verificationStatus} />
                                     ) : (
                                         <>
                                             <AlertDialogHeader>
@@ -383,3 +458,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+  

@@ -2597,6 +2597,147 @@ export async function verifyUserEmail(
     return { success: true };
 }
     
+// --- START: Refactored Verification Actions ---
+
+export async function createAndVerifyDomain(organizationId: string): Promise<{ success: boolean; newDomain?: string; error?: string }> {
+    const orgRef = doc(db, "organizations", organizationId);
+    const orgDoc = await getDoc(orgRef);
+    if (!orgDoc.exists()) throw new Error("Organization not found.");
+    
+    const orgData = orgDoc.data();
+    if (orgData.newDomain) {
+        return { success: true, newDomain: orgData.newDomain };
+    }
+    
+    const client = getGraphClient();
+    const orgDomainName = orgData.domain.split('.')[0];
+    const newDomain = `${orgDomainName}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+    
+    try {
+        await addDomain(client, newDomain);
+        const domainInfo = await getDomain(client, newDomain);
+
+        if (!domainInfo.isVerified) {
+            const verificationRecords = await getDomainVerificationRecords(client, newDomain);
+            const msTxtRecord = verificationRecords.find((rec: any) => rec.recordType.toLowerCase() === "txt" && rec.text.startsWith("MS="));
+            if (!msTxtRecord) throw new Error("Could not find TXT verification record from Azure.");
+
+            await addDnsRecordToCloudflare("TXT", newDomain, msTxtRecord.text);
+            await pollDnsPropagation(newDomain, msTxtRecord.text);
+            
+            let verified = false;
+            let verifyAttempts = 0;
+            while (!verified && verifyAttempts < 10) {
+                verifyAttempts++;
+                try {
+                    await verifyDomain(client, newDomain);
+                    const updatedDomainInfo = await getDomain(client, newDomain);
+                    if (updatedDomainInfo.isVerified) {
+                        verified = true;
+                    }
+                } catch (err) {
+                    if (verifyAttempts >= 10) throw err;
+                    await new Promise(res => setTimeout(res, 30000));
+                }
+            }
+            if (!verified) throw new Error("Domain verification timed out.");
+        }
+        
+        await updateDoc(orgRef, { newDomain });
+        return { success: true, newDomain };
+
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function configureEmailRecords(organizationId: string): Promise<{ success: boolean; error?: string }> {
+    const orgRef = doc(db, "organizations", organizationId);
+    const orgDoc = await getDoc(orgRef);
+    if (!orgDoc.exists() || !orgDoc.data().newDomain) throw new Error("Organization domain not found.");
+    
+    const newDomain = orgDoc.data().newDomain;
+    const client = getGraphClient();
+    
+    try {
+        const serviceRecords = await getDomainServiceRecords(client, newDomain);
+        for (const rec of serviceRecords) {
+            const type = rec.recordType.toLowerCase();
+            if (type === "mx") {
+                await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
+            } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
+                await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
+            } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
+                await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
+            }
+        }
+        return { success: true };
+    } catch(e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function createLicensedUser(
+    organizationId: string, 
+    username: string, 
+    displayName: string, 
+    password: string
+): Promise<{ success: boolean; userId?: string; error?: string }> {
+    const orgRef = doc(db, "organizations", organizationId);
+    const orgDoc = await getDoc(orgRef);
+    if (!orgDoc.exists() || !orgDoc.data().newDomain) throw new Error("Organization domain not found.");
+    
+    const newDomain = orgDoc.data().newDomain;
+    const client = getGraphClient();
+
+    try {
+        const newUser = await createGraphUser(client, displayName, username, newDomain, password);
+        await new Promise(r => setTimeout(r, 30000));
+        await assignLicenseToUser(client, newUser.id);
+        
+        return { success: true, userId: newUser.id };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function finalizeUserSetup(
+    organizationId: string, 
+    firebaseUid: string,
+    graphUserId: string,
+    username: string
+): Promise<{ success: boolean; error?: string }> {
+    const orgRef = doc(db, "organizations", organizationId);
+    const orgDoc = await getDoc(orgRef);
+    if (!orgDoc.exists() || !orgDoc.data().newDomain) throw new Error("Organization domain not found.");
+
+    const newDomain = orgDoc.data().newDomain;
+    const client = getGraphClient();
+
+    try {
+        const securityGroupId = process.env.AZURE_SECURITY_GROUP_ID;
+        if (securityGroupId) {
+            await addUserToSecurityGroup(client, graphUserId, securityGroupId);
+        } else {
+            console.warn("AZURE_SECURITY_GROUP_ID not set. Skipping adding user to security group.");
+        }
+
+        const members = orgDoc.data().members as OrganizationMember[];
+        const memberIndex = members.findIndex(m => m.uid === firebaseUid);
+        if (memberIndex === -1) throw new Error("User not found in organization members list.");
+        
+        members[memberIndex].status = 'Verified';
+        members[memberIndex].email = `${username}@${newDomain}`;
+        
+        await updateDoc(orgRef, { members });
+
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+// --- END: Refactored Verification Actions ---
 
     
 
@@ -2738,3 +2879,6 @@ export async function verifyUserEmail(
 
     
 
+
+
+  
