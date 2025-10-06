@@ -75,23 +75,12 @@ type VerificationStatus = {
 
 const VerificationStatusDisplay = ({ status, newEmail, onClose }: { status: VerificationStatus, newEmail: string, onClose: () => void }) => {
     
-    if (status.step === 'success') {
-         return (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 p-8 animate-in fade-in-50 zoom-in-95 duration-500">
-                <div className="relative">
-                    <CheckCircle className="h-24 w-24 text-green-500" />
-                </div>
-                <h2 className="text-2xl font-bold">Verified!</h2>
-                <div className="font-semibold text-lg bg-secondary text-secondary-foreground rounded-md px-4 py-2">
-                    {newEmail}
-                </div>
-                <div className="pt-4">
-                    <Button onClick={onClose}>Done</Button>
-                </div>
-            </div>
-        );
-    }
-    
+    useEffect(() => {
+        if (status.step === 'success') {
+            onClose();
+        }
+    }, [status.step, onClose]);
+
     const steps: { id: VerificationStep; label: string }[] = [
         { id: 'domain', label: 'Creating & Verifying Domain' },
         { id: 'email', label: 'Configuring Email Records' },
@@ -216,6 +205,12 @@ function VerificationArea() {
             
             setVerificationStatus({ step: 'success', message: 'Verification complete!', error: null });
             await fetchUserProfile(user);
+
+            toast({
+                title: 'Account Verified!',
+                description: `Your new email ${newEmailPreview} is ready.`,
+                duration: 5000,
+            });
 
         } catch(e: any) {
             const errorMessage = e.message || 'An unknown error occurred.';
@@ -478,5 +473,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
-    
