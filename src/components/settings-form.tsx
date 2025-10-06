@@ -84,13 +84,15 @@ const VerificationStatusDisplay = ({ status, newEmail }: { status: VerificationS
     
     if (status.step === 'success') {
          return (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 p-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex flex-col items-center justify-center text-center space-y-4 p-8 animate-in fade-in-50 zoom-in-95 duration-500">
                 <div className="relative">
                     <CheckCircle className="h-24 w-24 text-green-500" />
                 </div>
                 <h2 className="text-2xl font-bold">Verified!</h2>
-                <p className="text-muted-foreground">Your new email address is ready.</p>
-                <p className="font-semibold text-lg">{newEmail}</p>
+                <p className="text-muted-foreground">Your new support email address is ready.</p>
+                <div className="font-semibold text-lg bg-secondary text-secondary-foreground rounded-md px-4 py-2">
+                    {newEmail}
+                </div>
             </div>
         );
     }
@@ -99,6 +101,10 @@ const VerificationStatusDisplay = ({ status, newEmail }: { status: VerificationS
 
     return (
         <div className="flex flex-col items-center justify-center text-center space-y-4 p-8">
+            <div className="text-center mb-4">
+                <h2 className="text-xl font-bold">Verification in Progress</h2>
+                <p className="text-muted-foreground">Please wait, this process may take several minutes.</p>
+            </div>
              <div className="space-y-6 w-full max-w-sm">
                 {steps.map((step, index) => (
                     <div key={step.id} className="flex items-center gap-4">
@@ -472,3 +478,5 @@ export function SettingsForm() {
 }
 
   
+
+    
