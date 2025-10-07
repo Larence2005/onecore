@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings } from '@/app/actions';
+import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings, getAttachmentContent } from '@/app/actions';
 import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note, DeadlineSettings } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,29 +62,10 @@ const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | und
             const cid = att.contentId!;
             // Create a regex that is not too greedy and handles variations
             const regex = new RegExp(`src=["']cid:${cid}["']`, 'g');
-            const dataUri = `src="data:${att.contentType};base64,${att.contentBytes}"`;
-            processedHtml = processedHtml.replace(regex, dataUri);
-        });
-    }
-    
-    // This is a simple and brittle way to find attachment links. A more robust solution
-    // might require server-side pre-processing or a more sophisticated client-side parser.
-    // We will do this for now as a PoC.
-    if(attachments){
-        const nonInlineAttachments = attachments.filter(att => !att.isInline);
-        nonInlineAttachments.forEach(att => {
-            const linkRegex = new RegExp(`<a href=["'].*?${att.name}["'](.*?)>(.*?)<\\/a>`, 'gi');
-            
-            // This is a bit of a hack. We can't actually download from a string replacement.
-            // We'll just style the link differently to indicate it's an attachment.
-            // A better way would be to add a custom attribute to be picked up by the parser.
-            // For now, let's just make it look like a button.
-            // In a real app, you'd replace this with a link that triggers a download function.
-             processedHtml = processedHtml.replace(linkRegex, (match, group1, group2) => {
-                // For now, we just return the link as is, but we could style it.
-                // In the future, we could add an onClick handler here if we use a more advanced parser.
-                return match;
-            });
+            // Inline attachments contentBytes are not stored anymore, so we cannot display them directly.
+            // This part of logic is now deprecated as we fetch content on-demand.
+            // For now, we will leave the cid: src, which will result in a broken image.
+            // A more advanced solution would be to fetch these inline images on-demand as well.
         });
     }
 
@@ -179,25 +160,6 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
             )}
         </div>
     );
-};
-
-const downloadAttachment = (attachment: Attachment) => {
-    // Convert base64 to a Blob
-    const byteCharacters = atob(attachment.contentBytes);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: attachment.contentType });
-
-    // Create a link and trigger the download
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = attachment.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 };
 
 
@@ -800,6 +762,35 @@ const handleCancelForward = () => {
     setShowForwardBcc(false);
 };
 
+const handleAttachmentDownload = async (messageId: string, attachment: Attachment) => {
+    if (!userProfile?.organizationId) return;
+
+    try {
+        const { contentBytes } = await getAttachmentContent(userProfile.organizationId, messageId, attachment.id);
+        
+        // Convert base64 to a Blob
+        const byteCharacters = atob(contentBytes);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: attachment.contentType });
+
+        // Create a link and trigger the download
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = attachment.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({ variant: "destructive", title: "Download Failed", description: errorMessage });
+    }
+}
+
 const renderRecipientList = (recipients: Recipient[] | undefined) => {
     if (!recipients || recipients.length === 0) return null;
     return recipients.map(r => r.emailAddress.address).join(', ');
@@ -879,7 +870,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                         {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
                         {message.body.contentType === 'html' ? (
-                            <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments, downloadAttachment)} attachments={message.attachments} />
+                            <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments, () => {})} attachments={message.attachments} />
                         ) : (
                             <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
                         )}
@@ -889,7 +880,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                             <h3 className="text-sm font-medium mb-2">Attachments</h3>
                             <div className="flex flex-wrap gap-2">
                                 {regularAttachments.map(att => (
-                                    <Button key={att.id} variant="outline" size="sm" onClick={() => downloadAttachment(att)}>
+                                    <Button key={att.id} variant="outline" size="sm" onClick={() => handleAttachmentDownload(message.id, att)}>
                                         <Paperclip className="mr-2 h-4 w-4" />
                                         {att.name}
                                     </Button>

@@ -56,7 +56,6 @@ export interface Attachment {
     name: string;
     contentType: string;
     size: number;
-    contentBytes: string; // Base64 encoded content
     isInline?: boolean;
     contentId?: string;
 }
@@ -667,7 +666,14 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         companyId: ticketProperties.companyId,
         assignee: ticketProperties.assignee,
         hasAttachments: msg.hasAttachments,
-        attachments: msg.attachments,
+        attachments: msg.attachments?.map((att: any) => ({
+            id: att.id,
+            name: att.name,
+            contentType: att.contentType,
+            size: att.size,
+            isInline: att.isInline,
+            contentId: att.contentId,
+        })),
         toRecipients: msg.toRecipients,
         ccRecipients: msg.ccRecipients,
         bccRecipients: msg.bccRecipients,
@@ -1113,6 +1119,33 @@ export async function forwardEmailAction(
     });
     
     return { success: true };
+}
+
+export async function getAttachmentContent(organizationId: string, messageId: string, attachmentId: string): Promise<{contentBytes: string}> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error('Failed to get attachment: API credentials not configured.');
+    }
+    
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        throw new Error('Failed to acquire access token to get attachment.');
+    }
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/attachments/${attachmentId}`, {
+        headers: {
+            Authorization: `Bearer ${authResponse.accessToken}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Failed to fetch attachment: ${error.error?.message || response.statusText}`);
+    }
+    
+    const attachment = await response.json();
+    
+    return { contentBytes: attachment.contentBytes };
 }
 
 async function incrementEmployeeCount(organizationId: string, companyId: string) {
