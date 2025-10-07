@@ -108,14 +108,12 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             return true;
         });
 
-        const filteredTickets = dateFilteredTickets;
+        const unresolvedTickets = dateFilteredTickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length;
+        const pendingTickets = dateFilteredTickets.filter(t => t.status === 'Pending').length;
+        const resolvedToday = dateFilteredTickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
+        const overdueTickets = dateFilteredTickets.filter(t => t.deadline && isPast(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
 
-        const unresolvedTickets = filteredTickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length;
-        const pendingTickets = filteredTickets.filter(t => t.status === 'Pending').length;
-        const resolvedToday = filteredTickets.filter(t => t.closedAt && isToday(parseISO(t.closedAt))).length;
-        const overdueTickets = filteredTickets.filter(t => t.deadline && isPast(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed').length;
-
-        const ticketsByStatus = filteredTickets.reduce((acc, ticket) => {
+        const ticketsByStatus = dateFilteredTickets.reduce((acc, ticket) => {
             const status = ticket.status;
             acc[status] = (acc[status] || 0) + 1;
             return acc;
@@ -126,7 +124,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             value: ticketsByStatus[status]
         }));
         
-        const ticketsByPriority = filteredTickets.reduce((acc, ticket) => {
+        const ticketsByPriority = dateFilteredTickets.reduce((acc, ticket) => {
             const priority = ticket.priority;
             acc[priority] = (acc[priority] || 0) + 1;
             return acc;
@@ -137,7 +135,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             value: ticketsByPriority[priority]
         }));
         
-        const ticketsByType = filteredTickets.reduce((acc, ticket) => {
+        const ticketsByType = dateFilteredTickets.reduce((acc, ticket) => {
             const type = ticket.type || 'Incident'; // Default to Incident if type is not set
             acc[type] = (acc[type] || 0) + 1;
             return acc;
@@ -148,7 +146,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             value: ticketsByType[type]
         }));
 
-        const upcomingDeadlines = filteredTickets
+        const upcomingDeadlines = dateFilteredTickets
             .filter(t => t.ticketNumber && t.deadline && isFuture(parseISO(t.deadline)) && t.status !== 'Resolved' && t.status !== 'Closed')
             .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
             .slice(0, 5);
@@ -157,6 +155,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
     }, [tickets, selectedCompanyId, dateRangeOption, customDateRange]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
+        'None': '#9ca3af',
         'Low': '#22c55e',
         'Medium': '#3b82f6',
         'High': '#f97316',
@@ -372,5 +371,3 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         </div>
     );
 }
-
-    
