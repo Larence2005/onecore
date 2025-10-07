@@ -215,16 +215,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const [replyTo, setReplyTo] = useState('');
     const [replyCc, setReplyCc] = useState('');
     const [replyBcc, setReplyBcc] = useState('');
-    const [showReplyCc, setShowReplyCc] = useState(showReplyCc);
-    const [showReplyBcc, setShowReplyBcc] = useState(showReplyBcc);
+    const [showReplyCc, setShowReplyCc] = useState(false);
+    const [showReplyBcc, setShowReplyBcc] = useState(false);
 
     const [forwardingMessageId, setForwardingMessageId] = useState<string | null>(null);
     const [forwardTo, setForwardTo] = useState('');
     const [forwardCc, setForwardCc] = useState('');
     const [forwardBcc, setForwardBcc] = useState('');
     const [forwardComment, setForwardComment] = useState('');
-    const [showForwardCc, setShowForwardCc] = useState(showForwardCc);
-    const [showForwardBcc, setShowForwardBcc] = useState(showForwardBcc);
+    const [showForwardCc, setShowForwardCc] = useState(false);
+    const [showForwardBcc, setShowForwardBcc] = useState(false);
 
     const [isSending, setIsSending] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
