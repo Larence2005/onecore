@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { Email, OrganizationMember } from "@/app/actions";
@@ -33,6 +32,7 @@ type PendingUpdate = {
 } | null;
 
 const priorities = [
+    { value: 'None', label: 'None', color: 'bg-gray-500' },
     { value: 'Low', label: 'Low', color: 'bg-green-500' },
     { value: 'Medium', label: 'Medium', color: 'bg-blue-500' },
     { value: 'High', label: 'High', color: 'bg-yellow-500' },

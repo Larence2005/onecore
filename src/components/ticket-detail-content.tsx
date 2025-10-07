@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -216,16 +215,16 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const [replyTo, setReplyTo] = useState('');
     const [replyCc, setReplyCc] = useState('');
     const [replyBcc, setReplyBcc] = useState('');
-    const [showReplyCc, setShowReplyCc] = useState(false);
-    const [showReplyBcc, setShowReplyBcc] = useState(false);
+    const [showReplyCc, setShowReplyCc] = useState(showReplyCc);
+    const [showReplyBcc, setShowReplyBcc] = useState(showReplyBcc);
 
     const [forwardingMessageId, setForwardingMessageId] = useState<string | null>(null);
     const [forwardTo, setForwardTo] = useState('');
     const [forwardCc, setForwardCc] = useState('');
     const [forwardBcc, setForwardBcc] = useState('');
     const [forwardComment, setForwardComment] = useState('');
-    const [showForwardCc, setShowForwardCc] = useState(false);
-    const [showForwardBcc, setShowForwardBcc] = useState(false);
+    const [showForwardCc, setShowForwardCc] = useState(showForwardCc);
+    const [showForwardBcc, setShowForwardBcc] = useState(showForwardBcc);
 
     const [isSending, setIsSending] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -258,6 +257,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
 
     const priorities = [
+        { value: 'None', label: 'None', color: 'bg-gray-500' },
         { value: 'Low', label: 'Low', color: 'bg-green-500' },
         { value: 'Medium', label: 'Medium', color: 'bg-blue-500' },
         { value: 'High', label: 'High', color: 'bg-yellow-500' },
@@ -1412,7 +1412,7 @@ return (
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {priorities.map(p => (
-                                                                <SelectItem key={p.value} value={p.value}>
+                                                                 <SelectItem key={p.value} value={p.value}>
                                                                     <span className="flex items-center gap-2">
                                                                         <span className={cn("h-2 w-2 rounded-full",p.color)} />
                                                                         {p.label}
@@ -1433,9 +1433,9 @@ return (
                                                                 </span>
                                                             </SelectValue>
                                                         </SelectTrigger>
-                                                        <SelectContent>
+                                                         <SelectContent>
                                                             {statuses.map(s => (
-                                                                <SelectItem key={s.value} value={s.value}>
+                                                                 <SelectItem key={s.value} value={s.value}>
                                                                     <span className="flex items-center gap-2">
                                                                         <s.icon className={cn("h-4 w-4", s.color)} />
                                                                         {s.label}

@@ -1,4 +1,3 @@
-
 "use server";
 
 import {
@@ -272,7 +271,7 @@ export async function createTicket(
             senderEmail: author.email,
             bodyPreview: body.substring(0, 255),
             receivedDateTime: new Date().toISOString(),
-            priority: 'Low',
+            priority: 'None',
             status: 'Open',
             type: 'Questions',
             tags: [],
@@ -460,7 +459,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                     bodyPreview: email.bodyPreview,
                     receivedDateTime: email.receivedDateTime,
                     conversationId: email.conversationId,
-                    priority: 'Low',
+                    priority: 'None',
                     status: 'Open',
                     type: 'Questions',
                     tags: [],
@@ -562,7 +561,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
             senderEmail: data.senderEmail || 'Unknown Email',
             bodyPreview: data.bodyPreview || '',
             receivedDateTime: data.receivedDateTime || new Date().toISOString(),
-            priority: data.priority || 'Low',
+            priority: data.priority || 'None',
             status: data.status || 'Open',
             type: data.type || 'Incident',
             conversationId: data.conversationId,
@@ -624,7 +623,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
     const querySnapshot = await getDocs(q);
     
     let ticketProperties = {
-        priority: 'Low',
+        priority: 'None',
         status: 'Open',
         type: 'Incident',
         companyId: null,
@@ -637,7 +636,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         ticketId = ticketDoc.id;
         const ticketData = ticketDoc.data();
         ticketProperties = {
-            priority: ticketData.priority || 'Low',
+            priority: ticketData.priority || 'None',
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
             companyId: ticketData.companyId || null,
@@ -784,7 +783,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             senderEmail: ticketData.senderEmail || 'Unknown Email',
             bodyPreview: ticketData.bodyPreview || '',
             receivedDateTime: ticketData.receivedDateTime,
-            priority: ticketData.priority || 'Low',
+            priority: ticketData.priority || 'None',
             status: ticketData.status || 'Open',
             type: ticketData.type || 'Incident',
             conversationId: ticketData.conversationId,
@@ -1309,7 +1308,7 @@ export async function updateTicket(
                 updateData.tags = arrayRemove('Resolved Late');
             }
             
-            if (data.priority) {
+            if ('priority' in data) {
                 const now = new Date();
                 switch (data.priority) {
                     case 'Low':
@@ -1417,7 +1416,7 @@ export async function updateTicket(
         
         const newData = await getDoc(ticketDocRef).then(d => d.data());
         
-        if (data.priority && data.priority !== originalPriority) {
+        if ('priority' in data && data.priority !== originalPriority) {
             await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: new Date().toISOString(), user: currentUser.email });
         }
         if (data.status && data.status !== originalStatus) {
@@ -2582,147 +2581,3 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-    
-
-    
-
-      
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-  
-
-    
-
-    
-
-    
-
-
-
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-    
-
-
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-
-
-
-
-    
-
-
-    
-
-
-      
-
-    
-
-  
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-
-
-    
-
-
-
-
-    
-
-    
-
-
-
-  
