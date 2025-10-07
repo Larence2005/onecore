@@ -206,7 +206,7 @@ const Sidebar = React.forwardRef<
           style={
             {
                 ...style,
-                 "--sidebar-width": "280px"
+                 "--sidebar-width": "220px"
             } as React.CSSProperties
           }
           ref={ref}
@@ -291,7 +291,7 @@ const Sidebar = React.forwardRef<
           style={
              {
                 ...style,
-                 "--sidebar-width": "280px"
+                 "--sidebar-width": "220px"
              } as React.CSSProperties
           }
           {...props}

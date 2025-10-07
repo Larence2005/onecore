@@ -51,8 +51,8 @@ export default function SettingsPage() {
 
     return (
         <SidebarProvider>
-            <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
-                <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
+            <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
+                <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="p-4 flex flex-col gap-4">
                             <div className="flex items-center justify-center">

@@ -279,9 +279,9 @@ function HomePageContent() {
     <SidebarProvider>
       <div className={cn(
         "grid min-h-screen w-full",
-        activeView === 'tickets' ? "lg:grid-cols-[240px_1fr_280px]" : "lg:grid-cols-[240px_1fr]"
+        activeView === 'tickets' ? "lg:grid-cols-[220px_1fr_280px]" : "lg:grid-cols-[220px_1fr]"
       )}>
-        <Sidebar className="w-[240px] hidden lg:flex flex-col py-6 h-full">
+        <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
             <div className="flex-grow flex flex-col">
                 <SidebarHeader className="p-4 flex flex-col gap-4">
                     <div className="flex items-center justify-center">
@@ -499,5 +499,3 @@ export default function DashboardPage() {
       </React.Suspense>
   )
 }
-
-    
