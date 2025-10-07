@@ -106,24 +106,18 @@ export function AgentProfile({ email }: { email: string }) {
         setUpdatedMobile(member.mobile || '');
         setUpdatedLandline(member.landline || '');
 
-        const allTicketsQuery = query(collection(db, 'organizations', userProfile.organizationId, 'tickets'));
-        const allTicketsSnapshot = await getDocs(allTicketsQuery);
-        const allTickets = allTicketsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Email));
+        const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
 
         const tempAssignedTickets = allTickets.filter(ticket => ticket.assignee === member.uid);
         
         const conversationsRef = collection(db, 'organizations', userProfile.organizationId, 'conversations');
-        const ccBccQuery = query(conversationsRef, or(
-            where('messages', 'array-contains', { emailAddress: { address: email.toLowerCase() }, type: 'cc' }),
-            where('messages', 'array-contains', { emailAddress: { address: email.toLowerCase() }, type: 'bcc' })
-        ));
-
-        const conversationSnapshot = await getDocs(conversationsRef);
+        
         let tempResponseCount = 0;
         const ccTicketIds = new Set<string>();
         const bccTicketIds = new Set<string>();
         
-        conversationSnapshot.docs.forEach(doc => {
+        const allConversationsSnapshot = await getDocs(conversationsRef);
+        allConversationsSnapshot.forEach(doc => {
             const messages = doc.data().messages as DetailedEmail[] || [];
             messages.forEach(message => {
                 if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
