@@ -1284,6 +1284,7 @@ export async function updateTicket(
         let originalType: string;
         let originalCompanyId: string | null;
         let originalTags: string[];
+        let updateData: any;
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -1301,7 +1302,7 @@ export async function updateTicket(
             originalTags = ticketData.tags || [];
 
 
-            const updateData: any = { ...data };
+            updateData = { ...data };
 
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
                 if(originalStatus !== 'Resolved' && originalStatus !== 'Closed') {
@@ -1346,6 +1347,52 @@ export async function updateTicket(
         });
 
         const settings = await getAPISettings(organizationId);
+        
+        const newData = { ...ticketData, ...updateData };
+        const newAssigneeUid = data.assignee !== undefined ? data.assignee : originalAssignee;
+        const deadlineChanged = originalDeadline !== newData.deadline;
+        const assigneeChanged = data.assignee !== undefined && data.assignee !== originalAssignee;
+
+        if (settings && ticketData.ticketNumber && newAssigneeUid && (assigneeChanged || deadlineChanged)) {
+            const members = await getOrganizationMembers(organizationId);
+            const assignee = members.find(m => m.uid === newAssigneeUid);
+
+            if (assignee?.email) {
+                const headersList = headers();
+                const host = headersList.get('host') || 'localhost:3000';
+                const protocol = headersList.get('x-forwarded-proto') || 'http';
+                const ticketUrl = `${protocol}://${host}/tickets/${id}`;
+                
+                let subject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                let body = `<p>Hello ${assignee.name},</p>`;
+
+                if (assigneeChanged) {
+                    subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                    body += `<p>You have been assigned a new ticket by ${currentUser.name}.</p>`;
+                }
+                
+                if (deadlineChanged && newData.deadline) {
+                    const formattedDeadline = format(parseISO(newData.deadline), 'PPpp');
+                    body += `<p>The deadline for this ticket has been set to: <b>${formattedDeadline}</b>.</p>`;
+                } else if (deadlineChanged && !newData.deadline) {
+                     body += `<p>The deadline for this ticket has been removed.</p>`;
+                }
+                
+                body += `<p>You can view and respond to the ticket here: ${ticketUrl}</p>`;
+
+                try {
+                    await sendEmailAction(organizationId, {
+                        recipient: assignee.email,
+                        subject: subject,
+                        body: body,
+                    });
+                } catch(e) {
+                     console.error(`Failed to send update notification to ${assignee.email}:`, e);
+                }
+            }
+        }
+
+
         if (data.status && (data.status === 'Resolved' || data.status === 'Closed') && originalStatus !== data.status) {
             if (settings && ticketData.senderEmail && ticketData.ticketNumber) {
                 const members = await getOrganizationMembers(organizationId);
@@ -1396,37 +1443,6 @@ export async function updateTicket(
             }
         }
         
-        if (data.assignee && data.assignee !== originalAssignee) {
-             if (settings && ticketData.ticketNumber) {
-                const members = await getOrganizationMembers(organizationId);
-                const newAssignee = members.find(m => m.uid === data.assignee);
-                if (newAssignee && newAssignee.email) {
-                    const headersList = headers();
-                    const host = headersList.get('host') || 'localhost:3000';
-                    const protocol = headersList.get('x-forwarded-proto') || 'http';
-                    const ticketUrl = `${protocol}://${host}/tickets/${id}`;
-                    
-                    const subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
-                    const body = `
-                        <p>Hello ${newAssignee.name},</p>
-                        <p>You have been assigned a new ticket by ${currentUser.name}.</p>
-                        <p><b>Ticket #${ticketData.ticketNumber}: ${ticketData.title}</b></p>
-                        <p>You can view and respond to the ticket here: ${ticketUrl}</p>
-                    `;
-                    try {
-                        await sendEmailAction(organizationId, {
-                            recipient: newAssignee.email,
-                            subject: subject,
-                            body: body,
-                        });
-                    } catch(e) {
-                         console.error(`Failed to send assignment notification to ${newAssignee.email}:`, e);
-                    }
-                }
-             }
-        }
-        
-        const newData = await getDoc(ticketDocRef).then(d => d.data());
         
         if ('priority' in data && data.priority !== originalPriority) {
             await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: new Date().toISOString(), user: currentUser.email });
@@ -1437,7 +1453,7 @@ export async function updateTicket(
         if (data.type && data.type !== originalType) {
             await addActivityLog(organizationId, id, { type: 'Type', details: `changed from ${originalType} to ${data.type}`, date: new Date().toISOString(), user: currentUser.email });
         }
-        if (data.assignee !== undefined && data.assignee !== originalAssignee) {
+        if (assigneeChanged) {
             const members = await getOrganizationMembers(organizationId);
             const prevAssigneeName = members.find(m => m.uid === originalAssignee)?.name || 'Unassigned';
             const newAssigneeName = members.find(m => m.uid === data.assignee)?.name || 'Unassigned';
@@ -1449,7 +1465,7 @@ export async function updateTicket(
             const newCompanyName = companies.find(c => c.id === data.companyId)?.name || 'None';
             await addActivityLog(organizationId, id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: new Date().toISOString(), user: currentUser.email });
         }
-        if (newData.deadline !== originalDeadline) {
+        if (deadlineChanged) {
             const detail = newData.deadline ? `set to ${format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
             await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUser.email });
         }
