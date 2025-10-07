@@ -2105,11 +2105,20 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // Only run between 6 AM and 6 PM (18:00)
     if (currentHour < 6 || currentHour >= 18) {
         console.log("Skipping deadline checks: Outside of active hours (6am-6pm).");
         return;
     }
+    
+    const orgDocRef = doc(db, 'organizations', organizationId);
+    const orgDoc = await getDoc(orgDocRef);
+    if (!orgDoc.exists()) {
+        console.log(`Skipping deadline checks: Organization ${organizationId} not found.`);
+        return;
+    }
+    const orgData = orgDoc.data();
+    const deadlineSettings: DeadlineSettings | undefined = orgData.deadlineSettings;
+
 
     const settings = await getAPISettings(organizationId);
     if (!settings) {
@@ -2156,32 +2165,39 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
 
 
             // Daily reminder logic
-            const priorityDaysMap: { [key: string]: number } = { 'Low': 4, 'Medium': 3, 'High': 2, 'Urgent': 1 };
-            const reminderDays = priorityDaysMap[ticket.priority];
-
-            if (reminderDays && daysUntilDeadline > 0 && daysUntilDeadline <= reminderDays) {
-                 const dayToSend = Math.ceil(daysUntilDeadline);
-                 const notificationTag = `deadline-reminder-sent-day-${dayToSend}`;
-
-                 if (!ticket.tags?.includes(notificationTag)) {
-                     if (ticket.assignee) {
-                        const assignee = members.find(m => m.uid === ticket.assignee);
-                        if (assignee?.email) {
-                            const headersList = headers();
-                            const host = headersList.get('host') || 'localhost:3000';
-                            const protocol = headersList.get('x-forwarded-proto') || 'http';
-                            const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
-                            const subject = `Reminder: Ticket #${ticket.ticketNumber} is due in ${dayToSend} day(s)`;
-                            const body = `<p>Ticket #${ticket.ticketNumber} is due soon.</p><p>View ticket: ${ticketUrl}</p>`;
-                            await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
-                            
-                            // Add new tag and remove old ones
-                            const newTags = (ticket.tags || []).filter(t => !t.startsWith('deadline-reminder-sent-day-'));
-                            newTags.push(notificationTag);
-                            await updateDoc(ticketDoc.ref, { tags: newTags });
-                        }
+            if (deadlineSettings) {
+                const priorityDaysMap: { [key: string]: number | undefined } = {
+                    'Low': deadlineSettings.Low,
+                    'Medium': deadlineSettings.Medium,
+                    'High': deadlineSettings.High,
+                    'Urgent': deadlineSettings.Urgent,
+                };
+                const reminderDays = priorityDaysMap[ticket.priority];
+    
+                if (reminderDays && daysUntilDeadline > 0 && daysUntilDeadline <= reminderDays) {
+                     const dayToSend = Math.ceil(daysUntilDeadline);
+                     const notificationTag = `deadline-reminder-sent-day-${dayToSend}`;
+    
+                     if (!ticket.tags?.includes(notificationTag)) {
+                         if (ticket.assignee) {
+                            const assignee = members.find(m => m.uid === ticket.assignee);
+                            if (assignee?.email) {
+                                const headersList = headers();
+                                const host = headersList.get('host') || 'localhost:3000';
+                                const protocol = headersList.get('x-forwarded-proto') || 'http';
+                                const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
+                                const subject = `Reminder: Ticket #${ticket.ticketNumber} is due in ${dayToSend} day(s)`;
+                                const body = `<p>Ticket #${ticket.ticketNumber} is due soon.</p><p>View ticket: ${ticketUrl}</p>`;
+                                await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
+                                
+                                // Add new tag and remove old ones
+                                const newTags = (ticket.tags || []).filter(t => !t.startsWith('deadline-reminder-sent-day-'));
+                                newTags.push(notificationTag);
+                                await updateDoc(ticketDoc.ref, { tags: newTags });
+                            }
+                         }
                      }
-                 }
+                }
             }
         }
     } catch (error) {
