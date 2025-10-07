@@ -6,7 +6,7 @@ import { onAuthStateChanged, User, signOut, createUserWithEmailAndPassword, sign
 import { auth, db } from '@/lib/firebase';
 import type { SignUpFormData, LoginFormData, MemberSignUpFormData, OrganizationMember, Employee } from '@/lib/types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion, or } from 'firebase/firestore';
-import { createOrganization } from '@/app/actions';
+import { createOrganization, DeadlineSettings } from '@/app/actions';
 
 
 export interface UserProfile {
@@ -23,6 +23,7 @@ export interface UserProfile {
   website?: string;
   status?: 'Uninvited' | 'Invited' | 'Not Verified' | 'Verified';
   organizationDomain?: string;
+  deadlineSettings?: DeadlineSettings;
 }
 
 
@@ -118,7 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 landline: orgData.landline,
                 website: orgData.website,
                 status: memberData.status,
-                organizationDomain: orgData.domain
+                organizationDomain: orgData.domain,
+                deadlineSettings: orgData.deadlineSettings,
             });
             return;
         }
@@ -350,3 +352,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

@@ -1,3 +1,4 @@
+
 "use server";
 
 import {
@@ -143,6 +144,13 @@ interface Settings {
   tenantId: string;
   clientSecret: string;
   userId: string;
+}
+
+export interface DeadlineSettings {
+    Urgent: number;
+    High: number;
+    Medium: number;
+    Low: number;
 }
 
 export async function getAPISettings(organizationId: string): Promise<Settings | null> {
@@ -1263,7 +1271,8 @@ export async function updateTicket(
         companyId?: string | null;
         assignee?: string | null;
     },
-    currentUser: { name: string; email: string }
+    currentUser: { name: string; email: string },
+    deadlineSettings?: DeadlineSettings
 ) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
@@ -1310,19 +1319,22 @@ export async function updateTicket(
             
             if ('priority' in data) {
                 const now = new Date();
+                const settings = deadlineSettings || { Urgent: 1, High: 2, Medium: 3, Low: 4 };
+
                 switch (data.priority) {
-                    case 'Low':
-                        updateData.deadline = addDays(now, 4).toISOString();
-                        break;
-                    case 'Medium':
-                        updateData.deadline = addDays(now, 3).toISOString();
+                    case 'Urgent':
+                        updateData.deadline = addDays(now, settings.Urgent).toISOString();
                         break;
                     case 'High':
-                        updateData.deadline = addDays(now, 2).toISOString();
+                        updateData.deadline = addDays(now, settings.High).toISOString();
                         break;
-                    case 'Urgent':
-                        updateData.deadline = addDays(now, 1).toISOString();
+                    case 'Medium':
+                        updateData.deadline = addDays(now, settings.Medium).toISOString();
                         break;
+                    case 'Low':
+                        updateData.deadline = addDays(now, settings.Low).toISOString();
+                        break;
+                    case 'None':
                     default:
                         updateData.deadline = null;
                         break;
@@ -1865,7 +1877,7 @@ export async function deleteMemberFromOrganization(organizationId: string, email
     
 export async function updateOrganization(
     organizationId: string, 
-    data: { name?: string; address?: string; mobile?: string; landline?: string; website?: string }
+    data: { name?: string; address?: string; mobile?: string; landline?: string; website?: string; deadlineSettings?: DeadlineSettings }
 ) {
     if (!organizationId) {
         throw new Error("Organization ID is required.");
@@ -2581,3 +2593,4 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---
+

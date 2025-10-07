@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note } from '@/app/actions';
+import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note, DeadlineSettings } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -417,7 +417,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
 
         const ticketIdToUpdate = email.id;
 
-        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email});
+        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email}, userProfile.deadlineSettings);
 
         if (!result.success) {
              toast({
@@ -1580,3 +1580,4 @@ return (
     </SidebarProvider>
 );
 }
+

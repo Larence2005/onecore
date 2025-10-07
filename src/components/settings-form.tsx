@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
-import { CheckCircle, AlertTriangle, RefreshCw, Info, Check, ShieldCheck } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, Info, Check, ShieldCheck, Settings } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/providers/auth-provider";
-import { deleteOrganization, createAndVerifyDomain, configureEmailRecords, createLicensedUser, finalizeUserSetup } from "@/app/actions";
+import { deleteOrganization, createAndVerifyDomain, configureEmailRecords, createLicensedUser, finalizeUserSetup, updateOrganization, DeadlineSettings } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, deleteDoc } from 'firebase/firestore';
@@ -57,6 +57,13 @@ const verificationFormSchema = z.object({
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+});
+
+const deadlineSettingsSchema = z.object({
+    Urgent: z.coerce.number().min(0, "Days must be a positive number."),
+    High: z.coerce.number().min(0, "Days must be a positive number."),
+    Medium: z.coerce.number().min(0, "Days must be a positive number."),
+    Low: z.coerce.number().min(0, "Days must be a positive number."),
 });
 
 type VerificationStep = 
@@ -347,12 +354,28 @@ function VerificationArea() {
 }
 
 export function SettingsForm() {
-  const { user, userProfile, logout } = useAuth();
+  const { user, userProfile, logout, fetchUserProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   
   const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
+  const deadlineForm = useForm<z.infer<typeof deadlineSettingsSchema>>({
+    resolver: zodResolver(deadlineSettingsSchema),
+    defaultValues: {
+      Urgent: userProfile?.deadlineSettings?.Urgent ?? 1,
+      High: userProfile?.deadlineSettings?.High ?? 2,
+      Medium: userProfile?.deadlineSettings?.Medium ?? 3,
+      Low: userProfile?.deadlineSettings?.Low ?? 4,
+    },
+  });
+
+  useEffect(() => {
+    if(userProfile?.deadlineSettings) {
+        deadlineForm.reset(userProfile.deadlineSettings);
+    }
+  }, [userProfile?.deadlineSettings, deadlineForm]);
   
   const handleDeleteAccount = async () => {
     if (!user || !userProfile || !user.email) {
@@ -408,6 +431,21 @@ export function SettingsForm() {
     }
   }
 
+  async function onDeadlineSubmit(data: z.infer<typeof deadlineSettingsSchema>) {
+    if (!userProfile?.organizationId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Organization not found.' });
+        return;
+    }
+    try {
+        await updateOrganization(userProfile.organizationId, { deadlineSettings: data });
+        await fetchUserProfile(user!);
+        toast({ title: 'Deadline settings updated successfully.' });
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        toast({ variant: 'destructive', title: 'Update Failed', description: errorMessage });
+    }
+  }
+
   
   return (
     <div className="w-full max-w-2xl space-y-6">
@@ -433,6 +471,81 @@ export function SettingsForm() {
         
         {isOwner && <VerificationArea />}
         
+        {isOwner && (
+             <Card>
+                <Form {...deadlineForm}>
+                    <form onSubmit={deadlineForm.handleSubmit(onDeadlineSubmit)}>
+                        <CardHeader>
+                            <CardTitle>Deadline Configuration</CardTitle>
+                            <CardDescription>
+                                Set the number of days until a ticket is due for each priority level.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField
+                                control={deadlineForm.control}
+                                name="Urgent"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Urgent (Days)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={deadlineForm.control}
+                                name="High"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>High (Days)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={deadlineForm.control}
+                                name="Medium"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Medium (Days)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={deadlineForm.control}
+                                name="Low"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Low (Days)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                        <CardFooter>
+                            <Button type="submit" disabled={deadlineForm.formState.isSubmitting}>
+                                {deadlineForm.formState.isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Deadline Settings
+                            </Button>
+                        </CardFooter>
+                    </form>
+                </Form>
+            </Card>
+        )}
+
         <Card className="border-destructive">
              <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -473,3 +586,4 @@ export function SettingsForm() {
     </div>
   );
 }
+
