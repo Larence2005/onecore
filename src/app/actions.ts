@@ -1318,22 +1318,20 @@ export async function updateTicket(
                 updateData.tags = arrayRemove('Resolved Late');
             }
             
-            if ('priority' in data) {
+            if ('priority' in data && deadlineSettings) {
                 const now = new Date();
-                const settings = deadlineSettings || { Urgent: 1, High: 2, Medium: 3, Low: 4 };
-
                 switch (data.priority) {
                     case 'Urgent':
-                        updateData.deadline = addDays(now, settings.Urgent).toISOString();
+                        updateData.deadline = addDays(now, deadlineSettings.Urgent).toISOString();
                         break;
                     case 'High':
-                        updateData.deadline = addDays(now, settings.High).toISOString();
+                        updateData.deadline = addDays(now, deadlineSettings.High).toISOString();
                         break;
                     case 'Medium':
-                        updateData.deadline = addDays(now, settings.Medium).toISOString();
+                        updateData.deadline = addDays(now, deadlineSettings.Medium).toISOString();
                         break;
                     case 'Low':
-                        updateData.deadline = addDays(now, settings.Low).toISOString();
+                        updateData.deadline = addDays(now, deadlineSettings.Low).toISOString();
                         break;
                     case 'None':
                     default:
