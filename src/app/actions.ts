@@ -1306,6 +1306,7 @@ export async function updateTicket(
         assignee?: string | null;
     },
     currentUser: { name: string; email: string },
+    clientNow: string,
     deadlineSettings?: DeadlineSettings
 ) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
@@ -1319,6 +1320,9 @@ export async function updateTicket(
         let originalCompanyId: string | null;
         let originalTags: string[];
         let updateData: any;
+        
+        const now = clientNow ? parseISO(clientNow) : new Date();
+        const nowISO = now.toISOString();
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -1340,7 +1344,7 @@ export async function updateTicket(
 
             if (data.status && (data.status === 'Resolved' || data.status === 'Closed')) {
                 if(originalStatus !== 'Resolved' && originalStatus !== 'Closed') {
-                    updateData.closedAt = new Date().toISOString();
+                    updateData.closedAt = nowISO;
                 }
                 if (ticketData.deadline && isPast(parseISO(ticketData.deadline))) {
                     updateData.tags = arrayUnion('Resolved Late');
@@ -1353,7 +1357,6 @@ export async function updateTicket(
             }
             
             if ('priority' in data && deadlineSettings) {
-                const now = new Date();
                 switch (data.priority) {
                     case 'Urgent':
                         updateData.deadline = add(now, { days: deadlineSettings.Urgent }).toISOString();
@@ -1477,38 +1480,38 @@ export async function updateTicket(
         
         
         if ('priority' in data && data.priority !== originalPriority) {
-            await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: new Date().toISOString(), user: currentUser.email });
+            await addActivityLog(organizationId, id, { type: 'Priority', details: `changed from ${originalPriority} to ${data.priority}`, date: nowISO, user: currentUser.email });
         }
         if (data.status && data.status !== originalStatus) {
-            await addActivityLog(organizationId, id, { type: 'Status', details: `changed from ${originalStatus} to ${data.status}`, date: new Date().toISOString(), user: currentUser.email });
+            await addActivityLog(organizationId, id, { type: 'Status', details: `changed from ${originalStatus} to ${data.status}`, date: nowISO, user: currentUser.email });
         }
         if (data.type && data.type !== originalType) {
-            await addActivityLog(organizationId, id, { type: 'Type', details: `changed from ${originalType} to ${data.type}`, date: new Date().toISOString(), user: currentUser.email });
+            await addActivityLog(organizationId, id, { type: 'Type', details: `changed from ${originalType} to ${data.type}`, date: nowISO, user: currentUser.email });
         }
         if (assigneeChanged) {
             const members = await getOrganizationMembers(organizationId);
             const prevAssigneeName = members.find(m => m.uid === originalAssignee)?.name || 'Unassigned';
             const newAssigneeName = members.find(m => m.uid === data.assignee)?.name || 'Unassigned';
-            await addActivityLog(organizationId, id, { type: 'Assignee', details: `changed from ${prevAssigneeName} to ${newAssigneeName}`, date: new Date().toISOString(), user: currentUser.email });
+            await addActivityLog(organizationId, id, { type: 'Assignee', details: `changed from ${prevAssigneeName} to ${newAssigneeName}`, date: nowISO, user: currentUser.email });
         }
         if (data.companyId !== undefined && data.companyId !== originalCompanyId) {
             const companies = await getCompanies(organizationId);
             const prevCompanyName = companies.find(c => c.id === originalCompanyId)?.name || 'None';
             const newCompanyName = companies.find(c => c.id === data.companyId)?.name || 'None';
-            await addActivityLog(organizationId, id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: new Date().toISOString(), user: currentUser.email });
+            await addActivityLog(organizationId, id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: nowISO, user: currentUser.email });
         }
         if (deadlineChanged) {
             const detail = newData.deadline ? `set to ${format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
-            await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: new Date().toISOString(), user: currentUser.email });
+            await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: nowISO, user: currentUser.email });
         }
         if (data.tags) {
             const addedTags = data.tags.filter(t => !originalTags.includes(t));
             const removedTags = originalTags.filter(t => !data.tags!.includes(t));
             if (addedTags.length > 0) {
-                await addActivityLog(organizationId, id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: new Date().toISOString(), user: currentUser.email });
+                await addActivityLog(organizationId, id, { type: 'Tags', details: `added: ${addedTags.join(', ')}`, date: nowISO, user: currentUser.email });
             }
             if (removedTags.length > 0) {
-                await addActivityLog(organizationId, id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: new Date().toISOString(), user: currentUser.email });
+                await addActivityLog(organizationId, id, { type: 'Tags', details: `removed: ${removedTags.join(', ')}`, date: nowISO, user: currentUser.email });
             }
         }
 

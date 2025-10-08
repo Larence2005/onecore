@@ -98,7 +98,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
 
         const finalValue = field === 'assignee' && value === 'unassigned' ? null : value;
 
-        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, {name: userProfile.name, email: user.email}, userProfile.deadlineSettings);
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, {name: userProfile.name, email: user.email}, new Date().toISOString(), userProfile.deadlineSettings);
         
         if (result.success) {
             toast({

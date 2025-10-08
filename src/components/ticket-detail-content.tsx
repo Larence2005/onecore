@@ -374,12 +374,12 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     }, [email?.conversationId, userProfile?.organizationId]);
 
     
-    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any) => {
+    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any, clientNow: string) => {
         if (!email || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
 
         const ticketIdToUpdate = email.id;
 
-        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email}, userProfile.deadlineSettings);
+        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email}, clientNow, userProfile.deadlineSettings);
 
         if (!result.success) {
              toast({
@@ -409,7 +409,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if(field === 'companyId') setCurrentCompanyId(value);
         if(field === 'assignee') setCurrentAssignee(value);
     
-        await handleUpdate(field, value);
+        await handleUpdate(field, value, new Date().toISOString());
 
         setIsUpdating(false);
         setPendingUpdate(null);
@@ -440,7 +440,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (!currentTags.includes(newTag)) {
                 const updatedTags = [...currentTags, newTag];
                 setCurrentTags(updatedTags);
-                await handleUpdate('tags', updatedTags);
+                await handleUpdate('tags', updatedTags, new Date().toISOString());
                 setTagInput('');
             }
         }
@@ -449,7 +449,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const removeTag = async (tagToRemove: string) => {
         const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
         setCurrentTags(updatedTags);
-        await handleUpdate('tags', updatedTags);
+        await handleUpdate('tags', updatedTags, new Date().toISOString());
     };
 
 
