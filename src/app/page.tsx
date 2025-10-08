@@ -12,22 +12,6 @@ export default function LandingPage() {
           <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="150" height="75" unoptimized />
           <span className="sr-only">Quickdesk</span>
         </Link>
-        <nav className="ml-auto flex items-center gap-4 sm:gap-6">
-          <Button variant="link" asChild>
-            <Link
-              href="/login"
-              className="text-sm font-medium"
-              prefetch={false}
-            >
-              Login
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/signup" prefetch={false}>
-              Sign Up
-            </Link>
-          </Button>
-        </nav>
       </header>
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 px-6 lg:px-[20%]">
@@ -42,9 +26,14 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="space-x-4">
+                <Button asChild size="lg" variant="outline">
+                    <Link href="/login" prefetch={false}>
+                        Login
+                    </Link>
+                </Button>
                 <Button asChild size="lg">
                     <Link href="/signup" prefetch={false}>
-                        Get Started
+                        Sign Up
                     </Link>
                 </Button>
               </div>
