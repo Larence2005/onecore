@@ -15,23 +15,23 @@ export default function LandingPage() {
             <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" className="w-[120px] md:w-[150px]" unoptimized />
             <span className="sr-only">Quickdesk</span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-4">
-            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
+          <nav className="flex items-center space-x-1 md:space-x-4">
+            <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
               <Link href="#" prefetch={false}>
                 About
               </Link>
             </Button>
-            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
+            <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
               <Link href="#" prefetch={false}>
                 Features
               </Link>
             </Button>
-            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
+            <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
               <Link href="#" prefetch={false}>
                 Privacy
               </Link>
             </Button>
-            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
+            <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
               <Link href="#" prefetch={false}>
                 Terms and Policy
               </Link>
