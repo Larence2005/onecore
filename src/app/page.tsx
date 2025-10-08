@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ArrowDown } from 'lucide-react';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -68,8 +68,8 @@ export default function LandingPage() {
             </nav>
           </div>
         )}
-      <main className="flex-1 pt-24">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 px-6 lg:px-[20%]">
+      <main className="flex-1">
+        <section className="w-full h-screen flex flex-col items-center justify-center px-6">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center space-y-4 text-center">
               <div className="space-y-6">
@@ -95,6 +95,9 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+          <div className="md:hidden absolute bottom-10 animate-bounce">
+            <ArrowDown className="h-8 w-8 text-muted-foreground" />
           </div>
         </section>
 
