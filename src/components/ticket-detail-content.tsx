@@ -1258,8 +1258,8 @@ return (
                             </h1>
                         </div>
                     </Header>
-                    <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto">
-                        <div className="p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                    <div className="flex-1 grid lg:grid-cols-[1fr_320px] overflow-y-auto w-full">
+                        <div className="space-y-4 overflow-y-auto lg:p-8 sm:p-6 p-4">
                                 {isLoading && (
                                     <div className="space-y-4">
                                         {[...Array(2)].map((_, i) => (
@@ -1329,7 +1329,7 @@ return (
                                 )}
                             </div>
                             
-                            <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                            <aside className="border-l bg-muted p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                                 {isLoading && (
                                     <>
                                     <Card>
@@ -1582,3 +1582,5 @@ return (
     </SidebarProvider>
 );
 }
+
+    
