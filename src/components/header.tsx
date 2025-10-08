@@ -10,10 +10,12 @@ type HeaderProps = {
 export function Header({ children }: HeaderProps) {
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-background px-4">
+        <div className="flex flex-1 items-center gap-2">
+            {children}
+        </div>
         <div className="flex items-center gap-2 lg:hidden">
             <SidebarTrigger />
         </div>
-        {children}
     </header>
   );
 }
