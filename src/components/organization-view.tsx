@@ -318,8 +318,8 @@ export function OrganizationView() {
 
     return (
         <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
-                <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full">
+                <div className="lg:col-span-3 space-y-6">
                     <div className="flex justify-between items-start">
                         <div>
                             <h1 className="text-2xl font-bold">{userProfile.organizationName || 'Your Organization'}</h1>
