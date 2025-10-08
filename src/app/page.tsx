@@ -75,7 +75,7 @@ export default function LandingPage() {
                   Quickdesk is a powerful and intuitive ticketing system designed to help you manage customer inquiries
                   with ease and efficiency.
                 </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="flex flex-row items-center justify-center gap-4">
                   <Button asChild size="sm" variant="outline" className="border-black sm:size-lg">
                     <Link href="/login" prefetch={false}>
                       Login
