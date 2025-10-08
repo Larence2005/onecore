@@ -49,15 +49,13 @@ export default function LandingPage() {
           </div>
         </header>
         {isMenuOpen && (
-          <div className="md:hidden fixed inset-x-0 top-20 z-40 p-4">
-             <div className="bg-card/95 backdrop-blur-sm rounded-lg shadow-lg border p-4">
-                <nav className="flex flex-col space-y-4">
-                    <Link href="#" className="text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
-                    <Link href="#" className="text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
-                    <Link href="#" className="text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Privacy</Link>
-                    <Link href="#" className="text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Terms and Policy</Link>
-                </nav>
-             </div>
+          <div className="md:hidden fixed inset-0 z-40 bg-background flex flex-col items-center justify-center">
+            <nav className="flex flex-col items-center space-y-8">
+                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
+                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
+                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Privacy</Link>
+                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Terms and Policy</Link>
+            </nav>
           </div>
         )}
       </div>
