@@ -63,7 +63,11 @@ const features = [
     icon: <Pencil className="w-8 h-8 text-orange-500" />,
     title: "Internal Notes",
     description: "Collaborate with your team by adding private, team-only notes to any ticket. Share information, ask questions, and resolve issues faster without the client seeing the internal chatter.",
-    image: placeholderImages.feature6,
+    image: {
+      src: "/InternalNotes.png",
+      width: 600,
+      height: 400
+    },
   },
   {
     icon: <Activity className="w-8 h-8 text-red-500" />,
@@ -173,7 +177,7 @@ export default function FeaturesPage() {
                                     width={feature.image.width}
                                     height={feature.image.height}
                                     className="overflow-hidden rounded-xl object-contain object-center border border-black"
-                                    data-ai-hint={feature.image['data-ai-hint']}
+                                    data-ai-hint={(feature.image as any)['data-ai-hint']}
                                     unoptimized
                                 />
                             </div>
