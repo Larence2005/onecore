@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "./ui/card";
-import { CheckCircle, AlertTriangle, RefreshCw, Info, Check, ShieldCheck, Settings } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, Info, Check, ShieldCheck, Settings, Pencil } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -358,6 +358,7 @@ export function SettingsForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditingDeadlines, setIsEditingDeadlines] = useState(false);
   
   const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 
@@ -440,6 +441,7 @@ export function SettingsForm() {
         await updateOrganization(userProfile.organizationId, { deadlineSettings: data });
         await fetchUserProfile(user!);
         toast({ title: 'Deadline settings updated successfully.' });
+        setIsEditingDeadlines(false);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         toast({ variant: 'destructive', title: 'Update Failed', description: errorMessage });
@@ -476,71 +478,107 @@ export function SettingsForm() {
                 <Form {...deadlineForm}>
                     <form onSubmit={deadlineForm.handleSubmit(onDeadlineSubmit)}>
                         <CardHeader>
-                            <CardTitle>Deadline Configuration</CardTitle>
-                            <CardDescription>
-                                Set the number of days until a ticket is due for each priority level.
-                            </CardDescription>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>Deadline Configuration</CardTitle>
+                                    <CardDescription>
+                                        Set the number of days until a ticket is due for each priority level.
+                                    </CardDescription>
+                                </div>
+                                {!isEditingDeadlines && (
+                                    <Button variant="secondary" size="sm" onClick={() => setIsEditingDeadlines(true)}>
+                                        <Pencil className="mr-2 h-3 w-3" />
+                                        Edit
+                                    </Button>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                                control={deadlineForm.control}
-                                name="Urgent"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Urgent (Days)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={deadlineForm.control}
-                                name="High"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>High (Days)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={deadlineForm.control}
-                                name="Medium"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Medium (Days)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={deadlineForm.control}
-                                name="Low"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Low (Days)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            {isEditingDeadlines ? (
+                                <>
+                                    <FormField
+                                        control={deadlineForm.control}
+                                        name="Urgent"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Urgent (Days)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={deadlineForm.control}
+                                        name="High"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>High (Days)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={deadlineForm.control}
+                                        name="Medium"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Medium (Days)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={deadlineForm.control}
+                                        name="Low"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Low (Days)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <div className="space-y-1">
+                                        <Label className="text-muted-foreground">Urgent</Label>
+                                        <p>{userProfile?.deadlineSettings?.Urgent ?? 1} days</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-muted-foreground">High</Label>
+                                        <p>{userProfile?.deadlineSettings?.High ?? 2} days</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-muted-foreground">Medium</Label>
+                                        <p>{userProfile?.deadlineSettings?.Medium ?? 3} days</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-muted-foreground">Low</Label>
+                                        <p>{userProfile?.deadlineSettings?.Low ?? 4} days</p>
+                                    </div>
+                                </>
+                            )}
                         </CardContent>
-                        <CardFooter>
-                            <Button type="submit" disabled={deadlineForm.formState.isSubmitting}>
-                                {deadlineForm.formState.isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Deadline Settings
-                            </Button>
-                        </CardFooter>
+                        {isEditingDeadlines && (
+                             <CardFooter className="justify-end gap-2">
+                                <Button variant="ghost" type="button" onClick={() => setIsEditingDeadlines(false)}>Cancel</Button>
+                                <Button type="submit" disabled={deadlineForm.formState.isSubmitting}>
+                                    {deadlineForm.formState.isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save Settings
+                                </Button>
+                            </CardFooter>
+                        )}
                     </form>
                 </Form>
             </Card>
