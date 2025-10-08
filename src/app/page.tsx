@@ -125,13 +125,15 @@ export default function LandingPage() {
                 </li>
               </ul>
             </div>
-             <Image
-              src="/image1.png"
-              alt="Quickdesk Key Features"
-              width={500}
-              height={333}
-              className="mx-auto overflow-hidden rounded-xl object-contain object-center sm:w-full"
-            />
+             <div className="w-1/2 mx-auto">
+                <Image
+                    src="/image1.png"
+                    alt="Quickdesk Key Features"
+                    width={500}
+                    height={333}
+                    className="overflow-hidden rounded-xl object-contain object-center sm:w-full"
+                />
+            </div>
           </div>
         </section>
       </main>
