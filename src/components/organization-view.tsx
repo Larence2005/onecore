@@ -47,6 +47,7 @@ import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { PropertyItem } from './property-item';
 import { Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
+import { Avatar, AvatarFallback } from './ui/avatar';
 
 
 export function OrganizationView() {
@@ -383,6 +384,7 @@ export function OrganizationView() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[60px]"></TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Type</TableHead>
@@ -395,6 +397,11 @@ export function OrganizationView() {
                                     const memberIsOwner = member.uid === userProfile.organizationOwnerUid;
                                     return (
                                         <TableRow key={member.email}>
+                                            <TableCell>
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarFallback>{member.name}</AvatarFallback>
+                                                </Avatar>
+                                            </TableCell>
                                             <TableCell className="font-medium">
                                                 <Link href={`/organization/members/${encodeURIComponent(member.email)}`} className="hover:underline">
                                                     {member.name}
@@ -502,7 +509,7 @@ export function OrganizationView() {
                                     );
                                 }) : (
                                     <TableRow>
-                                        <TableCell colSpan={isOwner ? 5 : 4} className="h-24 text-center">
+                                        <TableCell colSpan={isOwner ? 6 : 5} className="h-24 text-center">
                                             No agents found.
                                         </TableCell>
                                     </TableRow>

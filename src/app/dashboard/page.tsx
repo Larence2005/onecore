@@ -289,7 +289,7 @@ function HomePageContent() {
                     </div>
                     <div className="flex items-center gap-4">
                         <Avatar className="h-9 w-9">
-                        <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                           <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
                             <span className="font-medium text-sm">{userProfile?.name || user.email}</span>

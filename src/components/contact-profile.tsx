@@ -393,7 +393,7 @@ export function ContactProfile({ email }: { email: string }) {
                         </div>
                         <div className="flex items-center gap-4">
                             <Avatar className="h-9 w-9">
-                            <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col">
                                 <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
@@ -483,7 +483,7 @@ export function ContactProfile({ email }: { email: string }) {
                         <div className="lg:col-span-2 xl:col-span-3 space-y-6">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                                 <Avatar className="h-20 w-20 text-3xl">
-                                    <AvatarFallback>{profileData.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                    <AvatarFallback>{profileData.name}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                     <h2 className="text-3xl font-bold">{profileData.name}</h2>
