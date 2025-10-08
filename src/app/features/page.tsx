@@ -43,7 +43,11 @@ const features = [
     icon: <Shield className="w-10 h-10 text-green-500" />,
     title: "Advanced Ticket Properties",
     description: "Manage tickets with assignees, status, priority, type, deadlines, and tags. Customize your workflow to fit your team's needs and track tickets from creation to resolution.",
-    image: placeholderImages.feature4,
+    image: {
+      src: "/AdvancedTicketProperties.png",
+      width: 600,
+      height: 400
+    },
   },
   {
     icon: <Bell className="w-8 h-8 text-yellow-500" />,
