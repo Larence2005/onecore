@@ -496,7 +496,7 @@ export function SettingsForm() {
                         </CardHeader>
                         <CardContent>
                             {isEditingDeadlines ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                     <FormField
                                         control={deadlineForm.control}
                                         name="Urgent"
@@ -625,3 +625,5 @@ export function SettingsForm() {
     </div>
   );
 }
+
+    
