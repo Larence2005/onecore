@@ -36,20 +36,15 @@ const generateColor = (name: string) => {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        hash = hash & hash; // Convert to 32bit integer
     }
-    const h = hash % 360;
-    return `hsl(${h}, 50%, 85%)`;
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, 70%, 80%)`;
 };
 
 const getTextColor = (bgColor: string) => {
-    // A simple heuristic to determine if the background is light or dark
-    // This could be improved, but for HSL with high lightness, dark text is better.
-    const hslValues = bgColor.match(/\d+/g);
-    if (hslValues) {
-        const lightness = parseInt(hslValues[2], 10);
-        return lightness > 60 ? 'hsl(0, 0%, 10%)' : 'hsl(0, 0%, 98%)';
-    }
-    return 'hsl(0, 0%, 10%)'; // default to dark text
+    // This is a simplified check. For the HSL values we're using, a dark text will always be more readable.
+    return 'hsl(0, 0%, 10%)'; // Dark text for good contrast on pastel backgrounds
 }
 
 const AvatarFallback = React.forwardRef<
