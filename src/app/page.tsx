@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -76,12 +77,12 @@ export default function LandingPage() {
                   with ease and efficiency.
                 </p>
                 <div className="flex flex-row items-center justify-center gap-4">
-                  <Button asChild size="sm" variant="outline" className="border-black sm:size-auto sm:px-6">
+                  <Button asChild size="sm" variant="outline" className="border-black sm:h-10 sm:px-6">
                     <Link href="/login" prefetch={false}>
                       Login
                     </Link>
                   </Button>
-                  <Button asChild size="sm" className="sm:size-auto sm:px-6">
+                  <Button asChild size="sm" className="sm:h-10 sm:px-6">
                     <Link href="/signup" prefetch={false}>
                       Sign Up
                     </Link>
