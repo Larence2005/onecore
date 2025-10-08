@@ -100,7 +100,7 @@ export function ArchiveView() {
 
 
     return (
-        <div className="flex flex-col h-full bg-background p-2 sm:p-4 lg:p-6">
+        <div className="flex flex-col h-full bg-muted p-2 sm:p-4 lg:p-6">
             {selectedTickets.length > 0 && (
                 <div className="flex-shrink-0 flex items-center justify-between p-2 mb-4 bg-muted border rounded-lg">
                      <div className="flex items-center gap-4">
