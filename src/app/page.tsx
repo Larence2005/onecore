@@ -20,12 +20,12 @@ export default function LandingPage() {
           </Link>
           <nav className="hidden md:flex items-center space-x-1 md:space-x-4">
             <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
-              <Link href="#" prefetch={false}>
+              <Link href="#about" prefetch={false}>
                 About
               </Link>
             </Button>
             <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
-              <Link href="#" prefetch={false}>
+              <Link href="/features" prefetch={false}>
                 Features
               </Link>
             </Button>
@@ -49,14 +49,14 @@ export default function LandingPage() {
         </header>
       </div>
         {isMenuOpen && (
-          <div className="md:hidden fixed inset-0 z-50 bg-background flex flex-col items-center justify-center">
+          <div className="md:hidden fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center">
             <Button onClick={() => setIsMenuOpen(false)} variant="ghost" size="icon" className="absolute top-6 right-6 h-8 w-8">
               <X className="h-6 w-6" />
               <span className="sr-only">Close menu</span>
             </Button>
             <nav className="flex flex-col items-center space-y-8">
-                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
-                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
+                <Link href="#about" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
+                <Link href="/features" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
                 <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Privacy</Link>
                 <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Terms and Policy</Link>
             </nav>
@@ -76,12 +76,12 @@ export default function LandingPage() {
                   with ease and efficiency.
                 </p>
                 <div className="flex flex-row items-center justify-center gap-4">
-                  <Button asChild size="sm" variant="outline" className="border-black sm:size-lg">
+                  <Button asChild size="sm" variant="outline" className="border-black sm:size-auto sm:px-6">
                     <Link href="/login" prefetch={false}>
                       Login
                     </Link>
                   </Button>
-                  <Button asChild size="sm" className="sm:size-lg">
+                  <Button asChild size="sm" className="sm:size-auto sm:px-6">
                     <Link href="/signup" prefetch={false}>
                       Sign Up
                     </Link>
@@ -91,6 +91,48 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        <section id="about" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+          <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12">
+            <div className="space-y-4">
+              <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary">Key Features</div>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">All-in-One Support Platform</h2>
+              <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                From intelligent ticket routing to automated responses and a comprehensive analytics dashboard, Quickdesk provides everything your team needs to deliver exceptional customer service.
+              </p>
+              <ul className="grid gap-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircleIcon className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Efficient Ticket Management</h3>
+                    <p className="text-muted-foreground">Organize, prioritize, and assign tickets with ease.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircleIcon className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Seamless Client Communication</h3>
+                    <p className="text-muted-foreground">Communicate via email and internal notes, all in one place.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircleIcon className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Powerful Automation</h3>
+                    <p className="text-muted-foreground">Automate notifications, deadline reminders, and more.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+             <Image
+              src="/image.png"
+              alt="Feature image"
+              width={600}
+              height={400}
+              className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full"
+            />
+          </div>
+        </section>
       </main>
       <footer
         className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-6 lg:px-[20%] border-t">
@@ -98,4 +140,24 @@ export default function LandingPage() {
       </footer>
     </div>
   );
+}
+
+function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  )
 }
