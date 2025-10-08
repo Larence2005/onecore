@@ -24,6 +24,7 @@ import RichTextEditor from "./rich-text-editor";
 import { useAuth } from "@/providers/auth-provider";
 import { AutocompleteInput } from "./autocomplete-input";
 import { Badge } from "./ui/badge";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card";
 
 const emailListRegex = /^$|^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(, *[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})*$/;
 
@@ -151,14 +152,14 @@ export function CreateTicketForm() {
   const isBccVisible = showBcc || !!form.watch('bcc');
 
   return (
-    <div className="max-w-2xl w-full">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Create a New Ticket</h2>
-        <p className="text-muted-foreground">
+    <Card className="max-w-2xl w-full">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold">Create a New Ticket</CardTitle>
+        <CardDescription>
           Fill out the form below to submit a new support ticket.
-        </p>
-      </div>
-      <div>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex items-center gap-2">
@@ -296,7 +297,7 @@ export function CreateTicketForm() {
             </Button>
           </form>
         </Form>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
