@@ -13,6 +13,7 @@ import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 import axios from 'axios';
@@ -1403,7 +1404,8 @@ export async function updateTicket(
                 }
                 
                 if (deadlineChanged && newData.deadline) {
-                    const formattedDeadline = format(parseISO(newData.deadline), 'PPpp');
+                    const timezone = headersList.get('x-vercel-ip-timezone') || 'UTC';
+                    const formattedDeadline = formatInTimeZone(parseISO(newData.deadline), timezone, 'PPpp zzz');
                     body += `<p>The deadline for this ticket has been set to: <b>${formattedDeadline}</b>.</p>`;
                 } else if (deadlineChanged && !newData.deadline) {
                      body += `<p>The deadline for this ticket has been removed.</p>`;
@@ -2656,5 +2658,6 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---
+
 
 
