@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -73,7 +72,11 @@ const features = [
     icon: <Activity className="w-8 h-8 text-red-500" />,
     title: "Activity Log",
     description: "Maintain a complete audit trail of every ticket. A detailed, chronological activity log tracks every single change, comment, and action from start to finish.",
-    image: placeholderImages.feature7,
+    image: {
+        src: "/ActivityLog.png",
+        width: 600,
+        height: 400
+    },
   },
   {
     icon: <LayoutDashboard className="w-8 h-8 text-indigo-500" />,
