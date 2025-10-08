@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -26,7 +27,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="space-x-4">
-                <Button asChild size="lg" variant="outline">
+                <Button asChild size="lg" variant="outline" className="border-black">
                     <Link href="/login" prefetch={false}>
                         Login
                     </Link>
