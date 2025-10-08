@@ -8,14 +8,28 @@ import Image from 'next/image';
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="px-6 lg:px-[20%] h-16 flex items-center">
-        <Link href="#" className="flex items-center justify-center" prefetch={false}>
-          <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="150" height="75" unoptimized />
-          <span className="sr-only">Quickdesk</span>
-        </Link>
-      </header>
-      <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 px-6 lg:px-[20%]">
+      <div className="fixed top-0 left-0 right-0 z-50 p-4">
+        <header className="container mx-auto max-w-5xl flex items-center justify-between h-16 px-6 bg-card/80 backdrop-blur-sm rounded-full shadow-md border">
+          <Link href="#" className="flex items-center justify-center" prefetch={false}>
+            <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="150" height="75" unoptimized />
+            <span className="sr-only">Quickdesk</span>
+          </Link>
+          <nav className="flex items-center space-x-2">
+            <Button asChild variant="ghost">
+              <Link href="/login" prefetch={false}>
+                Login
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/signup" prefetch={false}>
+                Sign Up
+              </Link>
+            </Button>
+          </nav>
+        </header>
+      </div>
+      <main className="flex-1 pt-24">
+        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 px-6">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center space-y-4 text-center">
               <div className="space-y-2">
@@ -25,18 +39,6 @@ export default function LandingPage() {
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
                   Quickdesk is a powerful and intuitive ticketing system designed to help you manage customer inquiries with ease and efficiency.
                 </p>
-              </div>
-              <div className="space-x-4">
-                <Button asChild size="lg" variant="outline" className="border-black">
-                    <Link href="/login" prefetch={false}>
-                        Login
-                    </Link>
-                </Button>
-                <Button asChild size="lg">
-                    <Link href="/signup" prefetch={false}>
-                        Sign Up
-                    </Link>
-                </Button>
               </div>
             </div>
           </div>
