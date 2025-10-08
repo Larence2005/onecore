@@ -127,10 +127,10 @@ export default function LandingPage() {
             </div>
              <Image
               src="/image1.png"
-              alt="Key Features"
+              alt="Quickdesk Key Features"
               width={600}
               height={400}
-              className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full"
+              className="mx-auto overflow-hidden rounded-xl object-contain object-center sm:w-full"
             />
           </div>
         </section>
