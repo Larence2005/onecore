@@ -1321,7 +1321,7 @@ export async function updateTicket(
         let originalTags: string[];
         let updateData: any;
         
-        const now = clientNow ? parseISO(clientNow) : new Date();
+        const now = parseISO(clientNow);
         const nowISO = now.toISOString();
         
         await runTransaction(db, async (transaction) => {
@@ -1407,7 +1407,8 @@ export async function updateTicket(
                 }
                 
                 if (deadlineChanged && newData.deadline) {
-                    const formattedDeadline = format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a');
+                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    const formattedDeadline = formatInTimeZone(parseISO(newData.deadline), timeZone, 'MMM d, yyyy h:mm a zzz');
                     body += `<p>The deadline for this ticket has been set to: <b>${formattedDeadline}</b>.</p>`;
                 } else if (deadlineChanged && !newData.deadline) {
                      body += `<p>The deadline for this ticket has been removed.</p>`;
@@ -1501,7 +1502,8 @@ export async function updateTicket(
             await addActivityLog(organizationId, id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: nowISO, user: currentUser.email });
         }
         if (deadlineChanged) {
-            const detail = newData.deadline ? `set to ${format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a')}` : 'removed';
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const detail = newData.deadline ? `set to ${formatInTimeZone(parseISO(newData.deadline), timeZone, 'MMM d, yyyy h:mm a zzz')}` : 'removed';
             await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: nowISO, user: currentUser.email });
         }
         if (data.tags) {

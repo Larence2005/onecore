@@ -429,7 +429,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     }
     
     const handleDeadlineChange = (date: Date | undefined) => {
-        const label = date ? format(date, 'PP') : 'cleared';
+        setCurrentDeadline(date);
+        const label = date ? format(date, 'PPpp') : 'cleared';
         setPendingUpdate({ field: 'deadline', value: date ? date.toISOString() : null, label });
     }
     
