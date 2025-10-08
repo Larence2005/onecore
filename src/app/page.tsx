@@ -31,6 +31,11 @@ export default function LandingPage() {
             </Button>
             <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
               <Link href="#" prefetch={false}>
+                Pricing
+              </Link>
+            </Button>
+            <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
+              <Link href="#" prefetch={false}>
                 Privacy
               </Link>
             </Button>
@@ -57,6 +62,7 @@ export default function LandingPage() {
             <nav className="flex flex-col items-center space-y-8">
                 <Link href="#about" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
                 <Link href="/features" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
+                <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
                 <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Privacy</Link>
                 <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Terms and Policy</Link>
             </nav>
