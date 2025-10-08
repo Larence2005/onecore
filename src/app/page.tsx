@@ -96,7 +96,7 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="md:hidden absolute bottom-10 animate-bounce">
+          <div className="absolute bottom-10 animate-bounce">
             <ArrowDown className="h-8 w-8 text-muted-foreground" />
           </div>
         </section>
