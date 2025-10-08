@@ -1404,8 +1404,7 @@ export async function updateTicket(
                 }
                 
                 if (deadlineChanged && newData.deadline) {
-                    const timezone = headersList.get('x-vercel-ip-timezone') || 'UTC';
-                    const formattedDeadline = formatInTimeZone(parseISO(newData.deadline), timezone, 'PPpp zzz');
+                    const formattedDeadline = format(parseISO(newData.deadline), 'MMM d, yyyy h:mm a');
                     body += `<p>The deadline for this ticket has been set to: <b>${formattedDeadline}</b>.</p>`;
                 } else if (deadlineChanged && !newData.deadline) {
                      body += `<p>The deadline for this ticket has been removed.</p>`;
@@ -2658,6 +2657,4 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---
-
-
 
