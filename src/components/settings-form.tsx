@@ -494,9 +494,9 @@ export function SettingsForm() {
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <CardContent>
                             {isEditingDeadlines ? (
-                                <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormField
                                         control={deadlineForm.control}
                                         name="Urgent"
@@ -549,26 +549,26 @@ export function SettingsForm() {
                                             </FormItem>
                                         )}
                                     />
-                                </>
+                                </div>
                             ) : (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Urgent</span>
-                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.Urgent ?? 1} days</span>
+                                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-muted-foreground">Urgent:</span>
+                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Urgent ?? 1} days</span>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">High</span>
-                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.High ?? 2} days</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-muted-foreground">High:</span>
+                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.High ?? 2} days</span>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Medium</span>
-                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.Medium ?? 3} days</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-muted-foreground">Medium:</span>
+                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Medium ?? 3} days</span>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Low</span>
-                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.Low ?? 4} days</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-muted-foreground">Low:</span>
+                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Low ?? 4} days</span>
                                     </div>
-                                </>
+                                </div>
                             )}
                         </CardContent>
                         {isEditingDeadlines && (
