@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
-import { TicketsFilter, FilterState } from '@/components/tickets-filter';
+import { TicketsFilter } from '@/components/tickets-filter';
 import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
 import { getCompanies, getLatestEmails, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -279,7 +279,7 @@ function HomePageContent() {
     <SidebarProvider>
       <div className={cn(
         "grid min-h-screen w-full",
-        activeView === 'tickets' ? "lg:grid-cols-[auto_1fr_280px]" : "lg:grid-cols-[auto_1fr]"
+        activeView === 'tickets' ? "lg:grid-cols-[auto_minmax(0,1fr)_auto]" : "lg:grid-cols-[auto_1fr]"
       )}>
         <Sidebar>
             <div className="flex-grow flex flex-col">
@@ -499,3 +499,4 @@ export default function DashboardPage() {
       </React.Suspense>
   )
 }
+
