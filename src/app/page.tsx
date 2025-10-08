@@ -136,6 +136,7 @@ export default function LandingPage() {
                     width={500}
                     height={333}
                     className="overflow-hidden rounded-xl object-contain object-center sm:w-full"
+                    unoptimized
                 />
             </div>
           </div>
