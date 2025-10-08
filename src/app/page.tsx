@@ -41,14 +41,19 @@ export default function LandingPage() {
             </Button>
           </nav>
           <div className="md:hidden">
-            <Button onClick={() => setIsMenuOpen(!isMenuOpen)} variant="ghost" size="icon">
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              <span className="sr-only">Toggle menu</span>
+            <Button onClick={() => setIsMenuOpen(true)} variant="ghost" size="icon">
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Open menu</span>
             </Button>
           </div>
         </header>
+      </div>
         {isMenuOpen && (
-          <div className="md:hidden fixed inset-0 z-40 bg-background flex flex-col items-center justify-center">
+          <div className="md:hidden fixed inset-0 z-50 bg-background flex flex-col items-center justify-center">
+            <Button onClick={() => setIsMenuOpen(false)} variant="ghost" size="icon" className="absolute top-6 right-6 h-8 w-8">
+              <X className="h-6 w-6" />
+              <span className="sr-only">Close menu</span>
+            </Button>
             <nav className="flex flex-col items-center space-y-8">
                 <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
                 <Link href="#" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
@@ -57,7 +62,6 @@ export default function LandingPage() {
             </nav>
           </div>
         )}
-      </div>
       <main className="flex-1 pt-24">
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 px-6 lg:px-[20%]">
           <div className="container px-4 md:px-6">
@@ -72,12 +76,12 @@ export default function LandingPage() {
                   with ease and efficiency.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button asChild size="lg" variant="outline" className="border-black">
+                  <Button asChild size="sm" variant="outline" className="border-black sm:size-lg">
                     <Link href="/login" prefetch={false}>
                       Login
                     </Link>
                   </Button>
-                  <Button asChild size="lg">
+                  <Button asChild size="sm" className="sm:size-lg">
                     <Link href="/signup" prefetch={false}>
                       Sign Up
                     </Link>
