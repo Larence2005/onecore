@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, LayoutDashboard } from 'lucide-react';
-import { placeholderImages } from '@/lib/placeholder-images.json';
 
 const features = [
   {
@@ -82,7 +81,11 @@ const features = [
     icon: <LayoutDashboard className="w-8 h-8 text-indigo-500" />,
     title: "Analytics Dashboard",
     description: "Get a high-level overview of your support operations with insightful charts and stats. Track key metrics like ticket volume, resolution times, and agent performance to make data-driven decisions.",
-    image: placeholderImages.feature8,
+    image: {
+      src: "/AnalyticsDashboard.png",
+      width: 600,
+      height: 400
+    },
   },
 ];
 
