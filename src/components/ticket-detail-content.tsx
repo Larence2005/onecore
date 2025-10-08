@@ -1160,7 +1160,7 @@ const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unas
 return (
     <SidebarProvider>
         <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
-            <div className="grid min-h-screen w-auto lg:grid-cols-[220px_1fr]">
+            <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
                 <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
                     <div className="flex-grow flex flex-col">
                         <SidebarHeader className="p-4 flex flex-col gap-4">
@@ -1329,7 +1329,7 @@ return (
                                 )}
                             </div>
                             
-                            <aside className="border-l bg-muted p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                            <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                                 {isLoading && (
                                     <>
                                     <Card>
