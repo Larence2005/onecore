@@ -10,49 +10,49 @@ import { placeholderImages } from '@/lib/placeholder-images.json';
 
 const features = [
   {
-    icon: <Mail className="w-8 h-8 text-primary" />,
+    icon: <Mail className="w-8 h-8 text-blue-500" />,
     title: "Multi-Channel Ticket Creation",
     description: "Create tickets via email or manually through the user interface, ensuring no customer query is missed. Quickdesk automatically imports and organizes emails into actionable tickets.",
     image: placeholderImages.feature1,
   },
   {
-    icon: <Building className="w-8 h-8 text-primary" />,
+    icon: <Building className="w-8 h-8 text-purple-500" />,
     title: "Client & Company Management",
     description: "Organize clients into companies to get a clear overview of all associated tickets, employees, and communication history. Keep your client relationships organized and accessible.",
     image: placeholderImages.feature2,
   },
     {
-    icon: <Users className="w-8 h-8 text-primary" />,
+    icon: <Users className="w-8 h-8 text-pink-500" />,
     title: "Agent Management",
     description: "Invite, manage, and assign roles to your support team members. Ensure the right agent is always on the right ticket with clear ownership and permissions.",
     image: placeholderImages.feature3,
   },
   {
-    icon: <Shield className="w-8 h-8 text-primary" />,
+    icon: <Shield className="w-8 h-8 text-green-500" />,
     title: "Advanced Ticket Properties",
     description: "Manage tickets with assignees, status, priority, type, deadlines, and tags. Customize your workflow to fit your team's needs and track tickets from creation to resolution.",
     image: placeholderImages.feature4,
   },
   {
-    icon: <Bell className="w-8 h-8 text-primary" />,
+    icon: <Bell className="w-8 h-8 text-yellow-500" />,
     title: "Automated Notifications",
     description: "Keep everyone in the loop with automatic email alerts for ticket creation, assignments, status changes, and resolutions. Reduce manual work and ensure timely responses.",
     image: placeholderImages.feature5,
   },
     {
-    icon: <Pencil className="w-8 h-8 text-primary" />,
+    icon: <Pencil className="w-8 h-8 text-orange-500" />,
     title: "Internal Notes",
     description: "Collaborate with your team by adding private, team-only notes to any ticket. Share information, ask questions, and resolve issues faster without the client seeing the internal chatter.",
     image: placeholderImages.feature6,
   },
   {
-    icon: <Activity className="w-8 h-8 text-primary" />,
+    icon: <Activity className="w-8 h-8 text-red-500" />,
     title: "Activity Log",
     description: "Maintain a complete audit trail of every ticket. A detailed, chronological activity log tracks every single change, comment, and action from start to finish.",
     image: placeholderImages.feature7,
   },
   {
-    icon: <LayoutDashboard className="w-8 h-8 text-primary" />,
+    icon: <LayoutDashboard className="w-8 h-8 text-indigo-500" />,
     title: "Analytics Dashboard",
     description: "Get a high-level overview of your support operations with insightful charts and stats. Track key metrics like ticket volume, resolution times, and agent performance to make data-driven decisions.",
     image: placeholderImages.feature8,
@@ -138,10 +138,10 @@ export default function FeaturesPage() {
                     <section key={index} className="w-full">
                         <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12 mx-auto max-w-5xl">
                            <div className={`space-y-4 ${index % 2 === 1 ? 'lg:order-last' : ''}`}>
-                              <div className="inline-block rounded-lg bg-muted p-3">
+                              <div className="flex items-center gap-4">
                                 {feature.icon}
+                                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">{feature.title}</h2>
                               </div>
-                              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">{feature.title}</h2>
                               <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                                 {feature.description}
                               </p>
@@ -171,5 +171,3 @@ export default function FeaturesPage() {
     </div>
   );
 }
-
-    
