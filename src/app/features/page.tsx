@@ -23,7 +23,11 @@ const features = [
     icon: <Building className="w-10 h-10 text-purple-500" />,
     title: "Client & Company Management",
     description: "Organize clients into companies to get a clear overview of all associated tickets, employees, and communication history. Keep your client relationships organized and accessible.",
-    image: placeholderImages.feature2,
+    image: {
+        src: "/Client&CompanyManagement.png",
+        width: 600,
+        height: 400
+    },
   },
     {
     icon: <Users className="w-8 h-8 text-pink-500" />,
