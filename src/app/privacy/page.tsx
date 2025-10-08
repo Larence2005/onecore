@@ -4,54 +4,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, BarChart, Settings, LayoutDashboard } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Menu, X } from 'lucide-react';
 
-const features = [
-  {
-    icon: <Mail className="w-8 h-8 text-primary" />,
-    title: "Multi-Channel Ticket Creation",
-    description: "Create tickets via email or manually through the user interface.",
-  },
-  {
-    icon: <Building className="w-8 h-8 text-primary" />,
-    title: "Client & Company Management",
-    description: "Organize clients into companies and track all associated tickets.",
-  },
-    {
-    icon: <Users className="w-8 h-8 text-primary" />,
-    title: "Agent Management",
-    description: "Invite, manage, and assign roles to your support team members.",
-  },
-  {
-    icon: <Shield className="w-8 h-8 text-primary" />,
-    title: "Advanced Ticket Properties",
-    description: "Manage tickets with assignees, status, priority, type, deadlines, and tags.",
-  },
-  {
-    icon: <Bell className="w-8 h-8 text-primary" />,
-    title: "Automated Notifications",
-    description: "Automatic email alerts for ticket creation, assignments, and resolutions.",
-  },
-    {
-    icon: <Pencil className="w-8 h-8 text-primary" />,
-    title: "Internal Notes",
-    description: "Add private, team-only notes to any ticket for internal communication.",
-  },
-  {
-    icon: <Activity className="w-8 h-8 text-primary" />,
-    title: "Activity Log",
-    description: "A detailed audit trail tracks every single change made to a ticket.",
-  },
-  {
-    icon: <LayoutDashboard className="w-8 h-8 text-primary" />,
-    title: "Analytics Dashboard",
-    description: "Get a high-level overview of support operations with insightful charts.",
-  },
-];
-
-
-export default function FeaturesPage() {
+export default function PrivacyPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -115,25 +70,26 @@ export default function FeaturesPage() {
         )}
       <main className="flex-1 pt-24">
         <section className="w-full py-12 md:py-24 px-4">
-          <div className="container px-4 md:px-6">
+          <div className="container px-4 md:px-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center space-y-4 text-center">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Features
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Privacy Policy
                 </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Quickdesk is packed with powerful features to streamline your customer support workflow.
-                </p>
+                <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
-                {features.map((feature, index) => (
-                    <Card key={index} className="flex flex-col items-center text-center p-6">
-                        <CardHeader>
-                            <div className="mx-auto mb-4">{feature.icon}</div>
-                            <CardTitle>{feature.title}</CardTitle>
-                        </CardHeader>
-                        <CardDescription>{feature.description}</CardDescription>
-                    </Card>
-                ))}
+            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
+              <h2>1. Introduction</h2>
+              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.</p>
+              <h2>2. Information We Collect</h2>
+              <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
+              <h3>2.1. Information You Provide</h3>
+              <p>Morbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit.</p>
+              <h3>2.2. Information We Collect Automatically</h3>
+              <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nam nec ante. Sed lacinia, urna non tincidunt mattis, tortor neque adipiscing diam, a cursus ipsum ante quis turpis. Nulla facilisi. Ut fringilla. Suspendisse potenti. Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. Proin quam. Etiam ultrices.</p>
+              <h2>3. How We Use Your Information</h2>
+              <p>Suspendisse in justonucleus ഫാസിസ്റ്റ് accumsan. Pellentesque comforted, felis ut very thin, a torturer ex nisi, et consequat urna. Integer Benson, therefore, players. Donee nec justo eget felis facilisis fermentum. Aliquam porttitor mauris sit amet orci. Aenean dignissim pellentesque felis.</p>
+              <h2>4. Sharing Your Information</h2>
+              <p>Morbi in sem quis dui placerat ornare. Pellentesque odio nisi, euismod in, pharetra a, ultricies in, diam. Sed arcu. Cras consequat.</p>
             </div>
           </div>
         </section>

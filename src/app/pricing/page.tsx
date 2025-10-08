@@ -4,54 +4,40 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, BarChart, Settings, LayoutDashboard } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Menu, X, Check } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
-const features = [
+const pricingTiers = [
   {
-    icon: <Mail className="w-8 h-8 text-primary" />,
-    title: "Multi-Channel Ticket Creation",
-    description: "Create tickets via email or manually through the user interface.",
-  },
-  {
-    icon: <Building className="w-8 h-8 text-primary" />,
-    title: "Client & Company Management",
-    description: "Organize clients into companies and track all associated tickets.",
-  },
-    {
-    icon: <Users className="w-8 h-8 text-primary" />,
-    title: "Agent Management",
-    description: "Invite, manage, and assign roles to your support team members.",
+    name: "Basic",
+    price: "$29",
+    period: "/month",
+    description: "For small teams just getting started.",
+    features: ["5 Agents", "1000 Tickets/month", "Basic Analytics", "Email Support"],
+    buttonText: "Choose Basic",
+    variant: "outline"
   },
   {
-    icon: <Shield className="w-8 h-8 text-primary" />,
-    title: "Advanced Ticket Properties",
-    description: "Manage tickets with assignees, status, priority, type, deadlines, and tags.",
+    name: "Pro",
+    price: "$79",
+    period: "/month",
+    description: "For growing businesses that need more power.",
+    features: ["25 Agents", "10,000 Tickets/month", "Advanced Analytics", "Priority Support", "Client Management"],
+    buttonText: "Choose Pro",
+    variant: "default"
   },
   {
-    icon: <Bell className="w-8 h-8 text-primary" />,
-    title: "Automated Notifications",
-    description: "Automatic email alerts for ticket creation, assignments, and resolutions.",
-  },
-    {
-    icon: <Pencil className="w-8 h-8 text-primary" />,
-    title: "Internal Notes",
-    description: "Add private, team-only notes to any ticket for internal communication.",
-  },
-  {
-    icon: <Activity className="w-8 h-8 text-primary" />,
-    title: "Activity Log",
-    description: "A detailed audit trail tracks every single change made to a ticket.",
-  },
-  {
-    icon: <LayoutDashboard className="w-8 h-8 text-primary" />,
-    title: "Analytics Dashboard",
-    description: "Get a high-level overview of support operations with insightful charts.",
-  },
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    description: "For large organizations with custom needs.",
+    features: ["Unlimited Agents", "Unlimited Tickets", "Custom Integrations", "Dedicated Account Manager", "24/7 Support"],
+    buttonText: "Contact Sales",
+    variant: "outline"
+  }
 ];
 
-
-export default function FeaturesPage() {
+export default function PricingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -118,22 +104,40 @@ export default function FeaturesPage() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center space-y-4 text-center">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Features
+                  Simple, Transparent Pricing
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Quickdesk is packed with powerful features to streamline your customer support workflow.
+                  Choose the plan that's right for your team.
                 </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
-                {features.map((feature, index) => (
-                    <Card key={index} className="flex flex-col items-center text-center p-6">
-                        <CardHeader>
-                            <div className="mx-auto mb-4">{feature.icon}</div>
-                            <CardTitle>{feature.title}</CardTitle>
-                        </CardHeader>
-                        <CardDescription>{feature.description}</CardDescription>
-                    </Card>
-                ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 max-w-5xl mx-auto">
+              {pricingTiers.map((tier) => (
+                <Card key={tier.name} className={`flex flex-col ${tier.name === 'Pro' ? 'border-primary shadow-2xl' : ''}`}>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{tier.name}</CardTitle>
+                    <CardDescription>{tier.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow space-y-6">
+                    <div className="flex items-baseline">
+                      <span className="text-4xl font-bold">{tier.price}</span>
+                      {tier.period && <span className="text-muted-foreground ml-1">{tier.period}</span>}
+                    </div>
+                    <ul className="space-y-3">
+                      {tier.features.map((feature) => (
+                        <li key={feature} className="flex items-center">
+                          <Check className="w-4 h-4 mr-2 text-green-500" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                  <CardFooter>
+                    <Button className="w-full" variant={tier.variant as any}>
+                      {tier.buttonText}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
             </div>
           </div>
         </section>

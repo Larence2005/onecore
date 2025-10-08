@@ -4,54 +4,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, BarChart, Settings, LayoutDashboard } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Menu, X } from 'lucide-react';
 
-const features = [
-  {
-    icon: <Mail className="w-8 h-8 text-primary" />,
-    title: "Multi-Channel Ticket Creation",
-    description: "Create tickets via email or manually through the user interface.",
-  },
-  {
-    icon: <Building className="w-8 h-8 text-primary" />,
-    title: "Client & Company Management",
-    description: "Organize clients into companies and track all associated tickets.",
-  },
-    {
-    icon: <Users className="w-8 h-8 text-primary" />,
-    title: "Agent Management",
-    description: "Invite, manage, and assign roles to your support team members.",
-  },
-  {
-    icon: <Shield className="w-8 h-8 text-primary" />,
-    title: "Advanced Ticket Properties",
-    description: "Manage tickets with assignees, status, priority, type, deadlines, and tags.",
-  },
-  {
-    icon: <Bell className="w-8 h-8 text-primary" />,
-    title: "Automated Notifications",
-    description: "Automatic email alerts for ticket creation, assignments, and resolutions.",
-  },
-    {
-    icon: <Pencil className="w-8 h-8 text-primary" />,
-    title: "Internal Notes",
-    description: "Add private, team-only notes to any ticket for internal communication.",
-  },
-  {
-    icon: <Activity className="w-8 h-8 text-primary" />,
-    title: "Activity Log",
-    description: "A detailed audit trail tracks every single change made to a ticket.",
-  },
-  {
-    icon: <LayoutDashboard className="w-8 h-8 text-primary" />,
-    title: "Analytics Dashboard",
-    description: "Get a high-level overview of support operations with insightful charts.",
-  },
-];
-
-
-export default function FeaturesPage() {
+export default function TermsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -115,25 +70,22 @@ export default function FeaturesPage() {
         )}
       <main className="flex-1 pt-24">
         <section className="w-full py-12 md:py-24 px-4">
-          <div className="container px-4 md:px-6">
+          <div className="container px-4 md:px-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center space-y-4 text-center">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  Features
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                  Terms of Service
                 </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Quickdesk is packed with powerful features to streamline your customer support workflow.
-                </p>
+                <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
-                {features.map((feature, index) => (
-                    <Card key={index} className="flex flex-col items-center text-center p-6">
-                        <CardHeader>
-                            <div className="mx-auto mb-4">{feature.icon}</div>
-                            <CardTitle>{feature.title}</CardTitle>
-                        </CardHeader>
-                        <CardDescription>{feature.description}</CardDescription>
-                    </Card>
-                ))}
+            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
+              <h2>1. Agreement to Terms</h2>
+              <p>Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing sem neque sed ipsum.</p>
+              <h2>2. Your Account</h2>
+              <p>Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh. Donec sodales sagittis magna.</p>
+              <h2>3. User Content</h2>
+              <p>Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, quis gravida magna mi a libero. Fusce vulputate eleifend sapien. Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus. Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla.</p>
+              <h2>4. Prohibited Activities</h2>
+              <p>Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; In ac dui quis mi consectetuer lacinia. Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget, imperdiet nec, imperdiet iaculis, ipsum. Sed aliquam ultrices mauris. Integer ante arcu, accumsan a, consectetuer eget, posuere ut, mauris.</p>
             </div>
           </div>
         </section>
