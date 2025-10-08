@@ -164,10 +164,14 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                             </div>
                             <p className="font-medium text-foreground truncate">{email.subject}</p>
 
-                            <p className="text-sm text-muted-foreground truncate">
-                                {email.sender} &bull; Received: {format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}
-                                {email.deadline && ` • Deadline: ${format(parseISO(email.deadline), 'MMMM d, yyyy')}`}
-                            </p>
+                            <div className="text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:gap-2 truncate">
+                                <span>{email.sender}</span>
+                                <span className="hidden sm:inline">&bull;</span>
+                                <div className="flex items-center gap-2">
+                                    <span>Received: {format(parseISO(email.receivedDateTime), 'MMMM d, yyyy')}</span>
+                                    {email.deadline && <span>&bull; Deadline: {format(parseISO(email.deadline), 'MMMM d, yyyy')}</span>}
+                                </div>
+                            </div>
                         </Link>
 
                         <div className="hidden sm:flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
