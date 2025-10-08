@@ -1158,7 +1158,7 @@ return (
                             </div>
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-9 w-9">
-                                <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
+                                <AvatarFallback>{userProfile?.name}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex flex-col">
                                     <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
@@ -1318,7 +1318,7 @@ return (
                                 )}
                             </div>
                             
-                            <aside className="border-l bg-background p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
+                            <aside className="border-l bg-muted p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                                 {isLoading && (
                                     <>
                                     <Card>
