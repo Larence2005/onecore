@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -34,6 +35,7 @@ AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
 const generateColor = (name: string) => {
     let hash = 0;
+    if (name.length === 0) return `hsl(0, 0%, 80%)`;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
         hash = hash & hash; // Convert to 32bit integer
