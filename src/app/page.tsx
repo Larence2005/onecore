@@ -8,11 +8,11 @@ import Image from 'next/image';
 export default function LandingPage() {
   return (
     (<div className="flex flex-col min-h-screen bg-background">
-      <div className="fixed top-0 left-0 right-0 z-50 p-4">
+      <div className="fixed top-0 left-0 right-0 z-50 p-2 sm:p-4">
         <header
-          className="container mx-auto max-w-5xl flex items-center justify-between h-16 px-6 bg-card/80 backdrop-blur-sm rounded-full shadow-md border">
+          className="container mx-auto max-w-5xl flex items-center justify-between h-14 md:h-16 px-4 md:px-6 bg-card/80 backdrop-blur-sm rounded-full shadow-md border">
           <Link href="#" className="flex items-center justify-center" prefetch={false}>
-            <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="150" height="75" unoptimized />
+            <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" className="w-[120px] md:w-[150px]" unoptimized />
             <span className="sr-only">Quickdesk</span>
           </Link>
           <nav className="hidden md:flex items-center space-x-4">
