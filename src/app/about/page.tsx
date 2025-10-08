@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
-export default function PrivacyPage() {
+export default function AboutPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -73,23 +73,17 @@ export default function PrivacyPage() {
           <div className="container px-4 md:px-6 max-w-3xl mx-auto">
             <div className="flex flex-col items-center space-y-4 text-center">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  Privacy Policy
+                  About Quickdesk
                 </h1>
                 <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
             <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
-              <h2>1. Introduction</h2>
+              <h2>Our Mission</h2>
+              <p>Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
+              <h2>Our Story</h2>
               <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.</p>
-              <h2>2. Information We Collect</h2>
-              <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
-              <h3>2.1. Information You Provide</h3>
-              <p>Morbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit.</p>
-              <h3>2.2. Information We Collect Automatically</h3>
+              <h2>Our Team</h2>
               <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nam nec ante. Sed lacinia, urna non tincidunt mattis, tortor neque adipiscing diam, a cursus ipsum ante quis turpis. Nulla facilisi. Ut fringilla. Suspendisse potenti. Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. Proin quam. Etiam ultrices.</p>
-              <h2>3. How We Use Your Information</h2>
-              <p>Suspendisse in justonucleus ഫാസിസ്റ്റ് accumsan. Pellentesque comforted, felis ut very thin, a torturer ex nisi, et consequat urna. Integer Benson, therefore, players. Donee nec justo eget felis facilisis fermentum. Aliquam porttitor mauris sit amet orci. Aenean dignissim pellentesque felis.</p>
-              <h2>4. Sharing Your Information</h2>
-              <p>Morbi in sem quis dui placerat ornare. Pellentesque odio nisi, euismod in, pharetra a, ultricies in, diam. Sed arcu. Cras consequat.</p>
             </div>
           </div>
         </section>

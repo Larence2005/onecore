@@ -20,7 +20,7 @@ export default function LandingPage() {
           </Link>
           <nav className="hidden md:flex items-center space-x-1 md:space-x-4">
             <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
-              <Link href="#about" prefetch={false}>
+              <Link href="/about" prefetch={false}>
                 About
               </Link>
             </Button>
@@ -60,7 +60,7 @@ export default function LandingPage() {
               <span className="sr-only">Close menu</span>
             </Button>
             <nav className="flex flex-col items-center space-y-8">
-                <Link href="#about" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
+                <Link href="/about" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>About</Link>
                 <Link href="/features" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Features</Link>
                 <Link href="/pricing" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
                 <Link href="/privacy" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Privacy</Link>
