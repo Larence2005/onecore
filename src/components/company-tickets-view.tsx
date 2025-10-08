@@ -11,8 +11,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee, sendEmployeeVerificationEmail } from '@/app/actions';
-import type { Email, Company, Employee, ActivityLog } from '@/app/actions';
+import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee, sendEmployeeVerificationEmail, getOrganizationMembers } from '@/app/actions';
+import type { Email, Company, Employee, ActivityLog, DetailedEmail, OrganizationMember } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TicketItem } from './ticket-item';
@@ -34,6 +34,8 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 type StatusFilter = 'all' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
@@ -101,11 +103,12 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
         setIsLoading(true);
         try {
-            const [companyDetails, companyTickets, companyEmployees, companyActivity] = await Promise.all([
+            const [companyDetails, companyTickets, companyEmployees, companyActivity, orgMembers] = await Promise.all([
                 getCompanyDetails(userProfile.organizationId!, companyId),
                 getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true }),
                 getCompanyEmployees(userProfile.organizationId!, companyId),
                 getCompanyActivityLogs(userProfile.organizationId!, companyId),
+                getOrganizationMembers(userProfile.organizationId),
             ]);
             
             if (!companyDetails) {
@@ -114,8 +117,27 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 return;
             }
 
+            const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
+
+            const ticketsWithLastReplier = await Promise.all(companyTickets.map(async (ticket) => {
+                let lastReplier: 'agent' | 'client' | undefined = undefined;
+                if (ticket.conversationId) {
+                    const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
+                    if (convDoc.exists()) {
+                        const messages = convDoc.data().messages as DetailedEmail[];
+                        if (messages && messages.length > 0) {
+                            const lastMessage = messages[messages.length - 1];
+                            lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
+                        }
+                    } else if (ticket.senderEmail && !memberEmails.has(ticket.senderEmail.toLowerCase())) {
+                        lastReplier = 'client';
+                    }
+                }
+                return { ...ticket, lastReplier };
+            }));
+
             setCompany(companyDetails);
-            setTickets(companyTickets);
+            setTickets(ticketsWithLastReplier);
             setEmployees(companyEmployees);
             setActivity(companyActivity);
             
@@ -878,3 +900,5 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </SidebarProvider>
     );
 }
+
+    
