@@ -39,6 +39,7 @@ import { db } from "@/lib/firebase";
 import { doc, deleteDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { Separator } from "./ui/separator";
+import { Label } from "./ui/label";
 
 
 const passwordValidation = z
@@ -624,4 +625,3 @@ export function SettingsForm() {
     </div>
   );
 }
-
