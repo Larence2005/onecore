@@ -831,7 +831,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
             <Card className="overflow-hidden">
                 <CardHeader className="flex flex-row items-start gap-4 p-4 bg-muted border-b">
                     <Avatar className="h-10 w-10">
-                        <AvatarFallback>{message.sender?.[0]?.toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{message.sender}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 grid gap-1 text-sm">
                         <div className="font-semibold">{message.sender}</div>
@@ -1091,7 +1091,7 @@ const renderNoteCard = (note: Note) => {
         <Card key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
             <CardHeader className="flex flex-row items-center gap-4 p-4">
                 <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-yellow-100 dark:bg-yellow-800">{member?.name?.[0]?.toUpperCase() || 'N'}</AvatarFallback>
+                    <AvatarFallback className="bg-yellow-100 dark:bg-yellow-800">{member?.name || note.user}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 grid gap-1 text-sm">
                     <div className="font-semibold">{member?.name || note.user} <span className="text-muted-foreground font-normal">added a note</span></div>
@@ -1158,7 +1158,7 @@ return (
                             </div>
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-9 w-9">
-                                <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
+                                <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex flex-col">
                                     <span className="font-medium text-sm">{userProfile?.name || user.email}</span>

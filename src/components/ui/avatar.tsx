@@ -40,7 +40,7 @@ const generateColor = (name: string) => {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
         hash = hash & hash; // Convert to 32bit integer
     }
-    const h = Math.abs(hash) % 360;
+    const h = hash % 360;
     return `hsl(${h}, 70%, 80%)`;
 };
 
