@@ -33,7 +33,11 @@ const features = [
     icon: <Users className="w-8 h-8 text-pink-500" />,
     title: "Agent Management",
     description: "Invite, manage, and assign roles to your support team members. Ensure the right agent is always on the right ticket with clear ownership and permissions.",
-    image: placeholderImages.feature3,
+    image: {
+      src: "/AgentManagement.png",
+      width: 600,
+      height: 400
+    },
   },
   {
     icon: <Shield className="w-10 h-10 text-green-500" />,
