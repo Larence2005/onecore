@@ -128,8 +128,8 @@ export default function LandingPage() {
              <Image
               src="/image1.png"
               alt="Quickdesk Key Features"
-              width={600}
-              height={400}
+              width={500}
+              height={333}
               className="mx-auto overflow-hidden rounded-xl object-contain object-center sm:w-full"
             />
           </div>
