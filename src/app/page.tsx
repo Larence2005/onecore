@@ -16,22 +16,22 @@ export default function LandingPage() {
             <span className="sr-only">Quickdesk</span>
           </Link>
           <nav className="hidden md:flex items-center space-x-4">
-            <Button asChild variant="link" className="text-foreground">
+            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
               <Link href="#" prefetch={false}>
                 About
               </Link>
             </Button>
-            <Button asChild variant="link" className="text-foreground">
+            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
               <Link href="#" prefetch={false}>
                 Features
               </Link>
             </Button>
-            <Button asChild variant="link" className="text-foreground">
+            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
               <Link href="#" prefetch={false}>
                 Privacy
               </Link>
             </Button>
-            <Button asChild variant="link" className="text-foreground">
+            <Button asChild variant="link" size="sm" className="text-foreground md:size-auto">
               <Link href="#" prefetch={false}>
                 Terms and Policy
               </Link>
