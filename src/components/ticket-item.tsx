@@ -133,6 +133,17 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         setPendingUpdate({ field, value, label });
     }
 
+    const renderTags = () => (
+        <>
+            {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
+            {isOverdue && <Badge variant="destructive">Overdue</Badge>}
+            {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
+            {email.tags?.filter(t => t !== 'Resolved Late' && !t.startsWith('deadline-reminder-sent-day-')).map(tag => (
+                <Badge key={tag} variant="outline">{tag}</Badge>
+            ))}
+        </>
+    );
+
     return (
         <li className={cn(
             "transition-colors", 
@@ -150,17 +161,15 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                     <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                         <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
                             <Checkbox id={`ticket-${email.id}`} checked={isSelected} onCheckedChange={(checked) => onSelect(email.id, !!checked)} />
-                            {email.ticketNumber && <span className="text-sm font-medium text-muted-foreground">#{email.ticketNumber}</span>}
+                            <div className="flex items-center gap-2">
+                                {email.ticketNumber && <span className="text-sm font-medium text-muted-foreground">#{email.ticketNumber}</span>}
+                                <div className="flex sm:hidden items-center gap-2 flex-wrap">{renderTags()}</div>
+                            </div>
                         </div>
                         
                         <Link href={`/tickets/${email.id}`} className="flex-1 min-w-0 w-full cursor-pointer">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                {isResolvedLate && <Badge variant="destructive" className="bg-orange-500">Resolved Late</Badge>}
-                                {isOverdue && <Badge variant="destructive">Overdue</Badge>}
-                                {email.companyName && <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"><Building className="mr-1 h-3 w-3" />{email.companyName}</Badge>}
-                                {email.tags?.filter(t => t !== 'Resolved Late' && !t.startsWith('deadline-reminder-sent-day-')).map(tag => (
-                                   <Badge key={tag} variant="outline">{tag}</Badge>
-                                ))}
+                            <div className="hidden sm:flex items-center gap-2 mb-1 flex-wrap">
+                                {renderTags()}
                             </div>
                             <p className="font-medium text-foreground truncate">{email.subject}</p>
 
