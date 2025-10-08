@@ -95,7 +95,6 @@ export default function LandingPage() {
         <section id="about" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12">
             <div className="space-y-4">
-              <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary">Key Features</div>
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">All-in-One Support Platform</h2>
               <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 From intelligent ticket routing to automated responses and a comprehensive analytics dashboard, Quickdesk provides everything your team needs to deliver exceptional customer service.
