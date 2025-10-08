@@ -53,7 +53,11 @@ const features = [
     icon: <Bell className="w-8 h-8 text-yellow-500" />,
     title: "Automated Notifications",
     description: "Keep everyone in the loop with automatic email alerts for ticket creation, assignments, status changes, and resolutions. Reduce manual work and ensure timely responses.",
-    image: placeholderImages.feature5,
+    image: {
+      src: "/AutomatedNotifications.png",
+      width: 600,
+      height: 400
+    },
   },
     {
     icon: <Pencil className="w-8 h-8 text-orange-500" />,
