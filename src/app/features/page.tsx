@@ -156,7 +156,7 @@ export default function FeaturesPage() {
                                     alt={feature.title}
                                     width={feature.image.width}
                                     height={feature.image.height}
-                                    className="overflow-hidden rounded-xl object-contain object-center"
+                                    className="overflow-hidden rounded-xl object-contain object-center border border-black"
                                     data-ai-hint={feature.image['data-ai-hint']}
                                     unoptimized
                                 />
