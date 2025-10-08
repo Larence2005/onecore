@@ -1,52 +1,61 @@
+
 "use client";
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, BarChart, Settings, LayoutDashboard } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, LayoutDashboard } from 'lucide-react';
+import { placeholderImages } from '@/lib/placeholder-images.json';
 
 const features = [
   {
     icon: <Mail className="w-8 h-8 text-primary" />,
     title: "Multi-Channel Ticket Creation",
-    description: "Create tickets via email or manually through the user interface.",
+    description: "Create tickets via email or manually through the user interface, ensuring no customer query is missed. Quickdesk automatically imports and organizes emails into actionable tickets.",
+    image: placeholderImages.feature1,
   },
   {
     icon: <Building className="w-8 h-8 text-primary" />,
     title: "Client & Company Management",
-    description: "Organize clients into companies and track all associated tickets.",
+    description: "Organize clients into companies to get a clear overview of all associated tickets, employees, and communication history. Keep your client relationships organized and accessible.",
+    image: placeholderImages.feature2,
   },
     {
     icon: <Users className="w-8 h-8 text-primary" />,
     title: "Agent Management",
-    description: "Invite, manage, and assign roles to your support team members.",
+    description: "Invite, manage, and assign roles to your support team members. Ensure the right agent is always on the right ticket with clear ownership and permissions.",
+    image: placeholderImages.feature3,
   },
   {
     icon: <Shield className="w-8 h-8 text-primary" />,
     title: "Advanced Ticket Properties",
-    description: "Manage tickets with assignees, status, priority, type, deadlines, and tags.",
+    description: "Manage tickets with assignees, status, priority, type, deadlines, and tags. Customize your workflow to fit your team's needs and track tickets from creation to resolution.",
+    image: placeholderImages.feature4,
   },
   {
     icon: <Bell className="w-8 h-8 text-primary" />,
     title: "Automated Notifications",
-    description: "Automatic email alerts for ticket creation, assignments, and resolutions.",
+    description: "Keep everyone in the loop with automatic email alerts for ticket creation, assignments, status changes, and resolutions. Reduce manual work and ensure timely responses.",
+    image: placeholderImages.feature5,
   },
     {
     icon: <Pencil className="w-8 h-8 text-primary" />,
     title: "Internal Notes",
-    description: "Add private, team-only notes to any ticket for internal communication.",
+    description: "Collaborate with your team by adding private, team-only notes to any ticket. Share information, ask questions, and resolve issues faster without the client seeing the internal chatter.",
+    image: placeholderImages.feature6,
   },
   {
     icon: <Activity className="w-8 h-8 text-primary" />,
     title: "Activity Log",
-    description: "A detailed audit trail tracks every single change made to a ticket.",
+    description: "Maintain a complete audit trail of every ticket. A detailed, chronological activity log tracks every single change, comment, and action from start to finish.",
+    image: placeholderImages.feature7,
   },
   {
     icon: <LayoutDashboard className="w-8 h-8 text-primary" />,
     title: "Analytics Dashboard",
-    description: "Get a high-level overview of support operations with insightful charts.",
+    description: "Get a high-level overview of your support operations with insightful charts and stats. Track key metrics like ticket volume, resolution times, and agent performance to make data-driven decisions.",
+    image: placeholderImages.feature8,
   },
 ];
 
@@ -124,15 +133,32 @@ export default function FeaturesPage() {
                   Quickdesk is packed with powerful features to streamline your customer support workflow.
                 </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+            <div className="mt-12 space-y-12">
                 {features.map((feature, index) => (
-                    <Card key={index} className="flex flex-col items-center text-center p-6">
-                        <CardHeader>
-                            <div className="mx-auto mb-4">{feature.icon}</div>
-                            <CardTitle>{feature.title}</CardTitle>
-                        </CardHeader>
-                        <CardDescription>{feature.description}</CardDescription>
-                    </Card>
+                    <section key={index} className="w-full">
+                        <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12 mx-auto max-w-5xl">
+                           <div className={`space-y-4 ${index % 2 === 1 ? 'lg:order-last' : ''}`}>
+                              <div className="inline-block rounded-lg bg-muted p-3">
+                                {feature.icon}
+                              </div>
+                              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">{feature.title}</h2>
+                              <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                                {feature.description}
+                              </p>
+                            </div>
+                            <div className="w-full mx-auto">
+                                <Image
+                                    src={feature.image.src}
+                                    alt={feature.title}
+                                    width={feature.image.width}
+                                    height={feature.image.height}
+                                    className="overflow-hidden rounded-xl object-contain object-center"
+                                    data-ai-hint={feature.image['data-ai-hint']}
+                                    unoptimized
+                                />
+                            </div>
+                        </div>
+                    </section>
                 ))}
             </div>
           </div>
@@ -145,3 +171,5 @@ export default function FeaturesPage() {
     </div>
   );
 }
+
+    

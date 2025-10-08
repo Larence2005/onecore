@@ -1,0 +1,55 @@
+
+{
+  "placeholderImages": {
+    "feature1": {
+      "src": "https://picsum.photos/seed/feature1/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "email interface"
+    },
+    "feature2": {
+      "src": "https://picsum.photos/seed/feature2/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "client management"
+    },
+    "feature3": {
+      "src": "https://picsum.photos/seed/feature3/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "team collaboration"
+    },
+    "feature4": {
+      "src": "https://picsum.photos/seed/feature4/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "ticket properties"
+    },
+    "feature5": {
+      "src": "https://picsum.photos/seed/feature5/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "notification bell"
+    },
+    "feature6": {
+      "src": "https://picsum.photos/seed/feature6/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "private notes"
+    },
+    "feature7": {
+      "src": "https://picsum.photos/seed/feature7/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "activity log"
+    },
+    "feature8": {
+      "src": "https://picsum.photos/seed/feature8/600/400",
+      "width": 600,
+      "height": 400,
+      "data-ai-hint": "analytics dashboard"
+    }
+  }
+}
+
+    
