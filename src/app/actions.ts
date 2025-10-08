@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
-import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format } from 'date-fns';
+import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
@@ -1356,16 +1356,16 @@ export async function updateTicket(
                 const now = new Date();
                 switch (data.priority) {
                     case 'Urgent':
-                        updateData.deadline = addDays(now, deadlineSettings.Urgent).toISOString();
+                        updateData.deadline = add(now, { days: deadlineSettings.Urgent }).toISOString();
                         break;
                     case 'High':
-                        updateData.deadline = addDays(now, deadlineSettings.High).toISOString();
+                        updateData.deadline = add(now, { days: deadlineSettings.High }).toISOString();
                         break;
                     case 'Medium':
-                        updateData.deadline = addDays(now, deadlineSettings.Medium).toISOString();
+                        updateData.deadline = add(now, { days: deadlineSettings.Medium }).toISOString();
                         break;
                     case 'Low':
-                        updateData.deadline = addDays(now, deadlineSettings.Low).toISOString();
+                        updateData.deadline = add(now, { days: deadlineSettings.Low }).toISOString();
                         break;
                     case 'None':
                     default:
@@ -2659,4 +2659,5 @@ export async function finalizeUserSetup(
 // --- END: Refactored Verification Actions ---
 
 
+    
     
