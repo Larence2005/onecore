@@ -170,7 +170,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                             </p>
                         </Link>
 
-                        <div className="flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
+                        <div className="hidden sm:flex flex-col items-end ml-auto sm:ml-4 flex-shrink-0 w-full sm:w-48">
                             <Select value={currentPriority} onValueChange={(value) => handleSelectChange('priority', value)} disabled={isArchivedView || isClient}>
                                 <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none focus:ring-0 w-auto justify-end">
                                     <SelectValue>
