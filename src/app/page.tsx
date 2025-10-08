@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -125,7 +124,7 @@ export default function LandingPage() {
                 </li>
               </ul>
             </div>
-             <div className="w-1/2 mx-auto">
+             <div className="w-4/5 mx-auto">
                 <Image
                     src="/image1.png"
                     alt="Quickdesk Key Features"
