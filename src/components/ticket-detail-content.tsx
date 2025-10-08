@@ -840,7 +840,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
     return (
         <div key={message.id}>
             <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-start gap-4 p-4 bg-muted border-b">
+                <CardHeader className="flex flex-row items-start gap-4 p-4 border-b">
                     <Avatar className="h-10 w-10">
                         <AvatarFallback>{message.sender}</AvatarFallback>
                     </Avatar>
