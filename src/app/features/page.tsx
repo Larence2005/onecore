@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -10,13 +9,13 @@ import { placeholderImages } from '@/lib/placeholder-images.json';
 
 const features = [
   {
-    icon: <Mail className="w-8 h-8 text-blue-500" />,
+    icon: <Mail className="w-10 h-10 text-blue-500" />,
     title: "Multi-Channel Ticket Creation",
     description: "Create tickets via email or manually through the user interface, ensuring no customer query is missed. Quickdesk automatically imports and organizes emails into actionable tickets.",
     image: placeholderImages.feature1,
   },
   {
-    icon: <Building className="w-8 h-8 text-purple-500" />,
+    icon: <Building className="w-10 h-10 text-purple-500" />,
     title: "Client & Company Management",
     description: "Organize clients into companies to get a clear overview of all associated tickets, employees, and communication history. Keep your client relationships organized and accessible.",
     image: placeholderImages.feature2,
@@ -28,7 +27,7 @@ const features = [
     image: placeholderImages.feature3,
   },
   {
-    icon: <Shield className="w-8 h-8 text-green-500" />,
+    icon: <Shield className="w-10 h-10 text-green-500" />,
     title: "Advanced Ticket Properties",
     description: "Manage tickets with assignees, status, priority, type, deadlines, and tags. Customize your workflow to fit your team's needs and track tickets from creation to resolution.",
     image: placeholderImages.feature4,
