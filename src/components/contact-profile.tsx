@@ -133,8 +133,28 @@ export function ContactProfile({ email }: { email: string }) {
         setUpdatedLandline(foundProfile.landline || '');
 
 
-        // Then, fetch all tickets to find where this contact was involved.
         const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+        
+        const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
+        
+        const processTicketsWithLastReplier = async (tickets: Email[]): Promise<Email[]> => {
+            return Promise.all(tickets.map(async (ticket) => {
+                let lastReplier: 'agent' | 'client' | undefined = undefined;
+                if(ticket.conversationId) {
+                    const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
+                    if (convDoc.exists()) {
+                        const messages = convDoc.data().messages as DetailedEmail[];
+                        if (messages && messages.length > 0) {
+                            const lastMessage = messages[messages.length - 1];
+                            lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
+                        }
+                    } else if (ticket.senderEmail && !memberEmails.has(ticket.senderEmail.toLowerCase())) {
+                        lastReplier = 'client';
+                    }
+                }
+                return { ...ticket, lastReplier };
+            }));
+        };
         
         const tempSubmittedTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
         const tempCcTickets: Email[] = [];
@@ -143,7 +163,6 @@ export function ContactProfile({ email }: { email: string }) {
         const tempInvolvedTickets = new Map<string, Email>();
 
         for (const ticket of allTickets) {
-            // Fetch full conversation to check recipients
             const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
             if (detailedTicket?.conversation) {
                 let isCc = false;
@@ -160,7 +179,6 @@ export function ContactProfile({ email }: { email: string }) {
                 if (isBcc) tempBccTickets.push(ticket);
             }
 
-            // Check activity log for forwards
             const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
             const q = query(activityCollectionRef, where('type', '==', 'Forward'));
             const activitySnapshot = await getDocs(q);
@@ -175,9 +193,9 @@ export function ContactProfile({ email }: { email: string }) {
             });
         }
         
-        setSubmittedTickets(tempSubmittedTickets);
-        setCcTickets(tempCcTickets);
-        setBccTickets(tempBccTickets);
+        setSubmittedTickets(await processTicketsWithLastReplier(tempSubmittedTickets));
+        setCcTickets(await processTicketsWithLastReplier(tempCcTickets));
+        setBccTickets(await processTicketsWithLastReplier(tempBccTickets));
         setForwardedActivities(tempForwardedActivities);
         setInvolvedTickets(tempInvolvedTickets);
 

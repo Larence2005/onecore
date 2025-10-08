@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers, getEmail, getActivityLog, updateMemberInOrganization } from "@/app/actions";
+import { getTicketsFromDB, getOrganizationMembers, getActivityLog, updateMemberInOrganization } from "@/app/actions";
 import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem,
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Archive } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
-import { collection, query, where, getDocs, or } from "firebase/firestore";
+import { collection, query, where, getDocs, or, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
@@ -107,6 +107,27 @@ export function AgentProfile({ email }: { email: string }) {
         setUpdatedLandline(member.landline || '');
 
         const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+        
+        const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
+        
+        const processTicketsWithLastReplier = async (tickets: Email[]): Promise<Email[]> => {
+            return Promise.all(tickets.map(async (ticket) => {
+                let lastReplier: 'agent' | 'client' | undefined = undefined;
+                if(ticket.conversationId) {
+                    const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
+                    if (convDoc.exists()) {
+                        const messages = convDoc.data().messages as DetailedEmail[];
+                        if (messages && messages.length > 0) {
+                            const lastMessage = messages[messages.length - 1];
+                            lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
+                        }
+                    } else if (ticket.senderEmail && !memberEmails.has(ticket.senderEmail.toLowerCase())) {
+                        lastReplier = 'client';
+                    }
+                }
+                return { ...ticket, lastReplier };
+            }));
+        };
 
         const tempAssignedTickets = allTickets.filter(ticket => ticket.assignee === member.uid);
         
@@ -149,9 +170,10 @@ export function AgentProfile({ email }: { email: string }) {
 
         const tempForwardedActivities = allActivities.filter(log => log.type === 'Forward' && log.details.toLowerCase().includes(email.toLowerCase()));
 
-        setAssignedTickets(tempAssignedTickets);
-        setCcTickets(tempCcTickets);
-        setBccTickets(tempBccTickets);
+        setAssignedTickets(await processTicketsWithLastReplier(tempAssignedTickets));
+        setCcTickets(await processTicketsWithLastReplier(tempCcTickets));
+        setBccTickets(await processTicketsWithLastReplier(tempBccTickets));
+        
         setForwardedActivities(tempForwardedActivities);
         setResponseCount(tempResponseCount);
         
