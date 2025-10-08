@@ -104,7 +104,7 @@ export function ClientsView() {
     }
 
     return (
-        <div className="w-full max-w-4xl mx-auto space-y-6">
+        <div className="w-full max-w-4xl mx-auto space-y-6 bg-muted">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold">Companies</h1>

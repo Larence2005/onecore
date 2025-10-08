@@ -515,7 +515,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                     </div>
                 </Sidebar>
 
-                <main className="flex-1 flex flex-col min-w-0">
+                <main className="flex-1 flex flex-col min-w-0 bg-muted">
                     <Tabs defaultValue="tickets" value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
                         <Header>
                             <div className="flex items-center gap-4">
