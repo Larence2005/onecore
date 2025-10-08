@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -12,7 +13,11 @@ const features = [
     icon: <Mail className="w-10 h-10 text-blue-500" />,
     title: "Multi-Channel Ticket Creation",
     description: "Create tickets via email or manually through the user interface, ensuring no customer query is missed. Quickdesk automatically imports and organizes emails into actionable tickets.",
-    image: placeholderImages.feature1,
+    image: {
+      src: "/MultiChannelTicketCreation.png",
+      width: 600,
+      height: 400
+    },
   },
   {
     icon: <Building className="w-10 h-10 text-purple-500" />,
