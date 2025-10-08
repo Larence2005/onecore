@@ -552,21 +552,21 @@ export function SettingsForm() {
                                 </>
                             ) : (
                                 <>
-                                    <div className="space-y-1">
-                                        <Label className="text-muted-foreground">Urgent</Label>
-                                        <p>{userProfile?.deadlineSettings?.Urgent ?? 1} days</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">Urgent</span>
+                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.Urgent ?? 1} days</span>
                                     </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-muted-foreground">High</Label>
-                                        <p>{userProfile?.deadlineSettings?.High ?? 2} days</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">High</span>
+                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.High ?? 2} days</span>
                                     </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-muted-foreground">Medium</Label>
-                                        <p>{userProfile?.deadlineSettings?.Medium ?? 3} days</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">Medium</span>
+                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.Medium ?? 3} days</span>
                                     </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-muted-foreground">Low</Label>
-                                        <p>{userProfile?.deadlineSettings?.Low ?? 4} days</p>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">Low</span>
+                                        <span className="text-sm font-medium">{userProfile?.deadlineSettings?.Low ?? 4} days</span>
                                     </div>
                                 </>
                             )}
