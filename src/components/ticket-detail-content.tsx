@@ -374,15 +374,25 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     }, [email?.conversationId, userProfile?.organizationId]);
 
     
-    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any, clientNow: string) => {
+    const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any) => {
         if (!email || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
-
+    
         const ticketIdToUpdate = email.id;
-
-        const result = await updateTicket(userProfile.organizationId, ticketIdToUpdate, { [field]: value }, {name: userProfile.name, email: user.email}, clientNow, userProfile.deadlineSettings);
-
+        const clientNow = new Date().toISOString();
+        const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+        const result = await updateTicket(
+            userProfile.organizationId,
+            ticketIdToUpdate,
+            { [field]: value },
+            { name: userProfile.name, email: user.email },
+            clientNow,
+            userProfile.deadlineSettings,
+            clientTimeZone
+        );
+    
         if (!result.success) {
-             toast({
+            toast({
                 variant: 'destructive',
                 title: 'Update Failed',
                 description: result.error,
@@ -405,11 +415,11 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if(field === 'priority') setCurrentPriority(value);
         if(field === 'status') setCurrentStatus(value);
         if(field === 'type') setCurrentType(value);
-        if(field === 'deadline') setCurrentDeadline(value);
+        if(field === 'deadline') setCurrentDeadline(value ? parseISO(value) : undefined);
         if(field === 'companyId') setCurrentCompanyId(value);
         if(field === 'assignee') setCurrentAssignee(value);
     
-        await handleUpdate(field, value, new Date().toISOString());
+        await handleUpdate(field, value);
 
         setIsUpdating(false);
         setPendingUpdate(null);
@@ -441,7 +451,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             if (!currentTags.includes(newTag)) {
                 const updatedTags = [...currentTags, newTag];
                 setCurrentTags(updatedTags);
-                await handleUpdate('tags', updatedTags, new Date().toISOString());
+                await handleUpdate('tags', updatedTags);
                 setTagInput('');
             }
         }
@@ -450,7 +460,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
     const removeTag = async (tagToRemove: string) => {
         const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
         setCurrentTags(updatedTags);
-        await handleUpdate('tags', updatedTags, new Date().toISOString());
+        await handleUpdate('tags', updatedTags);
     };
 
 

@@ -1307,7 +1307,8 @@ export async function updateTicket(
     },
     currentUser: { name: string; email: string },
     clientNow: string,
-    deadlineSettings?: DeadlineSettings
+    deadlineSettings?: DeadlineSettings,
+    clientTimeZone?: string,
 ) {
     const ticketDocRef = doc(db, 'organizations', organizationId, 'tickets', id);
     try {
@@ -1323,6 +1324,7 @@ export async function updateTicket(
         
         const now = parseISO(clientNow);
         const nowISO = now.toISOString();
+        const timeZone = clientTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -1407,7 +1409,6 @@ export async function updateTicket(
                 }
                 
                 if (deadlineChanged && newData.deadline) {
-                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
                     const formattedDeadline = formatInTimeZone(parseISO(newData.deadline), timeZone, 'MMM d, yyyy h:mm a zzz');
                     body += `<p>The deadline for this ticket has been set to: <b>${formattedDeadline}</b>.</p>`;
                 } else if (deadlineChanged && !newData.deadline) {
@@ -1502,7 +1503,6 @@ export async function updateTicket(
             await addActivityLog(organizationId, id, { type: 'Company', details: `changed from ${prevCompanyName} to ${newCompanyName}`, date: nowISO, user: currentUser.email });
         }
         if (deadlineChanged) {
-            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
             const detail = newData.deadline ? `set to ${formatInTimeZone(parseISO(newData.deadline), timeZone, 'MMM d, yyyy h:mm a zzz')}` : 'removed';
             await addActivityLog(organizationId, id, { type: 'Deadline', details: `Deadline ${detail}`, date: nowISO, user: currentUser.email });
         }
