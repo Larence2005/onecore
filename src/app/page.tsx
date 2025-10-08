@@ -126,8 +126,8 @@ export default function LandingPage() {
               </ul>
             </div>
              <Image
-              src="/image.png"
-              alt="Feature image"
+              src="/image1.png"
+              alt="Key Features"
               width={600}
               height={400}
               className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full"
