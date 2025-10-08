@@ -13,14 +13,16 @@ export default function LandingPage() {
           <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="150" height="75" unoptimized />
           <span className="sr-only">Quickdesk</span>
         </Link>
-        <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link
-            href="/login"
-            className="text-sm font-medium hover:underline underline-offset-4"
-            prefetch={false}
-          >
-            Login
-          </Link>
+        <nav className="ml-auto flex items-center gap-4 sm:gap-6">
+          <Button variant="link" asChild>
+            <Link
+              href="/login"
+              className="text-sm font-medium"
+              prefetch={false}
+            >
+              Login
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/signup" prefetch={false}>
               Sign Up
