@@ -559,9 +559,8 @@ export function OrganizationView() {
                             {isOwner && (
                                 <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button variant="secondary" size="sm">
-                                            <Pencil className="mr-2 h-3 w-3" />
-                                            Edit
+                                        <Button variant="ghost" size="icon">
+                                            <Pencil className="h-4 w-4" />
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-2xl">
