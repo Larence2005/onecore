@@ -78,14 +78,51 @@ export default function TermsPage() {
                 <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
             <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
-              <h2>1. Agreement to Terms</h2>
-              <p>Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing sem neque sed ipsum.</p>
-              <h2>2. Your Account</h2>
-              <p>Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh. Donec sodales sagittis magna.</p>
-              <h2>3. User Content</h2>
-              <p>Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, quis gravida magna mi a libero. Fusce vulputate eleifend sapien. Vestibulum purus quam, scelerisque ut, mollis sed, nonummy id, metus. Nullam accumsan lorem in dui. Cras ultricies mi eu turpis hendrerit fringilla.</p>
-              <h2>4. Prohibited Activities</h2>
-              <p>Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; In ac dui quis mi consectetuer lacinia. Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget, imperdiet nec, imperdiet iaculis, ipsum. Sed aliquam ultrices mauris. Integer ante arcu, accumsan a, consectetuer eget, posuere ut, mauris.</p>
+              <div className="mb-8">
+                <h2 className="font-bold">1. Agreement to Terms</h2>
+                <p>By accessing or using Quickdesk, a product of Nextcore Technology Inc., you agree to be bound by these Terms and Policy, as well as all applicable laws and regulations. If you do not agree with any of these terms, you must discontinue the use of the platform immediately. Nextcore Technology Inc. reserves the right to update or modify these terms at any time without prior notice. Continued use of Quickdesk following any changes constitutes acceptance of the updated terms.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">2. Your Account</h2>
+                <p>To use Quickdesk, you are required to create an account by providing accurate and complete information, including your full name, email address, domain, and organization details. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to promptly notify us of any unauthorized use of your account or any other breach of security. Quickdesk shall not be liable for any loss or damage arising from your failure to safeguard your account information.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">3. User Content</h2>
+                <p>As part of using Quickdesk, you may submit or manage information, including emails and support tickets, through your account (“User Content”). You retain ownership of all User Content you create and manage within the platform. Quickdesk does not read, access, or monitor any User Content, ensuring that your data remains private and secure. However, you grant Quickdesk a limited, non-exclusive right to store and process your User Content solely for the purpose of providing and improving the platform’s services. You are solely responsible for ensuring that your User Content complies with applicable laws and does not infringe on the rights of any third party.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">4. Prohibited Activities</h2>
+                <p>You agree to use Quickdesk only for lawful and authorized purposes. The following activities are strictly prohibited:</p>
+                <ul>
+                  <li>Using the platform in any manner that violates applicable local, national, or international laws and regulations</li>
+                  <li>Attempting to gain unauthorized access to the platform, other user accounts, or related systems and networks</li>
+                  <li>Interfering with or disrupting the integrity or performance of the platform</li>
+                  <li>Uploading, transmitting, or sharing content that is unlawful, fraudulent, defamatory, or infringes on the intellectual property rights of others</li>
+                  <li>Misusing the platform to send spam, malicious software, or unauthorized communications</li>
+                  <li>Engaging in activities that could damage, disable, or impair the operation of Quickdesk or its infrastructure</li>
+                </ul>
+                <p>Violation of these prohibited activities may result in suspension or termination of your account, in addition to any legal remedies available under applicable law.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">5. Limitation of Liability</h2>
+                <p>To the maximum extent permitted by law, Nextcore Technology Inc. and its affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or goodwill, arising out of or in connection with the use or inability to use Quickdesk. Quickdesk is provided on an “as is” and “as available” basis. We do not warrant that the platform will be uninterrupted, error-free, or fully secure at all times.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">6. Termination</h2>
+                <p>We reserve the right to suspend or terminate your account or access to Quickdesk at any time, with or without notice, if we believe you have violated these terms, engaged in unlawful activity, or posed a risk to the platform’s security or integrity. Upon termination, your right to use Quickdesk will immediately cease. You remain responsible for any obligations or liabilities incurred prior to termination.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">7. International Use</h2>
+                <p>Quickdesk is operated and managed from the Philippines, but may be accessed by users worldwide. If you access or use Quickdesk from outside the Philippines, you are solely responsible for ensuring that your use of the platform complies with all applicable laws and regulations in your country or jurisdiction. We make no representation that Quickdesk is appropriate or available for use in all locations. Accessing the platform from territories where its use is unlawful is strictly prohibited.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">8. Governing Law</h2>
+                <p>These Terms and Policy shall be governed by and construed in accordance with the laws of the Republic of the Philippines, without regard to its conflict of law principles. By using the platform, you acknowledge and agree that any disputes, claims, or legal proceedings arising under or in connection with these terms shall be subject to the exclusive jurisdiction of the appropriate courts in the Philippines, regardless of your location.</p>
+              </div>
+              <div className="mb-8">
+                <h2 className="font-bold">9. Compliance with Laws</h2>
+                <p>Nextcore Technology Inc. complies with applicable laws and legal processes in the Philippines and may cooperate with law enforcement agencies or regulatory authorities outside the Philippines in accordance with valid international legal requests. If a user engages in activities on Quickdesk that violate the laws of their country or other jurisdictions, we may disclose relevant account information to competent authorities in those jurisdictions, provided that such disclosure is supported by proper legal documentation or international cooperation agreements. Users are solely responsible for ensuring that their use of the platform does not violate any laws or regulations applicable in their location.</p>
+              </div>
             </div>
           </div>
         </section>

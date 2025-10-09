@@ -85,9 +85,10 @@ export default function PrivacyPage() {
               <div className="mb-8">
                 <h2 className="font-bold">Information We Collect</h2>
                 <p>We collect only the information necessary to provide and improve our services. This includes both information you provide directly and information collected automatically during your interaction with our platform.</p>
-              
+                <br/>
                 <h3 className="font-bold">Information You Provide</h3>
                 <p>During the registration process, we collect the following information:</p>
+                <br/>
                 <ul>
                   <li>Full Name</li>
                   <li>Email Address</li>
@@ -98,6 +99,7 @@ export default function PrivacyPage() {
                 <br/>
                 <h3 className="font-bold">Information We Collect Automatically</h3>
                 <p>In addition to the information you provide, we also automatically collect the following details during your use of the platform:</p>
+                <br/>
                 <ul>
                   <li>The email, name, domain, and organization details associated with your account</li>
                   <li>New verified email addresses created during the verification process</li>
