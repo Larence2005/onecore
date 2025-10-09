@@ -13,7 +13,7 @@ const pricingTiers = [
     price: "$5",
     period: "/agent/month",
     description: "For small teams just getting started.",
-    features: ["Per-agent billing", "1000 Tickets/month", "Basic Analytics", "Email Support"],
+    features: ["Per-agent billing", "1000 Tickets/month", "Dedicated Email Support"],
     variant: "outline"
   },
   {
