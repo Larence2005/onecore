@@ -13,7 +13,7 @@ import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, toDate } from 'date-fns-tz';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 import axios from 'axios';
@@ -1322,9 +1322,9 @@ export async function updateTicket(
         let originalTags: string[];
         let updateData: any;
         
-        const now = parseISO(clientNow);
+        const now = toDate(clientNow);
         const nowISO = now.toISOString();
-        const timeZone = clientTimeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const timeZone = clientTimeZone || 'Asia/Singapore';
         
         await runTransaction(db, async (transaction) => {
             const ticketDoc = await transaction.get(ticketDocRef);
@@ -2139,11 +2139,13 @@ export async function updateCompany(
 export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     if (!organizationId) return;
 
-    const now = new Date();
+    const timeZone = 'Asia/Singapore';
+    const now = toDate(new Date(), { timeZone });
     const currentHour = now.getHours();
 
-    if (currentHour < 6 || currentHour >= 18) {
-        console.log("Skipping deadline checks: Outside of active hours (6am-6pm).");
+    // Run only at 6 AM UTC+8
+    if (currentHour !== 6) {
+        console.log(`Skipping deadline checks: Current time in UTC+8 is not 6 AM.`);
         return;
     }
     
@@ -2180,8 +2182,6 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
             const ticketDeadline = parseISO(ticket.deadline!);
             const daysUntilDeadline = differenceInSeconds(ticketDeadline, now) / (60 * 60 * 24);
 
-            const hasBeenNotifiedForDay = ticket.tags?.some(tag => tag.startsWith(`deadline-reminder-sent-day-`));
-            
             // Overdue notification
             if (isPast(ticketDeadline) && !ticket.tags?.includes('overdue-notification-sent')) {
                 if (ticket.assignee) {
@@ -2665,6 +2665,8 @@ export async function finalizeUserSetup(
 
 
     
+    
+
     
 
     
