@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -79,17 +80,45 @@ export default function PrivacyPage() {
             </div>
             <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
               <h2>1. Introduction</h2>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.</p>
+              <p>At Quickdesk, a product of Nextcore Technology Inc., we value and respect your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our platform and services. By registering and using Quickdesk, you agree to the practices described in this policy.</p>
+              
               <h2>2. Information We Collect</h2>
-              <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
+              <p>We collect only the information necessary to provide and improve our services. This includes both information you provide directly and information collected automatically during your interaction with our platform.</p>
+              
               <h3>2.1. Information You Provide</h3>
-              <p>Morbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit.</p>
+              <p>During the registration process, we collect the following information:</p>
+              <ul>
+                <li>Full Name</li>
+                <li>Email Address</li>
+                <li>Domain</li>
+                <li>Organization Details</li>
+              </ul>
+              <p>This information is provided voluntarily by you when you create an account on Quickdesk.</p>
+              
               <h3>2.2. Information We Collect Automatically</h3>
-              <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nam nec ante. Sed lacinia, urna non tincidunt mattis, tortor neque adipiscing diam, a cursus ipsum ante quis turpis. Nulla facilisi. Ut fringilla. Suspendisse potenti. Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. Proin quam. Etiam ultrices.</p>
+              <p>In addition to the information you provide, we also automatically collect the following details during your use of the platform:</p>
+              <ul>
+                <li>The email, name, domain, and organization details associated with your account</li>
+                <li>New verified email addresses created during the verification process</li>
+              </ul>
+              <p>We do not collect IP addresses, exact location data, or browser activity. This ensures that only essential information required for platform functionality is gathered.</p>
+              
               <h2>3. How We Use Your Information</h2>
-              <p>Suspendisse in justonucleus ഫാസിസ്റ്റ് accumsan. Pellentesque comforted, felis ut very thin, a torturer ex nisi, et consequat urna. Integer Benson, therefore, players. Donee nec justo eget felis facilisis fermentum. Aliquam porttitor mauris sit amet orci. Aenean dignissim pellentesque felis.</p>
+              <p>We use the information we collect solely for the following purposes:</p>
+              <ul>
+                <li>Metrics and usage computation, to understand how our platform is used and to improve service performance</li>
+                <li>Ensuring the security, functionality, and reliability of our platform</li>
+              </ul>
+              <p>We do not use your information for marketing or advertising purposes. Additionally, we do not read, access, or monitor any emails or tickets created within your account, ensuring that your communication data remains private and secure.</p>
+              
               <h2>4. Sharing Your Information</h2>
-              <p>Morbi in sem quis dui placerat ornare. Pellentesque odio nisi, euismod in, pharetra a, ultricies in, diam. Sed arcu. Cras consequat.</p>
+              <p>We do not share, sell, or rent any personal information, including email addresses, to third parties. The only circumstance under which we may disclose information is if we receive a lawful request from law enforcement authorities supported by a court order. In such cases, we will comply with applicable legal obligations.</p>
+              
+              <h2>5. Data Security</h2>
+              <p>We implement appropriate technical and organizational measures to safeguard the information we collect. Access to data is strictly controlled and limited to authorized personnel who require it to operate and maintain the platform. We continuously review and enhance our security practices to protect your information against unauthorized access, alteration, disclosure, or destruction.</p>
+              
+              <h2>6. Your Rights</h2>
+              <p>You have the right to access, update, or correct the personal information associated with your account. If you wish to request changes or deletion of your information, you may contact us through our official support channels. We will process all legitimate requests in accordance with applicable privacy and data protection laws.</p>
             </div>
           </div>
         </section>
