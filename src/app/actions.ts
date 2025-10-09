@@ -2169,6 +2169,7 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
         const ticketsRef = collection(db, 'organizations', organizationId, 'tickets');
         const q = query(ticketsRef, 
             where('status', 'in', ['Open', 'Pending']),
+            where('deadline', '!=', null)
         );
 
         const querySnapshot = await getDocs(q);
@@ -2670,3 +2671,4 @@ export async function finalizeUserSetup(
     
 
     
+
