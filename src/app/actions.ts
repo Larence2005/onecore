@@ -221,18 +221,16 @@ async function getNextTicketNumber(organizationId: string): Promise<number> {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
             if (!counterDoc.exists()) {
-                // Initialize the counter if it doesn't exist
                 transaction.set(counterRef, { currentNumber: 1 });
                 return 1;
             }
-            const newNumber = counterDoc.data().currentNumber + 1;
+            const newNumber = (counterDoc.data().currentNumber || 0) + 1;
             transaction.update(counterRef, { currentNumber: newNumber });
             return newNumber;
         });
         return newTicketNumber;
     } catch (e) {
         console.error("Transaction failed: ", e);
-        // Fallback or error handling
         throw new Error("Could not generate a unique ticket number.");
     }
 }
@@ -2678,3 +2676,6 @@ export async function finalizeUserSetup(
 
     
 
+
+
+    
