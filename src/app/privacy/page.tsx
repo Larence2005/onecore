@@ -80,14 +80,14 @@ export default function PrivacyPage() {
             </div>
             <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
               <div className="mb-8">
-                <h2>Introduction</h2>
+                <h2 className="font-bold">Introduction</h2>
                 <p>At Quickdesk, a product of Nextcore Technology Inc., we value and respect your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our platform and services. By registering and using Quickdesk, you agree to the practices described in this policy.</p>
               </div>
               <div className="mb-8">
-                <h2>Information We Collect</h2>
+                <h2 className="font-bold">Information We Collect</h2>
                 <p>We collect only the information necessary to provide and improve our services. This includes both information you provide directly and information collected automatically during your interaction with our platform.</p>
                 
-                <h3>Information You Provide</h3>
+                <h3 className="font-bold">Information You Provide</h3>
                 <p>During the registration process, we collect the following information:</p>
                 <ul>
                   <li>Full Name</li>
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
                 </ul>
                 <p>This information is provided voluntarily by you when you create an account on Quickdesk.</p>
                 
-                <h3>Information We Collect Automatically</h3>
+                <h3 className="font-bold">Information We Collect Automatically</h3>
                 <p>In addition to the information you provide, we also automatically collect the following details during your use of the platform:</p>
                 <ul>
                   <li>The email, name, domain, and organization details associated with your account</li>
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
                 <p>We do not collect IP addresses, exact location data, or browser activity. This ensures that only essential information required for platform functionality is gathered.</p>
               </div>
               <div className="mb-8">
-                <h2>How We Use Your Information</h2>
+                <h2 className="font-bold">How We Use Your Information</h2>
                 <p>We use the information we collect solely for the following purposes:</p>
                 <ul>
                   <li>Metrics and usage computation, to understand how our platform is used and to improve service performance</li>
@@ -115,15 +115,15 @@ export default function PrivacyPage() {
                 <p>We do not use your information for marketing or advertising purposes. Additionally, we do not read, access, or monitor any emails or tickets created within your account, ensuring that your communication data remains private and secure.</p>
               </div>
               <div className="mb-8">
-                <h2>Sharing Your Information</h2>
+                <h2 className="font-bold">Sharing Your Information</h2>
                 <p>We do not share, sell, or rent any personal information, including email addresses, to third parties. The only circumstance under which we may disclose information is if we receive a lawful request from law enforcement authorities supported by a court order. In such cases, we will comply with applicable legal obligations.</p>
               </div>
               <div className="mb-8">
-                <h2>Data Security</h2>
+                <h2 className="font-bold">Data Security</h2>
                 <p>We implement appropriate technical and organizational measures to safeguard the information we collect. Access to data is strictly controlled and limited to authorized personnel who require it to operate and maintain the platform. We continuously review and enhance our security practices to protect your information against unauthorized access, alteration, disclosure, or destruction.</p>
               </div>
               <div className="mb-8">
-                <h2>Your Rights</h2>
+                <h2 className="font-bold">Your Rights</h2>
                 <p>You have the right to access, update, or correct the personal information associated with your account. If you wish to request changes or deletion of your information, you may contact us through our official support channels. We will process all legitimate requests in accordance with applicable privacy and data protection laws.</p>
               </div>
             </div>
