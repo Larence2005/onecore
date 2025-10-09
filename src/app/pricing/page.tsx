@@ -22,7 +22,6 @@ const pricingTiers = [
     period: "",
     description: "For large organizations with custom needs.",
     features: ["Unlimited Agents", "Unlimited Tickets", "Custom Integrations", "Dedicated Account Manager", "24/7 Support"],
-    buttonText: "Contact Sales",
     variant: "outline"
   }
 ];
@@ -121,10 +120,10 @@ export default function PricingPage() {
                       ))}
                     </ul>
                   </CardContent>
-                  {tier.buttonText && (
+                  {(tier as any).buttonText && (
                     <CardFooter>
                       <Button className="w-full" variant={tier.variant as any}>
-                        {tier.buttonText}
+                        {(tier as any).buttonText}
                       </Button>
                     </CardFooter>
                   )}
