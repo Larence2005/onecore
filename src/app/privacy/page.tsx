@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -86,7 +85,7 @@ export default function PrivacyPage() {
               <div className="mb-8">
                 <h2 className="font-bold">Information We Collect</h2>
                 <p>We collect only the information necessary to provide and improve our services. This includes both information you provide directly and information collected automatically during your interaction with our platform.</p>
-                
+              
                 <h3 className="font-bold">Information You Provide</h3>
                 <p>During the registration process, we collect the following information:</p>
                 <ul>
@@ -96,7 +95,7 @@ export default function PrivacyPage() {
                   <li>Organization Details</li>
                 </ul>
                 <p>This information is provided voluntarily by you when you create an account on Quickdesk.</p>
-                
+                <br/>
                 <h3 className="font-bold">Information We Collect Automatically</h3>
                 <p>In addition to the information you provide, we also automatically collect the following details during your use of the platform:</p>
                 <ul>
