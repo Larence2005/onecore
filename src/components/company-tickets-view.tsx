@@ -1,15 +1,13 @@
 
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, useSidebar } from '@/components/ui/sidebar';
-import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Pencil, Archive, ArrowLeft, Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus, Trash2, Mail } from 'lucide-react';
+import { useSidebar } from '@/components/ui/sidebar';
+import { Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus, Trash2, Mail } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Header } from '@/components/header';
 import Link from 'next/link';
 import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee, sendEmployeeVerificationEmail, getOrganizationMembers } from '@/app/actions';
 import type { Email, Company, Employee, ActivityLog, DetailedEmail, OrganizationMember } from '@/app/actions';
@@ -36,6 +34,7 @@ import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Pencil } from 'lucide-react';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 type StatusFilter = 'all' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
@@ -43,7 +42,7 @@ type ActiveTab = 'tickets' | 'employees';
 
 
 export function CompanyTicketsView({ companyId }: { companyId: string }) {
-    const { user, userProfile, loading, logout } = useAuth();
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const [company, setCompany] = useState<Company | null>(null);
@@ -56,7 +55,6 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const [currentPage, setCurrentPage] = useState(1);
     const [ticketsPerPage, setTicketsPerPage] = useState(10);
     const [activeTab, setActiveTab] = useState<ActiveTab>('tickets');
-    const { setOpenMobile } = useSidebar();
     
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -199,24 +197,6 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
     const totalPages = Math.ceil(sortedTickets.length / ticketsPerPage);
 
-    const handleLogout = async () => {
-        try {
-            await logout();
-            router.push('/');
-        } catch (error) {
-            console.error("Failed to log out", error);
-        }
-    };
-    
-    const handleMenuClick = (view: string) => {
-        if (view === 'archive') {
-            router.push('/archive');
-        } else {
-            router.push(`/dashboard?view=${view}`); 
-        }
-        setOpenMobile(false);
-    };
-    
     const handleUpdateCompany = async () => {
         if (!company || !userProfile?.organizationId) return;
         setIsUpdating(true);
@@ -473,432 +453,364 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
     return (
         <>
-            <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
-                <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
-                    <div className="flex-grow flex flex-col">
-                        <SidebarHeader className="p-4 flex flex-col gap-4">
-                            <div className="flex items-center justify-center">
-                                <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-9 w-9">
-                                <AvatarFallback>{userProfile?.name?.[0].toUpperCase() || user.email?.[0].toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                                    <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
-                                </div>
-                            </div>
-                        </SidebarHeader>
-                        <SidebarContent className="flex-grow">
-                            <SidebarMenu className="flex flex-col gap-2 px-4">
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                    <LayoutDashboard className="text-purple-500" />
-                                    <span>Dashboard</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
-                                    <List className="text-green-500" />
-                                    <span>Tickets</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                    <Pencil className="text-blue-500" />
-                                    <span>Compose</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                        <Archive className="text-orange-500" />
-                                        <span>Archive</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('clients')} isActive>
-                                    <Users className="text-pink-500" />
-                                    <span>Clients</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                                    <Building2 className="text-yellow-500" />
-                                    <span>Organization</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                                    <Settings className="text-gray-500" />
-                                    <span>Settings</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            </SidebarMenu>
-                        </SidebarContent>
+            <Tabs defaultValue="tickets" value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
+                <Header>
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" size="icon" asChild>
+                            <Link href="/dashboard?view=clients">
+                                <ArrowLeft className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <TabsList>
+                            <TabsTrigger value="tickets">All Tickets</TabsTrigger>
+                            <TabsTrigger value="employees">Employees</TabsTrigger>
+                        </TabsList>
                     </div>
-                </Sidebar>
-
-                <main className="flex-1 flex flex-col min-w-0 bg-muted">
-                    <Tabs defaultValue="tickets" value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
-                        <Header>
-                            <div className="flex items-center gap-4">
-                                <Button variant="outline" size="icon" asChild>
-                                    <Link href="/dashboard?view=clients">
-                                        <ArrowLeft className="h-4 w-4" />
-                                    </Link>
-                                </Button>
-                                <TabsList>
-                                    <TabsTrigger value="tickets">All Tickets</TabsTrigger>
-                                    <TabsTrigger value="employees">Employees</TabsTrigger>
-                                </TabsList>
-                            </div>
-                        </Header>
-                        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-3 lg:p-8 xl:grid-cols-4">
-                            <div className="lg:col-span-2 xl:col-span-3">
-                                {isLoading ? (
-                                    <div className="space-y-4">
-                                        {[...Array(5)].map((_, i) => (
-                                            <div key={i} className="p-4 border rounded-lg space-y-3">
-                                                <Skeleton className="h-5 w-3/4 rounded-md" />
-                                                <div className="flex items-center gap-2">
-                                                    <Skeleton className="h-4 w-24 rounded-md" />
-                                                    <Skeleton className="h-4 w-48 rounded-md" />
-                                                </div>
-                                            </div>
-                                        ))}
+                </Header>
+                <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-4 sm:p-6 lg:grid-cols-3 lg:p-8 xl:grid-cols-4">
+                    <div className="lg:col-span-2 xl:col-span-3">
+                        {isLoading ? (
+                            <div className="space-y-4">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className="p-4 border rounded-lg space-y-3">
+                                        <Skeleton className="h-5 w-3/4 rounded-md" />
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton className="h-4 w-24 rounded-md" />
+                                            <Skeleton className="h-4 w-48 rounded-md" />
+                                        </div>
                                     </div>
-                                ) : (
-                                    <>
-                                        <TabsContent value="tickets">
-                                            <div className="space-y-4">
-                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                                    <div>
-                                                        <h2 className="text-xl font-bold">Tickets for {company?.name}</h2>
-                                                        <p className="text-muted-foreground">A list of all tickets associated with this company.</p>
-                                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <>
+                                <TabsContent value="tickets">
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                            <div>
+                                                <h2 className="text-xl font-bold">Tickets for {company?.name}</h2>
+                                                <p className="text-muted-foreground">A list of all tickets associated with this company.</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                                        <SelectValue placeholder="Sort by" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="newest">Newest</SelectItem>
+                                                        <SelectItem value="oldest">Oldest</SelectItem>
+                                                        <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
+                                                        <SelectItem value="overdue">Overdue</SelectItem>
+                                                        <SelectItem value="status">Status</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {sortOption === 'status' && (
+                                                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                                                        <SelectTrigger className="w-full sm:w-[120px]">
+                                                            <SelectValue placeholder="Filter status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All</SelectItem>
+                                                            <SelectItem value="Open">Open</SelectItem>
+                                                            <SelectItem value="Pending">Pending</SelectItem>
+                                                            <SelectItem value="Resolved">Resolved</SelectItem>
+                                                            <SelectItem value="Closed">Closed</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            {paginatedTickets.length > 0 ? (
+                                                <ul className="space-y-0 border-t">
+                                                    {paginatedTickets.map((ticket) => (
+                                                        <TicketItem 
+                                                            key={ticket.id} 
+                                                            email={ticket} 
+                                                            isSelected={false}
+                                                            onSelect={() => {}}
+                                                        />
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <Alert>
+                                                    <Ticket className="h-4 w-4" />
+                                                    <AlertTitle>No Tickets Found</AlertTitle>
+                                                    <AlertDescription>
+                                                        There are no tickets matching the current criteria for {company?.name}.
+                                                    </AlertDescription>
+                                                </Alert>
+                                            )}
+                                        </div>
+                                        {totalPages > 1 && (
+                                            <div className="flex items-center justify-between pt-6 border-t">
+                                                <div className="text-sm text-muted-foreground">
+                                                    Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
+                                                </div>
+                                                <div className="flex items-center gap-4">
                                                     <div className="flex items-center gap-2">
-                                                        <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                                                            <SelectTrigger className="w-full sm:w-[180px]">
-                                                                <SelectValue placeholder="Sort by" />
+                                                        <span className="text-sm text-muted-foreground">Rows per page</span>
+                                                        <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
+                                                            <SelectTrigger className="h-8 w-[70px]">
+                                                                <SelectValue placeholder={String(ticketsPerPage)} />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="newest">Newest</SelectItem>
-                                                                <SelectItem value="oldest">Oldest</SelectItem>
-                                                                <SelectItem value="upcoming">Upcoming Deadline</SelectItem>
-                                                                <SelectItem value="overdue">Overdue</SelectItem>
-                                                                <SelectItem value="status">Status</SelectItem>
+                                                                <SelectItem value="10">10</SelectItem>
+                                                                <SelectItem value="25">25</SelectItem>
+                                                                <SelectItem value="50">50</SelectItem>
                                                             </SelectContent>
                                                         </Select>
-                                                        {sortOption === 'status' && (
-                                                            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-                                                                <SelectTrigger className="w-full sm:w-[120px]">
-                                                                    <SelectValue placeholder="Filter status" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="all">All</SelectItem>
-                                                                    <SelectItem value="Open">Open</SelectItem>
-                                                                    <SelectItem value="Pending">Pending</SelectItem>
-                                                                    <SelectItem value="Resolved">Resolved</SelectItem>
-                                                                    <SelectItem value="Closed">Closed</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        Page {currentPage} of {totalPages}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                                                            <ChevronLeft className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    {paginatedTickets.length > 0 ? (
-                                                        <ul className="space-y-0 border-t">
-                                                            {paginatedTickets.map((ticket) => (
-                                                                <TicketItem 
-                                                                    key={ticket.id} 
-                                                                    email={ticket} 
-                                                                    isSelected={false}
-                                                                    onSelect={() => {}}
-                                                                />
-                                                            ))}
-                                                        </ul>
-                                                    ) : (
-                                                        <Alert>
-                                                            <Ticket className="h-4 w-4" />
-                                                            <AlertTitle>No Tickets Found</AlertTitle>
-                                                            <AlertDescription>
-                                                                There are no tickets matching the current criteria for {company?.name}.
-                                                            </AlertDescription>
-                                                        </Alert>
-                                                    )}
-                                                </div>
-                                                {totalPages > 1 && (
-                                                    <div className="flex items-center justify-between pt-6 border-t">
-                                                        <div className="text-sm text-muted-foreground">
-                                                            Showing {Math.min(ticketsPerPage * currentPage, sortedTickets.length)} of {sortedTickets.length} tickets.
-                                                        </div>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm text-muted-foreground">Rows per page</span>
-                                                                <Select value={String(ticketsPerPage)} onValueChange={(value) => { setTicketsPerPage(Number(value)); setCurrentPage(1); }}>
-                                                                    <SelectTrigger className="h-8 w-[70px]">
-                                                                        <SelectValue placeholder={String(ticketsPerPage)} />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="10">10</SelectItem>
-                                                                        <SelectItem value="25">25</SelectItem>
-                                                                        <SelectItem value="50">50</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div className="text-sm text-muted-foreground">
-                                                                Page {currentPage} of {totalPages}
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                                                                    <ChevronLeft className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                                                                    <ChevronRight className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
-                                        </TabsContent>
-                                        <TabsContent value="employees">
+                                        )}
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="employees">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
                                             <div>
-                                                <div className="flex justify-between items-center mb-4">
-                                                    <div>
-                                                        <h2 className="text-xl font-bold">Employees at {company?.name}</h2>
-                                                        <p className="text-muted-foreground">A list of employees associated with this company.</p>
-                                                    </div>
-                                                    {isOwner && (
-                                                        <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
-                                                            <DialogTrigger asChild>
-                                                                <Button size="sm">
-                                                                    <UserPlus className="mr-2 h-4 w-4" />
-                                                                    Add Employee
-                                                                </Button>
-                                                            </DialogTrigger>
-                                                            <DialogContent className="sm:max-w-2xl">
-                                                                <DialogHeader>
-                                                                    <DialogTitle>Add New Employee</DialogTitle>
-                                                                    <DialogDescription>Enter the details for the new employee.</DialogDescription>
-                                                                </DialogHeader>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                                                    <div className="space-y-2">
-                                                                        <Label htmlFor="new-employee-name">Name</Label>
-                                                                        <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label htmlFor="new-employee-email">Email</Label>
-                                                                        <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label htmlFor="new-employee-mobile">Mobile Number</Label>
-                                                                        <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label htmlFor="new-employee-landline">Landline</Label>
-                                                                        <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
-                                                                    </div>
-                                                                    <div className="space-y-2 sm:col-span-2">
-                                                                        <Label htmlFor="new-employee-address">Address</Label>
-                                                                        <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
-                                                                    </div>
-                                                                </div>
-                                                                <DialogFooter>
-                                                                    <DialogClose asChild>
-                                                                        <Button variant="outline">Cancel</Button>
-                                                                    </DialogClose>
-                                                                    <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
-                                                                        {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                        Save Employee
-                                                                    </Button>
-                                                                </DialogFooter>
-                                                            </DialogContent>
-                                                        </Dialog>
-                                                    )}
-                                                </div>
-                                                
-                                                {employees.length > 0 ? (
-                                                    <div className="border-t">
-                                                        <Table>
-                                                            <TableHeader>
-                                                                <TableRow>
-                                                                    <TableHead>Name</TableHead>
-                                                                    <TableHead>Email</TableHead>
-                                                                    <TableHead>Status</TableHead>
-                                                                    {isOwner && <TableHead className="w-[100px] text-right">Actions</TableHead>}
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {employees.map((employee) => (
-                                                                    <TableRow key={employee.email}>
-                                                                        <TableCell className="font-medium">
-                                                                            <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
-                                                                                {employee.name}
-                                                                            </Link>
-                                                                        </TableCell>
-                                                                        <TableCell>{employee.email}</TableCell>
-                                                                        <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
-                                                                        {isOwner && (
-                                                                            <TableCell className="flex items-center justify-end gap-2">
-                                                                                {employee.status !== 'Verified' && (
-                                                                                    <TooltipProvider>
-                                                                                        <Tooltip>
-                                                                                            <AlertDialog>
-                                                                                                <AlertDialogTrigger asChild>
-                                                                                                    <TooltipTrigger asChild>
-                                                                                                        <Button 
-                                                                                                            variant="ghost" 
-                                                                                                            size="icon" 
-                                                                                                            className="h-8 w-8"
-                                                                                                            onClick={() => setVerifyingEmployee(employee)}
-                                                                                                            disabled={isSendingVerification === employee.email}
-                                                                                                        >
-                                                                                                            {isSendingVerification === employee.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                                                        </Button>
-                                                                                                    </TooltipTrigger>
-                                                                                                </AlertDialogTrigger>
-                                                                                                <TooltipContent>
-                                                                                                    <p>{employee.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
-                                                                                                </TooltipContent>
-                                                                                                <AlertDialogContent>
-                                                                                                    <AlertDialogHeader>
-                                                                                                        <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
-                                                                                                        <AlertDialogDescription>
-                                                                                                            This will send an invitation to {verifyingEmployee?.name} at {verifyingEmployee?.email}. They will be able to register and start using the ticketing system.
-                                                                                                        </AlertDialogDescription>
-                                                                                                    </AlertDialogHeader>
-                                                                                                    <AlertDialogFooter>
-                                                                                                        <AlertDialogCancel onClick={() => setVerifyingEmployee(null)}>Cancel</AlertDialogCancel>
-                                                                                                        <AlertDialogAction onClick={() => handleSendVerification(verifyingEmployee)} disabled={isSendingVerification === verifyingEmployee?.email}>
-                                                                                                            {isSendingVerification === verifyingEmployee?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                                                            Send Invite
-                                                                                                        </AlertDialogAction>
-                                                                                                    </AlertDialogFooter>
-                                                                                                </AlertDialogContent>
-                                                                                            </AlertDialog>
-                                                                                        </Tooltip>
-                                                                                    </TooltipProvider>
-                                                                                )}
-
-                                                                                <AlertDialog>
-                                                                                    <DropdownMenu>
-                                                                                        <DropdownMenuTrigger asChild>
-                                                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                                            </Button>
-                                                                                        </DropdownMenuTrigger>
-                                                                                        <DropdownMenuContent align="end">
-                                                                                            <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
-                                                                                                <Pencil className="mr-2 h-4 w-4" />
-                                                                                                Edit
-                                                                                            </DropdownMenuItem>
-                                                                                            <AlertDialogTrigger asChild>
-                                                                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(employee); }} className="text-destructive focus:text-destructive">
-                                                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                                                    Delete
-                                                                                                </DropdownMenuItem>
-                                                                                            </AlertDialogTrigger>
-                                                                                        </DropdownMenuContent>
-                                                                                    </DropdownMenu>
-                                                                                    <AlertDialogContent>
-                                                                                        <AlertDialogHeader>
-                                                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                                            <AlertDialogDescription>
-                                                                                                This action will delete {deletingEmployee?.name} and cannot be undone.
-                                                                                            </AlertDialogDescription>
-                                                                                        </AlertDialogHeader>
-                                                                                        <AlertDialogFooter>
-                                                                                            <AlertDialogCancel onClick={() => setDeletingEmployee(null)}>Cancel</AlertDialogCancel>
-                                                                                            <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                                                {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                                                Delete
-                                                                                            </AlertDialogAction>
-                                                                                        </AlertDialogFooter>
-                                                                                    </AlertDialogContent>
-                                                                                </AlertDialog>
-                                                                            </TableCell>
-                                                                        )}
-                                                                    </TableRow>
-                                                                ))}
-                                                            </TableBody>
-                                                        </Table>
-                                                    </div>
-                                                ) : (
-                                                    <Alert>
-                                                        <User className="h-4 w-4" />
-                                                        <AlertTitle>No Employees Found</AlertTitle>
-                                                        <AlertDescription>
-                                                        No employees have been associated with this company yet. You can add one manually.
-                                                        </AlertDescription>
-                                                    </Alert>
-                                                )}
+                                                <h2 className="text-xl font-bold">Employees at {company?.name}</h2>
+                                                <p className="text-muted-foreground">A list of employees associated with this company.</p>
                                             </div>
-                                        </TabsContent>
-                                    </>
-                                )}
-                            </div>
-                            <aside className="lg:col-span-1">
-                                {isLoading ? (
-                                    <Card>
-                                        <CardHeader>
-                                            <Skeleton className="h-6 w-1/2" />
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                            <Skeleton className="h-4 w-full" />
-                                        </CardContent>
-                                    </Card>
-                                ) : (
-                                    renderSidebarContent()
-                                )}
-                            </aside>
+                                            {isOwner && (
+                                                <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
+                                                    <DialogTrigger asChild>
+                                                        <Button size="sm">
+                                                            <UserPlus className="mr-2 h-4 w-4" />
+                                                            Add Employee
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-2xl">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Add New Employee</DialogTitle>
+                                                            <DialogDescription>Enter the details for the new employee.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-name">Name</Label>
+                                                                <Input id="new-employee-name" value={newEmployeeName} onChange={(e) => setNewEmployeeName(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-email">Email</Label>
+                                                                <Input id="new-employee-email" type="email" value={newEmployeeEmail} onChange={(e) => setNewEmployeeEmail(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-mobile">Mobile Number</Label>
+                                                                <Input id="new-employee-mobile" value={newEmployeeMobile} onChange={(e) => setNewEmployeeMobile(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label htmlFor="new-employee-landline">Landline</Label>
+                                                                <Input id="new-employee-landline" value={newEmployeeLandline} onChange={(e) => setNewEmployeeLandline(e.target.value)} />
+                                                            </div>
+                                                            <div className="space-y-2 sm:col-span-2">
+                                                                <Label htmlFor="new-employee-address">Address</Label>
+                                                                <Textarea id="new-employee-address" value={newEmployeeAddress} onChange={(e) => setNewEmployeeAddress(e.target.value)} />
+                                                            </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <DialogClose asChild>
+                                                                <Button variant="outline">Cancel</Button>
+                                                            </DialogClose>
+                                                            <Button onClick={handleAddEmployee} disabled={isAddingEmployee}>
+                                                                {isAddingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Save Employee
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            )}
+                                        </div>
+                                        
+                                        {employees.length > 0 ? (
+                                            <div className="border-t">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Name</TableHead>
+                                                            <TableHead>Email</TableHead>
+                                                            <TableHead>Status</TableHead>
+                                                            {isOwner && <TableHead className="w-[100px] text-right">Actions</TableHead>}
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {employees.map((employee) => (
+                                                            <TableRow key={employee.email}>
+                                                                <TableCell className="font-medium">
+                                                                    <Link href={`/contacts/${encodeURIComponent(employee.email)}`} className="hover:underline">
+                                                                        {employee.name}
+                                                                    </Link>
+                                                                </TableCell>
+                                                                <TableCell>{employee.email}</TableCell>
+                                                                <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
+                                                                {isOwner && (
+                                                                    <TableCell className="flex items-center justify-end gap-2">
+                                                                        {employee.status !== 'Verified' && (
+                                                                            <TooltipProvider>
+                                                                                <Tooltip>
+                                                                                    <AlertDialog>
+                                                                                        <AlertDialogTrigger asChild>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <Button 
+                                                                                                    variant="ghost" 
+                                                                                                    size="icon" 
+                                                                                                    className="h-8 w-8"
+                                                                                                    onClick={() => setVerifyingEmployee(employee)}
+                                                                                                    disabled={isSendingVerification === employee.email}
+                                                                                                >
+                                                                                                    {isSendingVerification === employee.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                                                                                </Button>
+                                                                                            </TooltipTrigger>
+                                                                                        </AlertDialogTrigger>
+                                                                                        <TooltipContent>
+                                                                                            <p>{employee.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
+                                                                                        </TooltipContent>
+                                                                                        <AlertDialogContent>
+                                                                                            <AlertDialogHeader>
+                                                                                                <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
+                                                                                                <AlertDialogDescription>
+                                                                                                    This will send an invitation to {verifyingEmployee?.name} at {verifyingEmployee?.email}. They will be able to register and start using the ticketing system.
+                                                                                                </AlertDialogDescription>
+                                                                                            </AlertDialogHeader>
+                                                                                            <AlertDialogFooter>
+                                                                                                <AlertDialogCancel onClick={() => setVerifyingEmployee(null)}>Cancel</AlertDialogCancel>
+                                                                                                <AlertDialogAction onClick={() => handleSendVerification(verifyingEmployee)} disabled={isSendingVerification === verifyingEmployee?.email}>
+                                                                                                    {isSendingVerification === verifyingEmployee?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                                    Send Invite
+                                                                                                </AlertDialogAction>
+                                                                                            </AlertDialogFooter>
+                                                                                        </AlertDialogContent>
+                                                                                    </AlertDialog>
+                                                                                </Tooltip>
+                                                                            </TooltipProvider>
+                                                                        )}
+
+                                                                        <AlertDialog>
+                                                                            <DropdownMenu>
+                                                                                <DropdownMenuTrigger asChild>
+                                                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </DropdownMenuTrigger>
+                                                                                <DropdownMenuContent align="end">
+                                                                                    <DropdownMenuItem onClick={() => handleEditEmployeeClick(employee)}>
+                                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                                        Edit
+                                                                                    </DropdownMenuItem>
+                                                                                    <AlertDialogTrigger asChild>
+                                                                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(employee); }} className="text-destructive focus:text-destructive">
+                                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                                            Delete
+                                                                                        </DropdownMenuItem>
+                                                                                    </AlertDialogTrigger>
+                                                                                </DropdownMenuContent>
+                                                                            </DropdownMenu>
+                                                                            <AlertDialogContent>
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                                    <AlertDialogDescription>
+                                                                                        This action will delete {deletingEmployee?.name} and cannot be undone.
+                                                                                    </AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel onClick={() => setDeletingEmployee(null)}>Cancel</AlertDialogCancel>
+                                                                                    <AlertDialogAction onClick={handleDeleteEmployee} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                                        {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                        Delete
+                                                                                    </AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    </TableCell>
+                                                                )}
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        ) : (
+                                            <Alert>
+                                                <User className="h-4 w-4" />
+                                                <AlertTitle>No Employees Found</AlertTitle>
+                                                <AlertDescription>
+                                                No employees have been associated with this company yet. You can add one manually.
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </div>
+                                </TabsContent>
+                            </>
+                        )}
+                    </div>
+                    <aside className="lg:col-span-1">
+                        {isLoading ? (
+                            <Card>
+                                <CardHeader>
+                                    <Skeleton className="h-6 w-1/2" />
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-full" />
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            renderSidebarContent()
+                        )}
+                    </aside>
+                </div>
+            </Tabs>
+            <Dialog open={isEditEmployeeDialogOpen} onOpenChange={setIsEditEmployeeDialogOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit Employee: {editingEmployee?.name}</DialogTitle>
+                        <DialogDescription>Update the contact details for this employee.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-name">Name</Label>
+                            <Input id="update-employee-name" value={updatedEmployeeName} onChange={(e) => setUpdatedEmployeeName(e.target.value)} />
                         </div>
-                    </Tabs>
-                </main>
-                
-                <Dialog open={isEditEmployeeDialogOpen} onOpenChange={setIsEditEmployeeDialogOpen}>
-                    <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Edit Employee: {editingEmployee?.name}</DialogTitle>
-                            <DialogDescription>Update the contact details for this employee.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="update-employee-name">Name</Label>
-                                <Input id="update-employee-name" value={updatedEmployeeName} onChange={(e) => setUpdatedEmployeeName(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="update-employee-email">Email</Label>
-                                <Input id="update-employee-email" type="email" value={updatedEmployeeEmail} onChange={(e) => setUpdatedEmployeeEmail(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="update-employee-mobile">Mobile Number</Label>
-                                <Input id="update-employee-mobile" value={updatedEmployeeMobile} onChange={(e) => setUpdatedEmployeeMobile(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="update-employee-landline">Landline</Label>
-                                <Input id="update-employee-landline" value={updatedEmployeeLandline} onChange={(e) => setUpdatedEmployeeLandline(e.target.value)} />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                                <Label htmlFor="update-employee-address">Address</Label>
-                                <Textarea id="update-employee-address" value={updatedEmployeeAddress} onChange={(e) => setUpdatedEmployeeAddress(e.target.value)} />
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-email">Email</Label>
+                            <Input id="update-employee-email" type="email" value={updatedEmployeeEmail} onChange={(e) => setUpdatedEmployeeEmail(e.target.value)} />
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline" onClick={() => setEditingEmployee(null)}>Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={handleUpdateEmployee} disabled={isUpdatingEmployee}>
-                                {isUpdatingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Changes
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-mobile">Mobile Number</Label>
+                            <Input id="update-employee-mobile" value={updatedEmployeeMobile} onChange={(e) => setUpdatedEmployeeMobile(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="update-employee-landline">Landline</Label>
+                            <Input id="update-employee-landline" value={updatedEmployeeLandline} onChange={(e) => setUpdatedEmployeeLandline(e.target.value)} />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                            <Label htmlFor="update-employee-address">Address</Label>
+                            <Textarea id="update-employee-address" value={updatedEmployeeAddress} onChange={(e) => setUpdatedEmployeeAddress(e.target.value)} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setEditingEmployee(null)}>Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleUpdateEmployee} disabled={isUpdatingEmployee}>
+                            {isUpdatingEmployee && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
+
+    
