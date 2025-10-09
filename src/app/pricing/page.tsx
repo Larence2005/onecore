@@ -111,22 +111,13 @@ export default function PricingPage() {
               {pricingTiers.map((tier) => (
                 <Card key={tier.name} className="w-full max-w-4xl border-primary shadow-2xl p-6">
                     <div className="flex flex-col space-y-6">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center space-y-4 sm:space-y-0">
-                            <div>
-                                <CardTitle className="text-3xl">{tier.name}</CardTitle>
-                                <CardDescription className="mt-2">{tier.description}</CardDescription>
-                                <div className="flex items-baseline mt-6">
-                                    <span className="text-5xl font-bold">{tier.price}</span>
-                                    {tier.period && <span className="text-muted-foreground ml-2 text-lg">{tier.period}</span>}
-                                </div>
+                         <div>
+                            <CardTitle className="text-3xl">{tier.name}</CardTitle>
+                            <CardDescription className="mt-2">{tier.description}</CardDescription>
+                            <div className="flex items-baseline mt-6">
+                                <span className="text-5xl font-bold">{tier.price}</span>
+                                {tier.period && <span className="text-muted-foreground ml-2 text-lg">{tier.period}</span>}
                             </div>
-                             {(tier as any).buttonText && (
-                                <Button asChild className="w-full sm:w-auto" variant={tier.variant as any} size="lg">
-                                    <Link href="/signup">
-                                    {(tier as any).buttonText}
-                                    </Link>
-                                </Button>
-                            )}
                         </div>
                         <Separator />
                         <div className="space-y-4">
@@ -140,6 +131,13 @@ export default function PricingPage() {
                                 ))}
                             </ul>
                         </div>
+                         {(tier as any).buttonText && (
+                            <Button asChild className="w-full" variant={tier.variant as any} size="lg">
+                                <Link href="/signup">
+                                {(tier as any).buttonText}
+                                </Link>
+                            </Button>
+                        )}
                     </div>
                 </Card>
               ))}
