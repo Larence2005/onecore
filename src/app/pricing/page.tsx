@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -111,8 +110,8 @@ export default function PricingPage() {
             <div className="flex justify-center mt-12">
               {pricingTiers.map((tier) => (
                 <Card key={tier.name} className="w-full max-w-4xl border-primary shadow-2xl p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
-                        <div className="flex flex-col justify-between space-y-6">
+                    <div className="flex flex-col space-y-6">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center space-y-4 sm:space-y-0">
                             <div>
                                 <CardTitle className="text-3xl">{tier.name}</CardTitle>
                                 <CardDescription className="mt-2">{tier.description}</CardDescription>
@@ -121,17 +120,18 @@ export default function PricingPage() {
                                     {tier.period && <span className="text-muted-foreground ml-2 text-lg">{tier.period}</span>}
                                 </div>
                             </div>
-                            {(tier as any).buttonText && (
-                                <Button asChild className="w-full" variant={tier.variant as any} size="lg">
+                             {(tier as any).buttonText && (
+                                <Button asChild className="w-full sm:w-auto" variant={tier.variant as any} size="lg">
                                     <Link href="/signup">
                                     {(tier as any).buttonText}
                                     </Link>
                                 </Button>
                             )}
                         </div>
+                        <Separator />
                         <div className="space-y-4">
-                            <h3 className="text-lg font-semibold">What's included:</h3>
-                            <ul className="space-y-3">
+                            <h3 className="text-lg font-semibold text-center">What's included:</h3>
+                            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
                                 {tier.features.map((feature) => (
                                     <li key={feature} className="flex items-center">
                                     <Check className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
