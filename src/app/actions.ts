@@ -224,7 +224,8 @@ async function getNextTicketNumber(organizationId: string): Promise<number> {
                 transaction.set(counterRef, { currentNumber: 1 });
                 return 1;
             }
-            const newNumber = (counterDoc.data().currentNumber || 0) + 1;
+            const currentNumber = counterDoc.data().currentNumber || 0;
+            const newNumber = currentNumber + 1;
             transaction.update(counterRef, { currentNumber: newNumber });
             return newNumber;
         });
@@ -314,10 +315,8 @@ export async function createTicket(
                     });
 
                     // Send a separate confirmation notification TO the client who created the ticket
-                    const headersList = headers();
-                    const host = headersList.get('host') || 'localhost:3000';
-                    const protocol = headersList.get('x-forwarded-proto') || 'http';
-                    const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
+                    const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                    const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
                     const emailBodyToClient = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
                     await sendEmailAction(organizationId, {
@@ -327,10 +326,8 @@ export async function createTicket(
                     });
 
                 } else { // This is for an agent creating a ticket
-                    const headersList = headers();
-                    const host = headersList.get('host') || 'localhost:3000';
-                    const protocol = headersList.get('x-forwarded-proto') || 'http';
-                    const ticketUrl = `${protocol}://${host}/tickets/${newTicketRef.id}`;
+                    const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                    const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
                     const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
                     sentEmailResponse = await sendEmailAction(organizationId, {
@@ -489,10 +486,8 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
                     // Send notification for email-based tickets
                     try {
-                        const headersList = headers();
-                        const host = headersList.get('host') || 'localhost:3000';
-                        const protocol = headersList.get('x-forwarded-proto') || 'http';
-                        const ticketUrl = `${protocol}://${host}/tickets/${ticketId}`;
+                        const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                        const ticketUrl = `https://${parentDomain}/tickets/${ticketId}`;
                         
                         const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
                         const notificationBody = `
@@ -1393,10 +1388,8 @@ export async function updateTicket(
             const assignee = members.find(m => m.uid === newAssigneeUid);
 
             if (assignee?.email) {
-                const headersList = headers();
-                const host = headersList.get('host') || 'localhost:3000';
-                const protocol = headersList.get('x-forwarded-proto') || 'http';
-                const ticketUrl = `${protocol}://${host}/tickets/${id}`;
+                const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                const ticketUrl = `https://${parentDomain}/tickets/${id}`;
                 
                 let subject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
                 let body = `<p>Hello ${assignee.name},</p>`;
@@ -2192,10 +2185,8 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
                 if (ticket.assignee) {
                     const assignee = members.find(m => m.uid === ticket.assignee);
                     if (assignee?.email) {
-                        const headersList = headers();
-                        const host = headersList.get('host') || 'localhost:3000';
-                        const protocol = headersList.get('x-forwarded-proto') || 'http';
-                        const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
+                        const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                        const ticketUrl = `https://${parentDomain}/tickets/${ticket.id}`;
                         const subject = `Overdue Ticket: #${ticket.ticketNumber} - ${ticket.subject}`;
                         const body = `<p>Ticket #${ticket.ticketNumber} is now overdue.</p><p>View ticket: ${ticketUrl}</p>`;
                         await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
@@ -2224,10 +2215,8 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
                          if (ticket.assignee) {
                             const assignee = members.find(m => m.uid === ticket.assignee);
                             if (assignee?.email) {
-                                const headersList = headers();
-                                const host = headersList.get('host') || 'localhost:3000';
-                                const protocol = headersList.get('x-forwarded-proto') || 'http';
-                                const ticketUrl = `${protocol}://${host}/tickets/${ticket.id}`;
+                                const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                                const ticketUrl = `https://${parentDomain}/tickets/${ticket.id}`;
                                 const subject = `Reminder: Ticket #${ticket.ticketNumber} is due in ${dayToSend} day(s)`;
                                 const body = `<p>Ticket #${ticket.ticketNumber} is due soon.</p><p>View ticket: ${ticketUrl}</p>`;
                                 await sendEmailAction(organizationId, { recipient: assignee.email, subject, body });
@@ -2279,10 +2268,8 @@ export async function sendVerificationEmail(organizationId: string, recipientEma
     // --- End of update logic ---
 
 
-    const headersList = headers();
-    const host = headersList.get('host') || '';
-    const protocol = headersList.get('x-forwarded-proto') || 'http';
-    const signupUrl = `${protocol}://${host}/member-signup`;
+    const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+    const signupUrl = `https://${parentDomain}/member-signup`;
 
     const subject = "You've been invited to join your team's ticketing system";
     const body = `
@@ -2320,10 +2307,8 @@ export async function sendEmployeeVerificationEmail(organizationId: string, comp
     // Invalidate employee cache
     companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
 
-    const headersList = headers();
-    const host = headersList.get('host') || '';
-    const protocol = headersList.get('x-forwarded-proto') || 'http';
-    const signupUrl = `${protocol}://${host}/member-signup`;
+    const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+    const signupUrl = `https://${parentDomain}/member-signup`;
 
     const subject = "You've been invited to your company's support portal";
     const body = `
@@ -2679,3 +2664,5 @@ export async function finalizeUserSetup(
 
 
     
+
+      
