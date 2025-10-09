@@ -1784,6 +1784,12 @@ export async function createOrganization(name: string, domain: string, uid: stri
         mobile: '',
         landline: '',
         website: '',
+        deadlineSettings: {
+            Urgent: 1,
+            High: 2,
+            Medium: 3,
+            Low: 4,
+        }
     });
     
     // Invalidate member cache for this new org
