@@ -1,6 +1,4 @@
 
-"use client";
-
 import { CompanyTicketsView } from "@/components/company-tickets-view";
 import { SidebarProvider } from "@/components/ui/sidebar";
 

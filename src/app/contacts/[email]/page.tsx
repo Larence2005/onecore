@@ -1,6 +1,4 @@
 
-"use client";
-
 import { ContactProfile } from "@/components/contact-profile";
 import { SidebarProvider } from "@/components/ui/sidebar";
 

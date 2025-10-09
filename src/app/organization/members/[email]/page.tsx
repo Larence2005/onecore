@@ -1,6 +1,4 @@
 
-"use client";
-
 import { AgentProfile } from "@/components/agent-profile";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
