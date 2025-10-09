@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X, Check } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 const pricingTiers = [
   {
@@ -109,34 +110,37 @@ export default function PricingPage() {
             </div>
             <div className="flex justify-center mt-12">
               {pricingTiers.map((tier) => (
-                <Card key={tier.name} className="flex flex-col w-full max-w-sm border-primary shadow-2xl">
-                  <CardHeader>
-                    <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                    <CardDescription>{tier.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow space-y-6">
-                    <div className="flex items-baseline">
-                      <span className="text-4xl font-bold">{tier.price}</span>
-                      {tier.period && <span className="text-muted-foreground ml-1">{tier.period}</span>}
+                <Card key={tier.name} className="w-full max-w-4xl border-primary shadow-2xl p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
+                        <div className="flex flex-col justify-between space-y-6">
+                            <div>
+                                <CardTitle className="text-3xl">{tier.name}</CardTitle>
+                                <CardDescription className="mt-2">{tier.description}</CardDescription>
+                                <div className="flex items-baseline mt-6">
+                                    <span className="text-5xl font-bold">{tier.price}</span>
+                                    {tier.period && <span className="text-muted-foreground ml-2 text-lg">{tier.period}</span>}
+                                </div>
+                            </div>
+                            {(tier as any).buttonText && (
+                                <Button asChild className="w-full" variant={tier.variant as any} size="lg">
+                                    <Link href="/signup">
+                                    {(tier as any).buttonText}
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">What's included:</h3>
+                            <ul className="space-y-3">
+                                {tier.features.map((feature) => (
+                                    <li key={feature} className="flex items-center">
+                                    <Check className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
-                    <ul className="space-y-3">
-                      {tier.features.map((feature) => (
-                        <li key={feature} className="flex items-center">
-                          <Check className="w-4 h-4 mr-2 text-green-500" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  {(tier as any).buttonText && (
-                    <CardFooter>
-                      <Button asChild className="w-full" variant={tier.variant as any}>
-                        <Link href="/signup">
-                          {(tier as any).buttonText}
-                        </Link>
-                      </Button>
-                    </CardFooter>
-                  )}
                 </Card>
               ))}
             </div>
