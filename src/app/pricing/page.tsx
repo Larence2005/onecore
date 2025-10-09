@@ -18,15 +18,6 @@ const pricingTiers = [
     variant: "outline"
   },
   {
-    name: "Pro",
-    price: "$79",
-    period: "/month",
-    description: "For growing businesses that need more power.",
-    features: ["25 Agents", "10,000 Tickets/month", "Advanced Analytics", "Priority Support", "Client Management"],
-    buttonText: "Choose Pro",
-    variant: "default"
-  },
-  {
     name: "Enterprise",
     price: "Custom",
     period: "",
@@ -110,7 +101,7 @@ export default function PricingPage() {
                   Choose the plan that's right for your team.
                 </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 max-w-3xl mx-auto">
               {pricingTiers.map((tier) => (
                 <Card key={tier.name} className={`flex flex-col ${tier.name === 'Pro' ? 'border-primary shadow-2xl' : ''}`}>
                   <CardHeader>
