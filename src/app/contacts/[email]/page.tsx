@@ -1,4 +1,3 @@
-
 "use client";
 
 import { ContactProfile } from "@/components/contact-profile";

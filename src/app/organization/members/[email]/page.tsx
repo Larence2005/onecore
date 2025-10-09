@@ -1,4 +1,3 @@
-
 "use client";
 
 import { AgentProfile } from "@/components/agent-profile";
