@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -35,11 +34,21 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/t
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Pencil } from 'lucide-react';
+import { Header } from './header';
+import { SidebarProvider } from './ui/sidebar';
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
 type StatusFilter = 'all' | 'Open' | 'Pending' | 'Resolved' | 'Closed';
 type ActiveTab = 'tickets' | 'employees';
 
+
+export function CompanyTicketsPageContent({ companyId }: { companyId: string }) {
+  return (
+    <SidebarProvider>
+      <CompanyTicketsView companyId={companyId} />
+    </SidebarProvider>
+  );
+}
 
 export function CompanyTicketsView({ companyId }: { companyId: string }) {
     const { user, userProfile, loading } = useAuth();
