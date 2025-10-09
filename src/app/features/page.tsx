@@ -129,6 +129,11 @@ export default function FeaturesPage() {
                 Terms and Policy
               </Link>
             </Button>
+            <Button asChild variant="link" size="sm" className="text-foreground h-auto p-1 text-xs md:size-auto md:text-sm">
+              <Link href="/contact" prefetch={false}>
+                Contact
+              </Link>
+            </Button>
           </nav>
           <div className="md:hidden">
             <Button onClick={() => setIsMenuOpen(true)} variant="ghost" size="icon">
@@ -150,6 +155,7 @@ export default function FeaturesPage() {
                 <Link href="/pricing" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Pricing</Link>
                 <Link href="/privacy" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Privacy</Link>
                 <Link href="/terms" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Terms and Policy</Link>
+                <Link href="/contact" className="text-2xl text-foreground hover:underline" onClick={() => setIsMenuOpen(false)}>Contact</Link>
             </nav>
           </div>
         )}
@@ -200,6 +206,9 @@ export default function FeaturesPage() {
             <div className="mb-4 md:mb-0">
                 <p className="text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
                 <p className="text-xs text-muted-foreground">A Product of Nextcore Technology Inc.</p>
+            </div>
+            <div>
+                <a href="mailto:support@quickdesk-nti.com" className="text-sm text-muted-foreground hover:underline">support@quickdesk-nti.com</a>
             </div>
         </div>
     </footer>
