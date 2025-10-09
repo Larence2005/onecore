@@ -9,20 +9,27 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
 const pricingTiers = [
   {
-    name: "Basic",
+    name: "All-in-One Plan",
     price: "$5",
     period: "/agent/month",
-    description: "For small teams just getting started.",
-    features: ["Per-agent billing", "1000 Tickets/month", "Dedicated Email Support"],
-    variant: "outline"
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "For large organizations with custom needs.",
-    features: ["Unlimited Agents", "Unlimited Tickets", "Custom Integrations", "Dedicated Account Manager", "24/7 Support"],
-    variant: "outline"
+    description: "One plan with everything you need to deliver great support.",
+    features: [
+      "Per-agent billing",
+      "Unlimited Tickets",
+      "Multi-Channel Ticket Creation",
+      "Client Management",
+      "Agent Management",
+      "Advanced Ticket Properties",
+      "Automated Notifications",
+      "Internal Notes",
+      "Activity Log",
+      "Analytics Dashboard",
+      "Dedicated Email Support",
+      "24/7 Support",
+      "And Many More"
+    ],
+    buttonText: "Get Started Now",
+    variant: "default"
   }
 ];
 
@@ -99,9 +106,9 @@ export default function PricingPage() {
                   Choose the plan that's right for your team.
                 </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 max-w-3xl mx-auto">
+            <div className="flex justify-center mt-12">
               {pricingTiers.map((tier) => (
-                <Card key={tier.name} className={`flex flex-col ${tier.name === 'Pro' ? 'border-primary shadow-2xl' : ''}`}>
+                <Card key={tier.name} className="flex flex-col w-full max-w-sm border-primary shadow-2xl">
                   <CardHeader>
                     <CardTitle className="text-2xl">{tier.name}</CardTitle>
                     <CardDescription>{tier.description}</CardDescription>
@@ -122,8 +129,10 @@ export default function PricingPage() {
                   </CardContent>
                   {(tier as any).buttonText && (
                     <CardFooter>
-                      <Button className="w-full" variant={tier.variant as any}>
-                        {(tier as any).buttonText}
+                      <Button asChild className="w-full" variant={tier.variant as any}>
+                        <Link href="/signup">
+                          {(tier as any).buttonText}
+                        </Link>
                       </Button>
                     </CardFooter>
                   )}
