@@ -63,6 +63,9 @@ export default function ForgotPasswordPage() {
             <p className="absolute bottom-12 text-xs text-muted-foreground">@2025 | All Rights Reserved</p>
         </div>
         <div className="w-full md:w-1/2 p-8 sm:p-12">
+            <div className="md:hidden flex flex-col items-center justify-center mb-8">
+              <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width={200} height={200} unoptimized />
+            </div>
             <div className="mb-8 text-left">
                 <h2 className="text-2xl font-bold text-primary">Forgot Password</h2>
                 <p className="text-muted-foreground">
