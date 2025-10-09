@@ -14,7 +14,6 @@ const pricingTiers = [
     period: "/month",
     description: "For small teams just getting started.",
     features: ["5 Agents", "1000 Tickets/month", "Basic Analytics", "Email Support"],
-    buttonText: "Choose Basic",
     variant: "outline"
   },
   {
@@ -122,11 +121,13 @@ export default function PricingPage() {
                       ))}
                     </ul>
                   </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" variant={tier.variant as any}>
-                      {tier.buttonText}
-                    </Button>
-                  </CardFooter>
+                  {tier.buttonText && (
+                    <CardFooter>
+                      <Button className="w-full" variant={tier.variant as any}>
+                        {tier.buttonText}
+                      </Button>
+                    </CardFooter>
+                  )}
                 </Card>
               ))}
             </div>
