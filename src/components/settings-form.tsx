@@ -241,76 +241,78 @@ function VerificationArea() {
     if(userProfile?.status === 'Not Verified') {
         
         return (
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-xl font-bold">Verify Your Account</h2>
-                    <p className="text-muted-foreground">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Verify Your Account</CardTitle>
+                    <CardDescription>
                         Create your new email address for the support system. This will be your primary address for sending and receiving support emails.
-                    </p>
-                </div>
+                    </CardDescription>
+                </CardHeader>
                 <Form {...form}>
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                        <div className="text-center text-sm text-muted-foreground my-4">
-                            Your new email will be:
-                            <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                                control={form.control}
-                                name="username"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Username</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., support" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="displayName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Display Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., Support Team" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>New Microsoft 365 Password</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" placeholder="********" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="confirmPassword"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Confirm New Password</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" placeholder="********" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                        <div className="flex justify-end">
+                    <form onSubmit={(e) => e.preventDefault()}>
+                        <CardContent className="space-y-6">
+                            <div className="text-center text-sm text-muted-foreground my-4 p-3 bg-muted rounded-md">
+                                Your new email will be:
+                                <p className="font-medium text-foreground text-base">{newEmailPreview}</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
+                                    name="username"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Username</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., support" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="displayName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Display Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., Support Team" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>New Microsoft 365 Password</FormLabel>
+                                        <FormControl>
+                                            <Input type="password" placeholder="********" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="confirmPassword"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Confirm New Password</FormLabel>
+                                        <FormControl>
+                                            <Input type="password" placeholder="********" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </CardContent>
+                        <CardFooter className="justify-end">
                             <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                                 <AlertDialogTrigger asChild>
                                     <Button onClick={handleVerifyClick}>
@@ -344,10 +346,10 @@ function VerificationArea() {
                                     )}
                                 </AlertDialogContent>
                             </AlertDialog>
-                        </div>
+                        </CardFooter>
                     </form>
                 </Form>
-            </div>
+            </Card>
         )
     }
 
