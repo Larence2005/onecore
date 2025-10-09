@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X, Mail } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function ContactPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -84,13 +85,15 @@ export default function ContactPage() {
                 </h1>
                 <p className="text-muted-foreground">We're here to help.</p>
             </div>
-            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto text-center">
-                <div className="flex items-center justify-center gap-2">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
-                    <a href="mailto:support@quickdesk-nti.com" className="text-lg font-medium hover:underline">
-                        support@quickdesk-nti.com
-                    </a>
-                </div>
+            <div className="mt-12 mx-auto max-w-md">
+                <Card>
+                    <CardContent className="p-6 flex items-center justify-center gap-4">
+                        <Mail className="h-6 w-6 text-muted-foreground" />
+                        <a href="mailto:support@quickdesk-nti.com" className="text-xl font-semibold hover:underline">
+                            support@quickdesk-nti.com
+                        </a>
+                    </CardContent>
+                </Card>
             </div>
           </div>
         </section>
