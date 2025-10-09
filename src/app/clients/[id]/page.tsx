@@ -8,12 +8,10 @@ function CompanyTicketsPageContent({ companyId }: { companyId: string }) {
     <SidebarProvider>
       <CompanyTicketsView companyId={companyId} />
     </SidebarProvider>
-  )
+  );
 }
 
 // The page is now a Server Component that passes params to the Client Component.
 export default function CompanyTicketsPage({ params }: { params: { id: string } }) {
-  return (
-      <CompanyTicketsPageContent companyId={params.id} />
-  );
+  return <CompanyTicketsPageContent companyId={params.id} />;
 }
