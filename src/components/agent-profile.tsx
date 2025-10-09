@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -499,12 +500,12 @@ export function AgentProfile({ email }: { email: string }) {
         ) : profileData ? (
             <>
             <div className="space-y-6 lg:col-span-2 xl:col-span-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                    <Avatar className="h-20 w-20 text-3xl">
+                <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16 text-2xl sm:h-20 sm:w-20 sm:text-3xl">
                         <AvatarFallback>{profileData.name}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <h2 className="text-3xl font-bold">{profileData.name}</h2>
+                        <h2 className="text-2xl sm:text-3xl font-bold">{profileData.name}</h2>
                         <div className="flex items-center gap-2 text-muted-foreground mt-1">
                             <Mail className="h-4 w-4" />
                             <span>{profileData.email}</span>
@@ -670,5 +671,7 @@ export function AgentProfile({ email }: { email: string }) {
     </div>
   );
 }
+
+    
 
     
