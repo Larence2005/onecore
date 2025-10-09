@@ -16,7 +16,7 @@ import { Terminal, ArrowLeft, Mail, Ticket, Forward, Users as UsersIcon, Buildin
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, useSidebar } from '@/components/ui/sidebar';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Archive } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
@@ -73,6 +73,7 @@ export function ContactProfile({ email }: { email: string }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const { setOpenMobile } = useSidebar();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -257,6 +258,7 @@ export function ContactProfile({ email }: { email: string }) {
         } else {
             router.push(`/dashboard?view=${view}`); 
         }
+        setOpenMobile(false);
     };
     
     const sortAndFilterTickets = (tickets: Email[], sortOption: SortOption, statusFilter: StatusFilter): Email[] => {
@@ -401,258 +403,256 @@ export function ContactProfile({ email }: { email: string }) {
 
 
   return (
-    <SidebarProvider>
-        <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
-            <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
-                <div className="flex-grow flex flex-col">
-                    <SidebarHeader className="p-4 flex flex-col gap-4">
-                        <div className="flex items-center justify-center">
-                            <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-9 w-9">
-                            <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                                <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
-                            </div>
-                        </div>
-                    </SidebarHeader>
-                    <SidebarContent className="flex-grow">
-                    <SidebarMenu className="flex flex-col gap-2 px-4">
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                            <LayoutDashboard className="text-purple-500" />
-                            <span>Dashboard</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
-                            <List className="text-green-500" />
-                            <span>Tickets</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                            <Pencil className="text-blue-500" />
-                            <span>Compose</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                <Archive className="text-orange-500" />
-                                <span>Archive</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('clients')} isActive>
-                            <Users className="text-pink-500" />
-                            <span>Clients</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
-                            <Building2 className="text-yellow-500" />
-                            <span>Organization</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                        <SidebarMenuItem>
-                            <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
-                            <Settings className="text-gray-500" />
-                            <span>Settings</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarContent>
-                </div>
-            </Sidebar>
-
-            <main className="flex-1 flex flex-col min-w-0 bg-muted">
-                <Header>
-                    <div className="flex items-center gap-4">
-                            <Button variant="outline" size="icon" onClick={() => router.back()}>
-                                <ArrowLeft className="h-4 w-4" />
-                            </Button>
-                        <h1 className="text-xl font-bold">Contact Profile</h1>
+    <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
+        <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
+            <div className="flex-grow flex flex-col">
+                <SidebarHeader className="p-4 flex flex-col gap-4">
+                    <div className="flex items-center justify-center">
+                        <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
                     </div>
-                </Header>
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
-                    {isLoading ? (
-                        <div className="lg:col-span-2 xl:col-span-3 space-y-4">
-                            <div className="flex items-center gap-4">
-                                <Skeleton className="h-20 w-20 rounded-full" />
-                                <div className="space-y-2">
-                                    <Skeleton className="h-7 w-48" />
-                                    <Skeleton className="h-5 w-64" />
-                                </div>
-                            </div>
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-96 w-full" />
+                    <div className="flex items-center gap-4">
+                        <Avatar className="h-9 w-9">
+                        <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                            <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                            <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
                         </div>
-                    ) : error ? (
-                            <Alert variant="destructive" className="max-w-2xl mx-auto lg:col-span-full">
-                            <Terminal className="h-4 w-4" />
-                            <AlertTitle>Error</AlertTitle>
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    ) : profileData ? (
-                        <>
-                        <div className="lg:col-span-2 xl:col-span-3 space-y-6">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                                <Avatar className="h-20 w-20 text-3xl">
-                                    <AvatarFallback>{profileData.name}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h2 className="text-3xl font-bold">{profileData.name}</h2>
-                                    <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                                        <Mail className="h-4 w-4" />
-                                        <span>{profileData.email}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <Tabs defaultValue="submitted" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                                <div className="flex justify-between items-center mb-4">
-                                    <TabsList>
-                                        <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
-                                        <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
-                                        <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
-                                        <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
-                                    </TabsList>
-                                    {renderActiveFilters()}
-                                </div>
-                                <TabsContent value="submitted">
-                                    <div className="border-t">
-                                        {sortedSubmittedTickets.length > 0 ? (
-                                            <ul className="space-y-0">
-                                                {sortedSubmittedTickets.map((ticket) => (
-                                                    <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="cc">
-                                    <div className="border-t">
-                                        {sortedCcTickets.length > 0 ? (
-                                            <ul className="space-y-0">
-                                                {sortedCcTickets.map((ticket) => (
-                                                    <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="bcc">
-                                    <div className="border-t">
-                                        {sortedBccTickets.length > 0 ? (
-                                            <ul className="space-y-0">
-                                                {sortedBccTickets.map((ticket) => (
-                                                    <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-                                <TabsContent value="forwarded">
-                                    <div className="border-t pt-4 space-y-4">
-                                        {forwardedActivities.length > 0 ? (
-                                            forwardedActivities.map((log) => (
-                                                <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
-                                                    <div className="flex flex-wrap items-center gap-x-2">
-                                                        <span>{log.details} on ticket</span> 
-                                                        <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
-                                                            {log.ticketSubject}
-                                                        </Link>
-                                                    </div>
-                                                </TimelineItem>
-                                            ))
-                                        ) : (
-                                            <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
-                                        )}
-                                    </div>
-                                </TabsContent>
-                            </Tabs>
-                        </div>
-                         <aside className="lg:col-span-1 xl:col-span-1 space-y-6">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>Properties</CardTitle>
-                                    {isOwner && profileData.companyId && (
-                                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button variant="secondary" size="sm">
-                                                    <Pencil className="mr-2 h-3 w-3" />
-                                                    Edit
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-2xl">
-                                                <DialogHeader>
-                                                    <DialogTitle>Edit Contact Properties</DialogTitle>
-                                                    <DialogDescription>Update the details for {profileData.name}.</DialogDescription>
-                                                </DialogHeader>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="update-name">Name</Label>
-                                                        <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="update-email">Email</Label>
-                                                        <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="update-mobile">Mobile Number</Label>
-                                                        <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="update-landline">Telephone Number</Label>
-                                                        <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
-                                                    </div>
-                                                    <div className="space-y-2 sm:col-span-2">
-                                                        <Label htmlFor="update-address">Address</Label>
-                                                        <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
-                                                    </div>
-                                                </div>
-                                                <DialogFooter>
-                                                    <DialogClose asChild>
-                                                        <Button variant="outline">Cancel</Button>
-                                                    </DialogClose>
-                                                    <Button onClick={handleUpdate} disabled={isUpdating}>
-                                                        {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                        Save Changes
-                                                    </Button>
-                                                </DialogFooter>
-                                            </DialogContent>
-                                        </Dialog>
-                                    )}
-                                </CardHeader>
-                                <CardContent>
-                                    <dl className="grid grid-cols-1 gap-y-4">
-                                        {profileData.companyId && profileData.companyName && (
-                                            <PropertyItem icon={BuildingIcon} label="Company">
-                                                <Link href={`/clients/${profileData.companyId}`} className="font-semibold hover:underline">
-                                                    {profileData.companyName}
-                                                </Link>
-                                            </PropertyItem>
-                                        )}
-                                        <PropertyItem icon={Home} label="Address" value={profileData.address} />
-                                        <PropertyItem icon={Phone} label="Mobile" value={profileData.mobile} />
-                                        <PropertyItem icon={Phone} label="Telephone" value={profileData.landline} />
-                                    </dl>
-                                </CardContent>
-                            </Card>
-                        </aside>
-                        </>
-                    ) : null}
+                    </div>
+                </SidebarHeader>
+                <SidebarContent className="flex-grow">
+                <SidebarMenu className="flex flex-col gap-2 px-4">
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
+                        <LayoutDashboard className="text-purple-500" />
+                        <span>Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
+                        <List className="text-green-500" />
+                        <span>Tickets</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                        <Pencil className="text-blue-500" />
+                        <span>Compose</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                            <Archive className="text-orange-500" />
+                            <span>Archive</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('clients')} isActive>
+                        <Users className="text-pink-500" />
+                        <span>Clients</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('organization')}>
+                        <Building2 className="text-yellow-500" />
+                        <span>Organization</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
+                        <Settings className="text-gray-500" />
+                        <span>Settings</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarContent>
+            </div>
+        </Sidebar>
+
+        <main className="flex-1 flex flex-col min-w-0 bg-muted">
+            <Header>
+                <div className="flex items-center gap-4">
+                        <Button variant="outline" size="icon" onClick={() => router.back()}>
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    <h1 className="text-xl font-bold">Contact Profile</h1>
                 </div>
-            </main>
-        </div>
-    </SidebarProvider>
+            </Header>
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                {isLoading ? (
+                    <div className="lg:col-span-2 xl:col-span-3 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <Skeleton className="h-20 w-20 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-7 w-48" />
+                                <Skeleton className="h-5 w-64" />
+                            </div>
+                        </div>
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-96 w-full" />
+                    </div>
+                ) : error ? (
+                        <Alert variant="destructive" className="max-w-2xl mx-auto lg:col-span-full">
+                        <Terminal className="h-4 w-4" />
+                        <AlertTitle>Error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                ) : profileData ? (
+                    <>
+                    <div className="lg:col-span-2 xl:col-span-3 space-y-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                            <Avatar className="h-20 w-20 text-3xl">
+                                <AvatarFallback>{profileData.name}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <h2 className="text-3xl font-bold">{profileData.name}</h2>
+                                <div className="flex items-center gap-2 text-muted-foreground mt-1">
+                                    <Mail className="h-4 w-4" />
+                                    <span>{profileData.email}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <Tabs defaultValue="submitted" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <div className="flex justify-between items-center mb-4">
+                                <TabsList>
+                                    <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                                    <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
+                                </TabsList>
+                                {renderActiveFilters()}
+                            </div>
+                            <TabsContent value="submitted">
+                                <div className="border-t">
+                                    {sortedSubmittedTickets.length > 0 ? (
+                                        <ul className="space-y-0">
+                                            {sortedSubmittedTickets.map((ticket) => (
+                                                <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                    )}
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="cc">
+                                <div className="border-t">
+                                    {sortedCcTickets.length > 0 ? (
+                                        <ul className="space-y-0">
+                                            {sortedCcTickets.map((ticket) => (
+                                                <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                    )}
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="bcc">
+                                <div className="border-t">
+                                    {sortedBccTickets.length > 0 ? (
+                                        <ul className="space-y-0">
+                                            {sortedBccTickets.map((ticket) => (
+                                                <TicketItem key={ticket.id} email={ticket} isSelected={false} onSelect={() => {}} />
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <div className="text-center py-10 text-muted-foreground">No tickets found.</div>
+                                    )}
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="forwarded">
+                                <div className="border-t pt-4 space-y-4">
+                                    {forwardedActivities.length > 0 ? (
+                                        forwardedActivities.map((log) => (
+                                            <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
+                                                <div className="flex flex-wrap items-center gap-x-2">
+                                                    <span>{log.details} on ticket</span> 
+                                                    <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
+                                                        {log.ticketSubject}
+                                                    </Link>
+                                                </div>
+                                            </TimelineItem>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-10 text-muted-foreground">No forwarded messages found.</div>
+                                    )}
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+                     <aside className="lg:col-span-1 xl:col-span-1 space-y-6">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle>Properties</CardTitle>
+                                {isOwner && profileData.companyId && (
+                                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="secondary" size="sm">
+                                                <Pencil className="mr-2 h-3 w-3" />
+                                                Edit
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-2xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Edit Contact Properties</DialogTitle>
+                                                <DialogDescription>Update the details for {profileData.name}.</DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="update-name">Name</Label>
+                                                    <Input id="update-name" value={updatedName} onChange={(e) => setUpdatedName(e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="update-email">Email</Label>
+                                                    <Input id="update-email" type="email" value={updatedEmail} onChange={(e) => setUpdatedEmail(e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="update-mobile">Mobile Number</Label>
+                                                    <Input id="update-mobile" value={updatedMobile} onChange={(e) => setUpdatedMobile(e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="update-landline">Telephone Number</Label>
+                                                    <Input id="update-landline" value={updatedLandline} onChange={(e) => setUpdatedLandline(e.target.value)} />
+                                                </div>
+                                                <div className="space-y-2 sm:col-span-2">
+                                                    <Label htmlFor="update-address">Address</Label>
+                                                    <Textarea id="update-address" value={updatedAddress} onChange={(e) => setUpdatedAddress(e.target.value)} />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <DialogClose asChild>
+                                                    <Button variant="outline">Cancel</Button>
+                                                </DialogClose>
+                                                <Button onClick={handleUpdate} disabled={isUpdating}>
+                                                    {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Save Changes
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
+                            </CardHeader>
+                            <CardContent>
+                                <dl className="grid grid-cols-1 gap-y-4">
+                                    {profileData.companyId && profileData.companyName && (
+                                        <PropertyItem icon={BuildingIcon} label="Company">
+                                            <Link href={`/clients/${profileData.companyId}`} className="font-semibold hover:underline">
+                                                {profileData.companyName}
+                                            </Link>
+                                        </PropertyItem>
+                                    )}
+                                    <PropertyItem icon={Home} label="Address" value={profileData.address} />
+                                    <PropertyItem icon={Phone} label="Mobile" value={profileData.mobile} />
+                                    <PropertyItem icon={Phone} label="Telephone" value={profileData.landline} />
+                                </dl>
+                            </CardContent>
+                        </Card>
+                    </aside>
+                    </>
+                ) : null}
+            </div>
+        </main>
+    </div>
   );
 }

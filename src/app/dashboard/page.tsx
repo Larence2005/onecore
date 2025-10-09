@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Search, Pencil, Archive, Building, Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -33,6 +33,7 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeView, setActiveView] = useState<View>('analytics');
+  const { setOpenMobile } = useSidebar();
   
   const { toast } = useToast();
   const [emails, setEmails] = useState<Email[]>([]);
@@ -259,6 +260,7 @@ function HomePageContent() {
     } else {
       router.push(`/dashboard?view=${view}`, { scroll: false });
     }
+    setOpenMobile(false);
   }
 
   const onApplyFilters = useCallback((newFilters: FilterState) => {
@@ -276,7 +278,6 @@ function HomePageContent() {
   const isClient = userProfile?.isClient === true;
 
   return (
-    <SidebarProvider>
       <div className={cn(
         "grid min-h-screen w-full",
         activeView === 'tickets' ? "lg:grid-cols-[220px_1fr_288px]" : "lg:grid-cols-[220px_1fr]"
@@ -368,7 +369,7 @@ function HomePageContent() {
                     <div>
                         <h1 className="text-xl font-bold">Dashboard</h1>
                     </div>
-                    <div className="flex flex-1 justify-end items-center gap-4">
+                    <div className="hidden flex-1 justify-end items-center gap-4 sm:flex">
                         <div className="grid items-center gap-1.5">
                             <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
                                 <SelectTrigger id="company-filter" className="w-full sm:w-[180px]">
@@ -470,6 +471,97 @@ function HomePageContent() {
                 </div>
             )}
           </Header>
+            {activeView === 'analytics' && (
+                 <div className="flex sm:hidden flex-row items-center gap-4 px-4 pt-4">
+                    <div className="grid items-center gap-1.5 flex-1">
+                        <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                            <SelectTrigger id="company-filter-mobile" className="w-full">
+                                <SelectValue placeholder="Select a company" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">
+                                    <div className="flex items-center gap-2">
+                                        <Building className="h-4 w-4" />
+                                        All Companies
+                                    </div>
+                                </SelectItem>
+                                {companies.map(company => (
+                                    <SelectItem key={company.id} value={company.id}>
+                                        {company.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="grid items-center flex-1">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                id="date-mobile"
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !customDateRange && dateRangeOption === 'all' && "text-muted-foreground"
+                                )}
+                                >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRangeOption === 'custom' && customDateRange?.from ? (
+                                    customDateRange.to ? (
+                                    <>
+                                        {format(customDateRange.from, "LLL dd, y")} -{" "}
+                                        {format(customDateRange.to, "LLL dd, y")}
+                                    </>
+                                    ) : (
+                                    format(customDateRange.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    {
+                                    'all': 'All Time',
+                                    '7d': 'Last 7 Days',
+                                    '30d': 'Last 30 Days',
+                                    '90d': 'Last 90 Days',
+                                    'custom': 'Custom Range'
+                                    }[dateRangeOption] || 'Select a date range'
+                                )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <Select
+                                    onValueChange={(value) => {
+                                        setDateRangeOption(value);
+                                        if (value !== 'custom') {
+                                            setCustomDateRange(undefined);
+                                        }
+                                    }}
+                                    value={dateRangeOption}
+                                >
+                                    <SelectTrigger className="w-full border-0 rounded-b-none focus:ring-0">
+                                        <SelectValue placeholder="Select a range" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Time</SelectItem>
+                                        <SelectItem value="7d">Last 7 Days</SelectItem>
+                                        <SelectItem value="30d">Last 30 Days</SelectItem>
+                                        <SelectItem value="90d">Last 90 Days</SelectItem>
+                                        <SelectItem value="custom">Custom Range</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={customDateRange?.from}
+                                    selected={customDateRange}
+                                    onSelect={(range) => {
+                                        setCustomDateRange(range)
+                                        if(range) setDateRangeOption('custom')
+                                    }}
+                                    numberOfMonths={1}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </div>
+            )}
           <MainView 
               activeView={activeView} 
               emails={emails}
@@ -488,14 +580,15 @@ function HomePageContent() {
         
         {activeView === 'tickets' && <TicketsFilter onApplyFilters={onApplyFilters} />}
       </div>
-    </SidebarProvider>
   );
 }
 
 export default function DashboardPage() {
   return (
       <React.Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>Loading page...</p></div>}>
-        <HomePageContent />
+        <SidebarProvider>
+            <HomePageContent />
+        </SidebarProvider>
       </React.Suspense>
   )
 }
