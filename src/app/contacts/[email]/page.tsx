@@ -117,7 +117,7 @@ function ContactProfilePageContent({ email }: { email: string }) {
     );
 }
 
-
+// The page is now a Server Component that passes params to the Client Component.
 export default function ContactProfilePage({ params }: { params: { email: string } }) {
   return (
     <SidebarProvider>
@@ -125,5 +125,3 @@ export default function ContactProfilePage({ params }: { params: { email: string
     </SidebarProvider>
   );
 }
-
-    

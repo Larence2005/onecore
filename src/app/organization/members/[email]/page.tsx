@@ -117,6 +117,7 @@ function AgentProfilePageContent({ email }: { email: string }) {
     );
 }
 
+// The page is now a Server Component that passes params to the Client Component.
 export default function AgentProfilePage({ params }: { params: { email: string } }) {
   return (
     <SidebarProvider>
@@ -124,5 +125,3 @@ export default function AgentProfilePage({ params }: { params: { email: string }
     </SidebarProvider>
   );
 }
-
-    
