@@ -1,7 +1,7 @@
 
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection, getDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getLatestEmails } from '@/app/actions';
+import { getLatestEmails, checkTicketDeadlinesAndNotify } from '@/app/actions';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic'; // Defaults to auto
@@ -21,12 +21,25 @@ export async function GET(request: Request) {
 
     const processingPromises = orgsSnapshot.docs.map(async (orgDoc) => {
       const organizationId = orgDoc.id;
-      console.log(`Processing emails for organization: ${organizationId}`);
+      const orgData = orgDoc.data();
+      
+      console.log(`Processing jobs for organization: ${organizationId}`);
+      
       try {
+        // Run email sync for all organizations
         await getLatestEmails(organizationId);
+
+        // Run deadline check only for the organization owner
+        if (orgData.owner) {
+             const ownerUid = orgData.owner;
+             // Here we assume the cron job identity is not a user, so we just run this for the org.
+             // A better approach in a multi-user system would be to ensure this runs only once per org.
+             await checkTicketDeadlinesAndNotify(organizationId);
+        }
+
         return { organizationId, status: 'success' };
       } catch (error) {
-        console.error(`Failed to process emails for organization ${organizationId}:`, error);
+        console.error(`Failed to process jobs for organization ${organizationId}:`, error);
         return { organizationId, status: 'failed', error: (error as Error).message };
       }
     });
@@ -35,7 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Email sync process completed for all organizations.',
+      message: 'Cron jobs completed for all organizations.',
       results,
     });
 
