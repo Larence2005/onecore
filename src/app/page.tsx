@@ -152,23 +152,6 @@ export default function LandingPage() {
                 <p className="text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
                 <p className="text-xs text-muted-foreground">A Product of Nextcore Technology Inc.</p>
             </div>
-            <nav className="flex flex-wrap justify-center md:justify-end gap-x-4 gap-y-2">
-                <Button asChild variant="link" size="sm" className="text-muted-foreground">
-                    <Link href="/about" prefetch={false}>About</Link>
-                </Button>
-                <Button asChild variant="link" size="sm" className="text-muted-foreground">
-                    <Link href="/features" prefetch={false}>Features</Link>
-                </Button>
-                <Button asChild variant="link" size="sm" className="text-muted-foreground">
-                    <Link href="/pricing" prefetch={false}>Pricing</Link>
-                </Button>
-                <Button asChild variant="link" size="sm" className="text-muted-foreground">
-                    <Link href="/privacy" prefetch={false}>Privacy</Link>
-                </Button>
-                <Button asChild variant="link" size="sm" className="text-muted-foreground">
-                    <Link href="/terms" prefetch={false}>Terms</Link>
-                </Button>
-            </nav>
         </div>
     </footer>
     </div>
