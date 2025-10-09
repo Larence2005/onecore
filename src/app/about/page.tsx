@@ -84,7 +84,7 @@ export default function AboutPage() {
                 </h1>
                 <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
-            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
+            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto text-justify">
               <div className="mb-8">
                 <h2 className="font-bold">Our Mission</h2>
                 <p>At Quickdesk, a product of Nextcore Technology Inc., our mission is to deliver a reliable, efficient, and professional ticketing system that enhances organizational productivity and service excellence. We are committed to equipping businesses with a robust platform that simplifies ticket management, accelerates response times, and ensures clear communication across teams. Our focus is on enabling organizations to provide exceptional support experiences to their clients and stakeholders.</p>

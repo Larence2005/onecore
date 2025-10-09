@@ -84,7 +84,7 @@ export default function PrivacyPage() {
                 </h1>
                 <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
-            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
+            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto text-justify">
               <div className="mb-8">
                 <h2 className="font-bold">Introduction</h2>
                 <p>At Quickdesk, a product of Nextcore Technology Inc., we value and respect your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our platform and services. By registering and using Quickdesk, you agree to the practices described in this policy.</p>

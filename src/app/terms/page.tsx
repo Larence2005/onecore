@@ -84,7 +84,7 @@ export default function TermsPage() {
                 </h1>
                 <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
             </div>
-            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
+            <div className="prose dark:prose-invert max-w-none mt-12 mx-auto text-justify">
               <div className="mb-8">
                 <h2 className="font-bold">1. Agreement to Terms</h2>
                 <p>By accessing or using Quickdesk, a product of Nextcore Technology Inc., you agree to be bound by these Terms and Policy, as well as all applicable laws and regulations. If you do not agree with any of these terms, you must discontinue the use of the platform immediately. Nextcore Technology Inc. reserves the right to update or modify these terms at any time without prior notice. Continued use of Quickdesk following any changes constitutes acceptance of the updated terms.</p>
