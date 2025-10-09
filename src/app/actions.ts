@@ -2139,13 +2139,13 @@ export async function updateCompany(
 export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     if (!organizationId) return;
 
-    const timeZone = 'Asia/Singapore';
+    const timeZone = 'Asia/Singapore'; // UTC+8
     const now = toDate(new Date(), { timeZone });
     const currentHour = now.getHours();
 
-    // Run only at 6 AM UTC+8
-    if (currentHour !== 6) {
-        console.log(`Skipping deadline checks: Current time in UTC+8 is not 6 AM.`);
+    // Run only at 12 AM UTC+8
+    if (currentHour !== 0) {
+        console.log(`Skipping deadline checks: Current time in UTC+8 is not 12 AM.`);
         return;
     }
     
