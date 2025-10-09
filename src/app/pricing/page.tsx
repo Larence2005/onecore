@@ -10,10 +10,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 const pricingTiers = [
   {
     name: "Basic",
-    price: "$29",
-    period: "/month",
+    price: "$5",
+    period: "/agent/month",
     description: "For small teams just getting started.",
-    features: ["5 Agents", "1000 Tickets/month", "Basic Analytics", "Email Support"],
+    features: ["Per-agent billing", "1000 Tickets/month", "Basic Analytics", "Email Support"],
     variant: "outline"
   },
   {
