@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -10,7 +11,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 const pricingTiers = [
   {
     name: "All-in-One Plan",
-    price: "$5",
+    price: "$10",
     period: "/agent/month",
     description: "One plan with everything you need to deliver great support.",
     features: [
