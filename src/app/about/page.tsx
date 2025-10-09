@@ -79,11 +79,11 @@ export default function AboutPage() {
             </div>
             <div className="prose dark:prose-invert max-w-none mt-12 mx-auto">
               <h2>Our Mission</h2>
-              <p>Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.</p>
+              <p>At Quickdesk, a product of Nextcore Technology Inc., our mission is to deliver a reliable, efficient, and professional ticketing system that enhances organizational productivity and service excellence. We are committed to equipping businesses with a robust platform that simplifies ticket management, accelerates response times, and ensures clear communication across teams. Our focus is on enabling organizations to provide exceptional support experiences to their clients and stakeholders.</p>
               <h2>Our Story</h2>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.</p>
+              <p>Quickdesk was developed in response to the growing need for a modern and efficient ticketing solution that addresses the challenges faced by many businesses in managing customer and internal requests. As a technology-driven company, Nextcore Technology Inc. identified gaps in existing systems, particularly in ease of use, scalability, and reliability. To bridge these gaps, we designed Quickdesk as a comprehensive ticketing platform that combines advanced functionality with a user-friendly interface. From its inception, Quickdesk has been guided by the principles of innovation, operational excellence, and customer-centricity.</p>
               <h2>Our Team</h2>
-              <p>Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nam nec ante. Sed lacinia, urna non tincidunt mattis, tortor neque adipiscing diam, a cursus ipsum ante quis turpis. Nulla facilisi. Ut fringilla. Suspendisse potenti. Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. Proin quam. Etiam ultrices.</p>
+              <p>Quickdesk is powered by the dedicated professionals at Nextcore Technology Inc. Our team consists of experienced software engineers, designers, product strategists, and support specialists who share a commitment to delivering high-quality solutions. We take pride in fostering a culture of precision, accountability, and continuous improvement. Through our combined expertise and strategic vision, we ensure that Quickdesk remains a trusted partner for businesses seeking a reliable and scalable ticketing system.</p>
             </div>
           </div>
         </section>
