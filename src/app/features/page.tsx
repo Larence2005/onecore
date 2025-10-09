@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -194,10 +195,31 @@ export default function FeaturesPage() {
           </div>
         </section>
       </main>
-      <footer
-        className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-6 lg:px-[20%] border-t">
-        <p className="text-xs text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
-      </footer>
+      <footer className="border-t py-6">
+        <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
+            <div className="mb-4 md:mb-0">
+                <p className="text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
+                <p className="text-xs text-muted-foreground">A Product of Nextcore Technology Inc.</p>
+            </div>
+            <nav className="flex flex-wrap justify-center md:justify-end gap-x-4 gap-y-2">
+                <Button asChild variant="link" size="sm" className="text-muted-foreground">
+                    <Link href="/about" prefetch={false}>About</Link>
+                </Button>
+                <Button asChild variant="link" size="sm" className="text-muted-foreground">
+                    <Link href="/features" prefetch={false}>Features</Link>
+                </Button>
+                <Button asChild variant="link" size="sm" className="text-muted-foreground">
+                    <Link href="/pricing" prefetch={false}>Pricing</Link>
+                </Button>
+                <Button asChild variant="link" size="sm" className="text-muted-foreground">
+                    <Link href="/privacy" prefetch={false}>Privacy</Link>
+                </Button>
+                <Button asChild variant="link" size="sm" className="text-muted-foreground">
+                    <Link href="/terms" prefetch={false}>Terms</Link>
+                </Button>
+            </nav>
+        </div>
+    </footer>
     </div>
   );
 }
