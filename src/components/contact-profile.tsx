@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -396,7 +397,7 @@ export function ContactProfile({ email }: { email: string }) {
     };
 
     if (loading || !user) {
-        return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
+        return <div className="flex items-center justify-center min-h-screen"></div>;
     }
     
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;

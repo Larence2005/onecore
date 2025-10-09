@@ -265,7 +265,7 @@ export function OrganizationView() {
     };
     
     if(loading) {
-        return <p>Loading...</p>;
+        return <div></div>;
     }
 
     if (!userProfile?.organizationId) {

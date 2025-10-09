@@ -383,7 +383,7 @@ export function AgentProfile({ email }: { email: string }) {
     };
 
     if (loading || !user) {
-        return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
+        return <div className="flex items-center justify-center min-h-screen"></div>;
     }
     
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;
