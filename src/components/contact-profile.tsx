@@ -514,12 +514,12 @@ export function ContactProfile({ email }: { email: string }) {
         ) : profileData ? (
             <>
             <div className="lg:col-span-2 xl:col-span-3 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                    <Avatar className="h-20 w-20 text-3xl">
+                <div className="flex flex-row items-center gap-4">
+                    <Avatar className="h-16 w-16 text-2xl">
                         <AvatarFallback>{profileData.name}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <h2 className="text-3xl font-bold">{profileData.name}</h2>
+                        <h2 className="text-2xl font-bold">{profileData.name}</h2>
                         <div className="flex items-center gap-2 text-muted-foreground mt-1">
                             <Mail className="h-4 w-4" />
                             <span>{profileData.email}</span>
