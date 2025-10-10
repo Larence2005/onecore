@@ -166,36 +166,19 @@ export default function LandingPage() {
             </div>
             <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-1 lg:max-w-5xl lg:grid-cols-1 mt-12">
               <Card className="border-primary shadow-lg">
-                <CardHeader className="text-center">
+                <CardHeader className="text-center pb-4">
                   <CardTitle className="text-2xl font-bold">All-in-One Plan</CardTitle>
                   <CardDescription>Perfect for teams of all sizes.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-2 text-center">
                   <div className="flex justify-center items-baseline">
                     <span className="text-4xl font-bold">$10</span>
                     <span className="text-muted-foreground">/agent/month</span>
                   </div>
-                  <ul className="grid gap-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <CheckCircleIcon className="h-4 w-4 text-primary" />
-                      Unlimited Tickets
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircleIcon className="h-4 w-4 text-primary" />
-                      Full Feature Access
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircleIcon className="h-4 w-4 text-primary" />
-                      24/7 Customer Support
-                    </li>
-                  </ul>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4">
-                  <Button asChild className="w-full">
-                    <Link href="/signup">Get Started</Link>
-                  </Button>
-                  <Button asChild variant="link" size="sm">
-                    <Link href="/pricing">See all features</Link>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href="/pricing">Click for more detail</Link>
                   </Button>
                 </CardFooter>
               </Card>
