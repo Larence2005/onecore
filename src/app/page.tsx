@@ -165,7 +165,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="mx-auto grid max-w-5xl items-start gap-8 sm:max-w-4xl lg:max-w-5xl mt-12">
-              <Card className="border-primary shadow-lg w-full max-w-lg mx-auto">
+              <Card className="border-primary shadow-lg w-[450px] mx-auto">
                 <div className="p-6 md:p-8 grid md:grid-cols-2 md:items-center gap-6">
                     <div className="space-y-4 text-center md:text-left">
                         <div className="space-y-2">
@@ -178,7 +178,7 @@ export default function LandingPage() {
                         </div>
                     </div>
                     <div className="flex justify-center md:justify-end">
-                      <Button asChild variant="outline" className="w-full md:w-auto">
+                      <Button asChild className="w-full md:w-auto bg-black text-white hover:bg-black/80">
                         <Link href="/pricing">Click for more detail</Link>
                       </Button>
                     </div>
@@ -223,3 +223,5 @@ function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+    
