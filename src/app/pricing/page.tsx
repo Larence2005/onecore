@@ -14,7 +14,7 @@ const pricingTiers = [
     name: "All-in-One Plan",
     price: "$10",
     period: "/agent/month",
-    description: "One plan with everything you need to deliver great support.",
+    description: "",
     features: [
       "Per-agent billing",
       "Unlimited Tickets",
@@ -110,9 +110,6 @@ export default function PricingPage() {
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                   Simple, Transparent Pricing
                 </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Choose the plan that's right for your team.
-                </p>
             </div>
             <div className="flex justify-center mt-12">
               {pricingTiers.map((tier) => (
