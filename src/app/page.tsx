@@ -164,8 +164,8 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
-            <div className="mx-auto grid max-w-md items-start gap-8 sm:max-w-4xl lg:max-w-5xl mt-12">
-              <Card className="border-primary shadow-lg">
+            <div className="mx-auto grid max-w-5xl items-start gap-8 sm:max-w-4xl lg:max-w-5xl mt-12">
+              <Card className="border-primary shadow-lg w-full max-w-lg mx-auto">
                 <div className="p-6 md:p-8 grid md:grid-cols-2 md:items-center gap-6">
                     <div className="space-y-4 text-center md:text-left">
                         <div className="space-y-2">
@@ -223,5 +223,3 @@ function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-
-    
