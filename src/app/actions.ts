@@ -224,8 +224,7 @@ async function getNextTicketNumber(organizationId: string): Promise<number> {
                 transaction.set(counterRef, { currentNumber: 1 });
                 return 1;
             }
-            const currentNumber = counterDoc.data().currentNumber || 0;
-            const newNumber = currentNumber + 1;
+            const newNumber = (counterDoc.data().currentNumber || 0) + 1;
             transaction.update(counterRef, { currentNumber: newNumber });
             return newNumber;
         });
@@ -353,7 +352,6 @@ export async function createTicket(
                         senderEmail: author.email,
                         body: { contentType: 'html', content: body },
                         receivedDateTime: newTicketData.receivedDateTime,
-                        bodyPreview: newTicketData.bodyPreview,
                         conversationId: sentEmailResponse.conversationId,
                         toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }], // Sent to support
                         ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
@@ -2518,34 +2516,6 @@ async function pollDnsPropagation(domain: string, expectedTxt: string) {
     }
 }
 
-async function pollMailboxReady(client: Client, userId: string): Promise<boolean> {
-    const maxAttempts = 15; // 15 attempts * 20 seconds = 5 minutes
-    let attempt = 0;
-
-    while (attempt < maxAttempts) {
-        attempt++;
-        try {
-            console.log(`Polling mailbox readiness for ${userId}, attempt ${attempt}...`);
-            // Attempt to get the inbox folder, a simple check to see if the mailbox is provisioned.
-            await client.api(`/users/${userId}/mailFolders/inbox`).get();
-            console.log(`✅ Mailbox for ${userId} is ready!`);
-            return true;
-        } catch (error: any) {
-            // Check if the error is a mailbox not found error, which is expected during provisioning
-            if (error.statusCode === 404 && error.code === 'ErrorItemNotFound') {
-                console.log(`⏳ Mailbox not ready yet. Waiting 20 seconds...`);
-                await new Promise(r => setTimeout(r, 20000)); // Wait for 20 seconds
-            } else {
-                // An unexpected error occurred
-                console.error("❌ Unexpected error while polling for mailbox readiness:", error);
-                throw error; 
-            }
-        }
-    }
-    
-    throw new Error("❌ Mailbox provisioning timed out after 5 minutes.");
-}
-
 // --- START: Refactored Verification Actions ---
 
 export async function createAndVerifyDomain(organizationId: string): Promise<{ success: boolean; newDomain?: string; error?: string }> {
@@ -2641,6 +2611,7 @@ export async function createLicensedUser(
 
     try {
         const newUser = await createGraphUser(client, displayName, username, newDomain, password);
+        await new Promise(res => setTimeout(res, 30000)); // Wait 30 seconds before assigning license
         await assignLicenseToUser(client, newUser.id);
         
         return { success: true, userId: newUser.id };
@@ -2652,7 +2623,6 @@ export async function createLicensedUser(
 export async function finalizeUserSetup(
     organizationId: string, 
     firebaseUid: string,
-    graphUserId: string,
     username: string
 ): Promise<{ success: boolean; error?: string }> {
     const orgRef = doc(db, "organizations", organizationId);
@@ -2663,9 +2633,6 @@ export async function finalizeUserSetup(
     const client = getGraphClient();
 
     try {
-        // Wait for mailbox to be ready before finalizing
-        await pollMailboxReady(client, graphUserId);
-        
         const members = orgDoc.data().members as OrganizationMember[];
         const memberIndex = members.findIndex(m => m.uid === firebaseUid);
         if (memberIndex === -1) throw new Error("User not found in organization members list.");
