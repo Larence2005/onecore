@@ -165,7 +165,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="mx-auto grid max-w-5xl items-start gap-8 sm:max-w-4xl lg:max-w-5xl mt-12">
-              <Card className="border-primary shadow-lg w-full max-w-sm sm:max-w-md mx-auto">
+              <Card className="border-primary shadow-lg w-full max-w-xs sm:max-w-md mx-auto">
                 <div className="p-6 md:p-8 grid md:grid-cols-2 md:items-center gap-6">
                     <div className="space-y-4 text-center md:text-left">
                         <div className="space-y-2">
@@ -191,11 +191,11 @@ export default function LandingPage() {
       <footer className="border-t py-6">
         <div className="container mx-auto max-w-5xl px-4 md:px-6 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
             <div className="mb-4 md:mb-0">
-                <p className="text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
                 <p className="text-xs text-muted-foreground">A Product of Nextcore Technology Inc.</p>
             </div>
             <div>
-                <a href="mailto:support@quickdesk-nti.com" className="text-sm text-muted-foreground hover:underline">support@quickdesk-nti.com</a>
+                <a href="mailto:support@quickdesk-nti.com" className="text-xs sm:text-sm text-muted-foreground hover:underline">support@quickdesk-nti.com</a>
             </div>
         </div>
     </footer>

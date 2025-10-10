@@ -104,11 +104,11 @@ export default function AboutPage() {
       <footer className="border-t py-6">
         <div className="container mx-auto max-w-5xl px-4 md:px-6 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
             <div className="mb-4 md:mb-0">
-                <p className="text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">&copy; 2025 Quickdesk. All rights reserved.</p>
                 <p className="text-xs text-muted-foreground">A Product of Nextcore Technology Inc.</p>
             </div>
             <div>
-                <a href="mailto:support@quickdesk-nti.com" className="text-sm text-muted-foreground hover:underline">support@quickdesk-nti.com</a>
+                <a href="mailto:support@quickdesk-nti.com" className="text-xs sm:text-sm text-muted-foreground hover:underline">support@quickdesk-nti.com</a>
             </div>
         </div>
     </footer>
