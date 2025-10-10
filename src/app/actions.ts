@@ -1083,7 +1083,7 @@ export async function forwardEmailAction(
         bccRecipients: parseRecipients(bcc),
     };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${messageId}/forward`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/forward`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
@@ -2517,6 +2517,31 @@ async function pollDnsPropagation(domain: string, expectedTxt: string) {
     }
 }
 
+async function pollMailboxReady(client: Client, userId: string): Promise<boolean> {
+    const maxAttempts = 15; // 15 attempts * 20 seconds = 5 minutes
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+        attempt++;
+        try {
+            // A lightweight query to check if the mailbox is responsive
+            await client.api(`/users/${userId}/mailFolders/inbox`).get();
+            console.log(`Mailbox for user ${userId} is ready after ${attempt} attempts.`);
+            return true;
+        } catch (err: any) {
+            if (err.statusCode === 404) {
+                console.log(`Attempt ${attempt}: Mailbox not ready yet. Waiting 20 seconds...`);
+                await new Promise(res => setTimeout(res, 20000)); // Wait 20 seconds
+            } else {
+                // If it's a different error, fail fast
+                throw new Error(`Failed to poll mailbox readiness: ${err.message}`);
+            }
+        }
+    }
+
+    throw new Error(`Mailbox readiness check timed out after ${maxAttempts} attempts.`);
+}
+
 // --- START: Refactored Verification Actions ---
 
 export async function createAndVerifyDomain(organizationId: string): Promise<{ success: boolean; newDomain?: string; error?: string }> {
@@ -2602,7 +2627,7 @@ export async function createLicensedUser(
     username: string, 
     displayName: string, 
     password: string
-): Promise<{ success: boolean; userId?: string; error?: string }> {
+): Promise<{ success: boolean; userId?: string; userPrincipalName?: string; error?: string }> {
     const orgRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(orgRef);
     if (!orgDoc.exists() || !orgDoc.data().newDomain) throw new Error("Organization domain not found.");
@@ -2612,10 +2637,12 @@ export async function createLicensedUser(
 
     try {
         const newUser = await createGraphUser(client, displayName, username, newDomain, password);
-        await new Promise(res => setTimeout(res, 30000)); // Wait 30 seconds before assigning license
         await assignLicenseToUser(client, newUser.id);
         
-        return { success: true, userId: newUser.id };
+        // After assigning the license, poll for mailbox readiness.
+        await pollMailboxReady(client, newUser.id);
+        
+        return { success: true, userId: newUser.id, userPrincipalName: newUser.userPrincipalName };
     } catch (e: any) {
         return { success: false, error: e.message };
     }
@@ -2624,22 +2651,20 @@ export async function createLicensedUser(
 export async function finalizeUserSetup(
     organizationId: string, 
     firebaseUid: string,
-    username: string
+    userPrincipalName: string
 ): Promise<{ success: boolean; error?: string }> {
     const orgRef = doc(db, "organizations", organizationId);
     const orgDoc = await getDoc(orgRef);
-    if (!orgDoc.exists() || !orgDoc.data().newDomain) throw new Error("Organization domain not found.");
-
-    const newDomain = orgDoc.data().newDomain;
-    const client = getGraphClient();
+    if (!orgDoc.exists()) throw new Error("Organization not found.");
 
     try {
         const members = orgDoc.data().members as OrganizationMember[];
         const memberIndex = members.findIndex(m => m.uid === firebaseUid);
         if (memberIndex === -1) throw new Error("User not found in organization members list.");
         
+        // Update status and the email to the new UPN
         members[memberIndex].status = 'Verified';
-        members[memberIndex].email = `${username}@${newDomain}`;
+        members[memberIndex].email = userPrincipalName;
         
         await updateDoc(orgRef, { members });
 
