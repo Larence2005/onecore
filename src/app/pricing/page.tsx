@@ -110,6 +110,7 @@ export default function PricingPage() {
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                   Simple, Transparent Pricing
                 </h1>
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">One plan with everything you need to deliver great support.</p>
             </div>
             <div className="flex justify-center mt-12">
               {pricingTiers.map((tier) => (
