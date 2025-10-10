@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X, ArrowDown } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -151,6 +152,57 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        <section id="pricing" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <div className="inline-block rounded-lg bg-gray-100 px-3 py-1 text-sm dark:bg-gray-800">Pricing</div>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Simple, Transparent Pricing</h2>
+                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  One plan with everything you need to deliver great support. No hidden fees.
+                </p>
+              </div>
+            </div>
+            <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-1 lg:max-w-5xl lg:grid-cols-1 mt-12">
+              <Card className="border-primary shadow-lg">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl font-bold">All-in-One Plan</CardTitle>
+                  <CardDescription>Perfect for teams of all sizes.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex justify-center items-baseline">
+                    <span className="text-4xl font-bold">$10</span>
+                    <span className="text-muted-foreground">/agent/month</span>
+                  </div>
+                  <ul className="grid gap-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <CheckCircleIcon className="h-4 w-4 text-primary" />
+                      Unlimited Tickets
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircleIcon className="h-4 w-4 text-primary" />
+                      Full Feature Access
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircleIcon className="h-4 w-4 text-primary" />
+                      24/7 Customer Support
+                    </li>
+                  </ul>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-4">
+                  <Button asChild className="w-full">
+                    <Link href="/signup">Get Started</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/pricing">See all features</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </div>
+        </section>
+
       </main>
       <footer className="border-t py-6">
         <div className="container mx-auto max-w-5xl px-4 md:px-6 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
