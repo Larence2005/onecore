@@ -204,11 +204,11 @@ function VerificationArea() {
             // Step 3: Create Licensed User
             setVerificationStatus(prev => ({ ...prev, step: 'user', message: 'Creating M365 user and assigning license...' }));
             const userResult = await createLicensedUser(userProfile.organizationId, values.username, values.displayName, values.password);
-            if (!userResult.success || !userResult.userId) throw new Error(userResult.error || 'Failed to create user.');
+            if (!userResult.success || !userResult.userPrincipalName) throw new Error(userResult.error || 'Failed to create user.');
 
             // Step 4: Finalize Setup
             setVerificationStatus(prev => ({ ...prev, step: 'finalize', message: 'Finalizing user setup...' }));
-            const finalizeResult = await finalizeUserSetup(userProfile.organizationId, user.uid, userResult.userId, values.username);
+            const finalizeResult = await finalizeUserSetup(userProfile.organizationId, user.uid, userResult.userPrincipalName);
             if (!finalizeResult.success) throw new Error(finalizeResult.error || 'Failed to finalize setup.');
             
             setVerificationStatus({ step: 'success', message: 'Verification complete!', error: null });
