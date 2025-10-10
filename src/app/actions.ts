@@ -2518,6 +2518,34 @@ async function pollDnsPropagation(domain: string, expectedTxt: string) {
     }
 }
 
+async function pollMailboxReady(client: Client, userId: string): Promise<boolean> {
+    const maxAttempts = 15; // 15 attempts * 20 seconds = 5 minutes
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+        attempt++;
+        try {
+            console.log(`Polling mailbox readiness for ${userId}, attempt ${attempt}...`);
+            // Attempt to get the inbox folder, a simple check to see if the mailbox is provisioned.
+            await client.api(`/users/${userId}/mailFolders/inbox`).get();
+            console.log(`✅ Mailbox for ${userId} is ready!`);
+            return true;
+        } catch (error: any) {
+            // Check if the error is a mailbox not found error, which is expected during provisioning
+            if (error.statusCode === 404 && error.code === 'ErrorItemNotFound') {
+                console.log(`⏳ Mailbox not ready yet. Waiting 20 seconds...`);
+                await new Promise(r => setTimeout(r, 20000)); // Wait for 20 seconds
+            } else {
+                // An unexpected error occurred
+                console.error("❌ Unexpected error while polling for mailbox readiness:", error);
+                throw error; 
+            }
+        }
+    }
+    
+    throw new Error("❌ Mailbox provisioning timed out after 5 minutes.");
+}
+
 // --- START: Refactored Verification Actions ---
 
 export async function createAndVerifyDomain(organizationId: string): Promise<{ success: boolean; newDomain?: string; error?: string }> {
@@ -2613,7 +2641,6 @@ export async function createLicensedUser(
 
     try {
         const newUser = await createGraphUser(client, displayName, username, newDomain, password);
-        await new Promise(r => setTimeout(r, 30000));
         await assignLicenseToUser(client, newUser.id);
         
         return { success: true, userId: newUser.id };
@@ -2636,6 +2663,9 @@ export async function finalizeUserSetup(
     const client = getGraphClient();
 
     try {
+        // Wait for mailbox to be ready before finalizing
+        await pollMailboxReady(client, graphUserId);
+        
         const members = orgDoc.data().members as OrganizationMember[];
         const memberIndex = members.findIndex(m => m.uid === firebaseUid);
         if (memberIndex === -1) throw new Error("User not found in organization members list.");
