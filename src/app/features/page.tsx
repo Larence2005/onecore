@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Mail, Users, Building, Shield, Bell, Pencil, Activity, LayoutDashboard, AtSign } from 'lucide-react';
 
 const features = [
   {
@@ -16,6 +16,16 @@ const features = [
       src: "/MultiChannelTicketCreation.png",
       width: 600,
       height: 400
+    },
+  },
+  {
+    icon: <AtSign className="w-10 h-10 text-teal-500" />,
+    title: "Dedicated Email Account",
+    description: "Upon registration, get a dedicated Microsoft 365 email account for your support operations, ensuring a professional and centralized communication channel (e.g., support@your-company.quickdesk-nti.com).",
+    image: {
+        src: "/DedicatedEmailAccount.png",
+        width: 600,
+        height: 400
     },
   },
   {
