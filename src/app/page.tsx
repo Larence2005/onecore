@@ -164,23 +164,25 @@ export default function LandingPage() {
                 </p>
               </div>
             </div>
-            <div className="mx-auto grid max-w-sm items-start gap-8 sm:max-w-4xl sm:grid-cols-1 lg:max-w-5xl lg:grid-cols-1 mt-12">
+            <div className="mx-auto grid max-w-md items-start gap-8 sm:max-w-4xl lg:max-w-5xl mt-12">
               <Card className="border-primary shadow-lg">
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl font-bold">All-in-One Plan</CardTitle>
-                  <CardDescription>Perfect for teams of all sizes.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2 text-center">
-                  <div className="flex justify-center items-baseline">
-                    <span className="text-4xl font-bold">$10</span>
-                    <span className="text-muted-foreground">/agent/month</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-4">
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href="/pricing">Click for more detail</Link>
-                  </Button>
-                </CardFooter>
+                <div className="p-6 md:p-8 grid md:grid-cols-2 md:items-center gap-6">
+                    <div className="space-y-4 text-center md:text-left">
+                        <div className="space-y-2">
+                            <CardTitle className="text-2xl font-bold">All-in-One Plan</CardTitle>
+                            <CardDescription>Perfect for teams of all sizes.</CardDescription>
+                        </div>
+                        <div className="flex justify-center md:justify-start items-baseline">
+                            <span className="text-4xl font-bold">$10</span>
+                            <span className="text-muted-foreground">/agent/month</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-center md:justify-end">
+                      <Button asChild variant="outline" className="w-full md:w-auto">
+                        <Link href="/pricing">Click for more detail</Link>
+                      </Button>
+                    </div>
+                </div>
               </Card>
             </div>
           </div>
@@ -221,3 +223,5 @@ function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+    
