@@ -220,12 +220,13 @@ async function getNextTicketNumber(organizationId: string): Promise<number> {
     try {
         const newTicketNumber = await runTransaction(db, async (transaction) => {
             const counterDoc = await transaction.get(counterRef);
-            if (!counterDoc.exists()) {
-                transaction.set(counterRef, { currentNumber: 1 });
-                return 1;
+            let newNumber = 1;
+            if (counterDoc.exists()) {
+                newNumber = (counterDoc.data().currentNumber || 0) + 1;
+                transaction.update(counterRef, { currentNumber: newNumber });
+            } else {
+                transaction.set(counterRef, { currentNumber: newNumber });
             }
-            const newNumber = (counterDoc.data().currentNumber || 0) + 1;
-            transaction.update(counterRef, { currentNumber: newNumber });
             return newNumber;
         });
         return newTicketNumber;
@@ -1082,7 +1083,7 @@ export async function forwardEmailAction(
         bccRecipients: parseRecipients(bcc),
     };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/forward`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${messageId}/forward`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
