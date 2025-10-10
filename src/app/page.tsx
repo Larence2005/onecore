@@ -178,7 +178,7 @@ export default function LandingPage() {
                         </div>
                     </div>
                     <div className="flex justify-center md:justify-end">
-                      <Button asChild className="w-full md:w-auto bg-black text-white hover:bg-black/80">
+                      <Button asChild className="w-[200px] bg-black text-white hover:bg-black/80">
                         <Link href="/pricing">Click for more detail</Link>
                       </Button>
                     </div>
@@ -223,5 +223,3 @@ function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-
-    
