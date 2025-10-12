@@ -155,7 +155,7 @@ export default function LandingPage() {
 
         <section id="security" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12 mx-auto max-w-5xl">
-            <div className="space-y-4 lg:order-last">
+            <div className="flex flex-col space-y-4 lg:order-last">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Your Security is Our Priority</h2>
               <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 We are committed to protecting your data and respecting your privacy. Quickdesk is built with robust security measures to ensure your information is always safe.
@@ -183,6 +183,11 @@ export default function LandingPage() {
                   </div>
                 </li>
               </ul>
+              <div className="hidden lg:block pt-4">
+                <Button asChild>
+                  <Link href="/privacy">Learn More</Link>
+                </Button>
+              </div>
             </div>
             <div className="w-4/5 mx-auto">
               <Image
@@ -193,6 +198,11 @@ export default function LandingPage() {
                 className="overflow-hidden rounded-xl object-contain object-center sm:w-full"
                 unoptimized
               />
+               <div className="block lg:hidden text-center pt-6">
+                <Button asChild>
+                  <Link href="/privacy">Learn More</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
