@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBa
 import { getAuth, signInWithEmailAndPassword } from "firebase-admin/auth";
 import { app as adminApp } from '@/lib/firebase-admin';
 import { auth as adminAuth } from '@/lib/firebase-admin';
-import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add } from 'date-fns';
+import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add, isAfter } from 'date-fns';
 import { formatInTimeZone, toDate } from 'date-fns-tz';
 import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
@@ -418,7 +418,6 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
             
             if (!email.conversationId) continue;
             
-            // Skip notification emails from our own system to prevent loops
             const subjectLower = email.subject.toLowerCase();
             if (subjectLower.includes("notification:") || subjectLower.includes("update on ticket") || subjectLower.includes("you've been assigned") || subjectLower.includes("ticket created:")) {
                 continue; 
@@ -429,15 +428,9 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                // This is a new conversation thread, create a ticket.
                 const senderEmail = email.from.emailAddress.address.toLowerCase();
+                if (senderEmail === settings.userId.toLowerCase()) continue;
 
-                // Do not create tickets from the monitored email address itself
-                if (senderEmail === settings.userId.toLowerCase()) {
-                    continue;
-                }
-
-                // Check if the sender belongs to any company
                 let companyId: string | undefined = undefined;
                 const allCompanies = await getCompanies(organizationId);
                 for (const company of allCompanies) {
@@ -450,7 +443,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                 }
 
                 const ticketNumber = await getNextTicketNumber(organizationId);
-                const ticketDocRef = doc(ticketsCollectionRef); // Create a new document reference to get the ID
+                const ticketDocRef = doc(ticketsCollectionRef);
                 const ticketId = ticketDocRef.id;
 
                 const preliminaryTicketData: Partial<Email> = {
@@ -469,53 +462,57 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                     closedAt: null,
                     ticketNumber: ticketNumber,
                     assignee: null,
-                    companyId: companyId, // Associate company if found
+                    companyId: companyId,
                     creator: { name: email.from.emailAddress.name, email: email.from.emailAddress.address }
                 };
 
+                await setDoc(ticketDocRef, preliminaryTicketData);
+                
+                await addActivityLog(organizationId, ticketId, {
+                    type: 'Create',
+                    details: 'Ticket created',
+                    date: email.receivedDateTime,
+                    user: email.from.emailAddress.address || 'System',
+                });
+
                 try {
-                    await setDoc(ticketDocRef, preliminaryTicketData);
-                    
-                    await addActivityLog(organizationId, ticketId, {
-                        type: 'Create',
-                        details: 'Ticket created',
-                        date: email.receivedDateTime,
-                        user: email.from.emailAddress.address || 'System',
+                    const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                    const ticketUrl = `https://${parentDomain}/tickets/${ticketId}`;
+                    const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
+                    const notificationBody = `<p>Hello ${preliminaryTicketData.sender},</p><p>Your ticket with the subject "${preliminaryTicketData.title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    await sendEmailAction(organizationId, {
+                        recipient: preliminaryTicketData.senderEmail!,
+                        subject: notificationSubject,
+                        body: notificationBody,
                     });
-
-                    // Send notification for email-based tickets
-                    try {
-                        const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
-                        const ticketUrl = `https://${parentDomain}/tickets/${ticketId}`;
-                        
-                        const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
-                        const notificationBody = `
-                            <p>Hello ${preliminaryTicketData.sender},</p>
-                            <p>Your ticket with the subject "${preliminaryTicketData.title}" has been successfully received and created.</p>
-                            <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
-                            <p>You can view your ticket and any updates at this URL: ${ticketUrl}</p>
-                            <br>
-                            <p>This is an automated notification. Replies to this email are not monitored.</p>
-                        `;
-
-                        await sendEmailAction(organizationId, {
-                            recipient: preliminaryTicketData.senderEmail!,
-                            subject: notificationSubject,
-                            body: notificationBody,
-                        });
-                    } catch (e) {
-                        console.error("Failed to send ticket creation notification for email-based ticket:", e);
-                    }
-
-                    await fetchAndStoreFullConversation(organizationId, email.conversationId);
-
                 } catch (e) {
-                    console.log(`Ticket creation for conversation ${email.conversationId} skipped, likely already exists.`);
+                    console.error("Failed to send ticket creation notification for email-based ticket:", e);
                 }
 
-            } else {
-                // It's a reply to an existing ticket.
                 await fetchAndStoreFullConversation(organizationId, email.conversationId);
+
+            } else {
+                // It's a reply. Check if we need to update.
+                const ticketDoc = querySnapshot.docs[0];
+                const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', email.conversationId);
+                const conversationDoc = await getDoc(conversationDocRef);
+                
+                if (conversationDoc.exists()) {
+                    const messages = conversationDoc.data().messages as DetailedEmail[];
+                    if (messages && messages.length > 0) {
+                        const lastStoredMessage = messages[messages.length - 1];
+                        if (isAfter(parseISO(email.receivedDateTime), parseISO(lastStoredMessage.receivedDateTime))) {
+                            // New email is newer than our last stored one, so we fetch the whole conversation.
+                            await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                        }
+                    } else {
+                        // No messages stored, fetch conversation.
+                        await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                    }
+                } else {
+                    // No conversation document exists, fetch it.
+                    await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                }
             }
         }
     } catch (error) {
@@ -2132,7 +2129,7 @@ export async function updateCompany(
 }
     
 // A simple in-memory lock to ensure the deadline check runs only once per day per org.
-const deadlineCheckLocks = new Map<string, string>();
+let lastDeadlineCheckDate: string | null = null;
     
 export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     if (!organizationId) return;
@@ -2142,22 +2139,14 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     const currentHour = now.getHours();
     const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
     
-    const lockKey = `${organizationId}-${currentDate}`;
-
-    // This function is intended to be called by a cron job.
+    // This function is intended to be called by a cron job every 5 minutes.
     // These checks ensure the core logic only runs once per day around midnight UTC+8.
-    if (currentHour !== 0 || deadlineCheckLocks.get(organizationId) === currentDate) {
-        if (currentHour !== 0) {
-            // Reset the lock for the next day if it's no longer midnight
-            if(deadlineCheckLocks.has(organizationId)) {
-                deadlineCheckLocks.delete(organizationId);
-            }
-        }
+    if (currentHour !== 0 || lastDeadlineCheckDate === currentDate) {
         return;
     }
 
     // Set the lock to prevent re-running for the same day
-    deadlineCheckLocks.set(organizationId, currentDate);
+    lastDeadlineCheckDate = currentDate;
     
     const orgDocRef = doc(db, 'organizations', organizationId);
     const orgDoc = await getDoc(orgDocRef);
@@ -2703,5 +2692,7 @@ export async function finalizeUserSetup(
     
 
       
+
+    
 
     
