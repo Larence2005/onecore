@@ -22,12 +22,12 @@ import { Client } from "@microsoft/microsoft-graph-client";
 
 
 // Initialize caches for different data types
-// Cache TTL: 24 hours for all caches
-const TTL_24_HOURS = 86400;
-const ticketsCache = new SimpleCache<any>(TTL_24_HOURS);
-const companiesCache = new SimpleCache<any>(TTL_24_HOURS);
-const membersCache = new SimpleCache<any>(TTL_24_HOURS);
-const activityCache = new SimpleCache<any>(TTL_24_HOURS);
+// Cache TTL: 1 year for all caches
+const TTL_1_YEAR = 31536000;
+const ticketsCache = new SimpleCache<any>(TTL_1_YEAR);
+const companiesCache = new SimpleCache<any>(TTL_1_YEAR);
+const membersCache = new SimpleCache<any>(TTL_1_YEAR);
+const activityCache = new SimpleCache<any>(TTL_1_YEAR);
 
 
 export interface Email {
@@ -2690,3 +2690,5 @@ export async function finalizeUserSetup(
     
 
       
+
+    
