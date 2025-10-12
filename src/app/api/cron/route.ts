@@ -25,6 +25,9 @@ export async function GET(request: Request) {
       console.log(`Processing jobs for organization: ${organizationId}`);
       
       try {
+        // Fetch latest emails to create/update tickets
+        await getLatestEmails(organizationId);
+        
         // Run deadline checks for each organization
         await checkTicketDeadlinesAndNotify(organizationId);
 

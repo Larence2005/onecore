@@ -58,22 +58,6 @@ function HomePageContent() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
 
-  const runBackgroundTasks = useCallback(async () => {
-    if (userProfile?.organizationId) {
-        try {
-            await getLatestEmails(userProfile.organizationId);
-        } catch (emailError) {
-            // Silently fail, error is logged in the action
-        }
-    }
-  }, [userProfile]);
-
-  useEffect(() => {
-    runBackgroundTasks(); // Run once on initial load
-    const interval = setInterval(runBackgroundTasks, 30 * 1000); // Poll every 30 seconds
-    return () => clearInterval(interval);
-  }, [runBackgroundTasks]);
-
   useEffect(() => {
     if (!user || !userProfile?.organizationId) return;
 
