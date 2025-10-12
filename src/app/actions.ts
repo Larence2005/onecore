@@ -317,7 +317,7 @@ export async function createTicket(
                     // Send a separate confirmation notification TO the client who created the ticket
                     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                     const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
-                    const emailBodyToClient = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    const emailBodyToClient = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
@@ -328,7 +328,7 @@ export async function createTicket(
                 } else { // This is for an agent creating a ticket
                     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                     const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
-                    const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been created successfully.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
                     sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: author.email,
@@ -491,7 +491,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                         const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
                         const notificationBody = `
                             <p>Hello ${preliminaryTicketData.sender},</p>
-                            <p>Your ticket with the subject "${preliminaryTicketData.title}" has been created successfully.</p>
+                            <p>Your ticket with the subject "${preliminaryTicketData.title}" has been successfully received and created.</p>
                             <p>Your ticket number is <b>#${ticketNumber}</b>.</p>
                             <p>You can view your ticket and any updates at this URL: ${ticketUrl}</p>
                             <br>
