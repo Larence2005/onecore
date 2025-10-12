@@ -139,6 +139,11 @@ export default function LandingPage() {
                   </div>
                 </li>
               </ul>
+              <div className="hidden lg:block pt-4">
+                  <Button asChild>
+                    <Link href="/features">Show More</Link>
+                  </Button>
+              </div>
             </div>
              <div className="w-4/5 mx-auto">
                 <Image
@@ -149,6 +154,11 @@ export default function LandingPage() {
                     className="overflow-hidden rounded-xl object-contain object-center sm:w-full"
                     unoptimized
                 />
+                 <div className="block lg:hidden text-center pt-6">
+                    <Button asChild>
+                        <Link href="/features">Show More</Link>
+                    </Button>
+                </div>
             </div>
           </div>
         </section>
