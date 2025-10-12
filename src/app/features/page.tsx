@@ -219,7 +219,7 @@ export default function FeaturesPage() {
             </div>
             <div className="text-right">
                 <a href="mailto:support@quickdesk-nti.com" className="text-xs sm:text-sm text-muted-foreground hover:underline">support@quickdesk-nti.com</a>
-                <p className="text-xs text-muted-foreground">Version: 1.0.0 (64a6d46)</p>
+                <p className="text-xs text-muted-foreground">Version: 1.0.0 (08a981e)</p>
             </div>
         </div>
     </footer>
