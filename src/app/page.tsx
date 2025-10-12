@@ -153,7 +153,51 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+        <section id="security" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+          <div className="container grid items-center gap-6 px-4 md:px-6 lg:grid-cols-2 lg:gap-12 mx-auto max-w-5xl">
+            <div className="w-4/5 mx-auto">
+              <Image
+                src="/image2.png"
+                alt="Security and Privacy"
+                width={500}
+                height={500}
+                className="overflow-hidden rounded-xl object-contain object-center sm:w-full"
+                unoptimized
+              />
+            </div>
+            <div className="space-y-4">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Your Security is Our Priority</h2>
+              <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                We are committed to protecting your data and respecting your privacy. Quickdesk is built with robust security measures to ensure your information is always safe.
+              </p>
+              <ul className="grid gap-4">
+                <li className="flex items-start gap-3">
+                  <ShieldCheckIcon className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Complete Data Privacy</h3>
+                    <p className="text-muted-foreground">We never read, access, or monitor your emails and tickets. Your data is yours alone.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <ShieldCheckIcon className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">Secure Authentication</h3>
+                    <p className="text-muted-foreground">Your account is protected with industry-standard authentication and security protocols.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <ShieldCheckIcon className="mt-1 h-5 w-5 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">No Third-Party Sharing</h3>
+                    <p className="text-muted-foreground">We will never share or sell your data to third parties. Your trust is our most important asset.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
@@ -221,4 +265,24 @@ function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
       <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
   )
+}
+
+function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
 }
