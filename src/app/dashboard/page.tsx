@@ -65,16 +65,8 @@ function HomePageContent() {
         } catch (emailError) {
             // Silently fail, error is logged in the action
         }
-
-        if(user?.uid === userProfile.organizationOwnerUid) {
-            try {
-                await checkTicketDeadlinesAndNotify(userProfile.organizationId);
-            } catch (deadlineError) {
-                 // Silently fail, error is logged in the action
-            }
-        }
     }
-  }, [userProfile, user]);
+  }, [userProfile]);
 
   useEffect(() => {
     runBackgroundTasks(); // Run once on initial load

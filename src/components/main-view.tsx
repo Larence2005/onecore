@@ -20,7 +20,7 @@ type MainViewProps = {
     isLoading?: boolean;
     error?: string | null;
     onRefresh?: () => void;
-    filters?: FilterState;
+    filters?: Omit<FilterState, 'groups'>;
     dashboardFilters?: {
         companies: Company[];
         selectedCompanyId: string;

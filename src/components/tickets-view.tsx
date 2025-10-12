@@ -9,7 +9,7 @@ import { Terminal, Archive, ChevronLeft, ChevronRight } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { TicketItem } from "./ticket-item";
 import { FilterState } from "./tickets-filter";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { isAfter, subDays, parseISO, isPast, isBefore } from "date-fns";
 import { archiveTickets } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
@@ -86,7 +86,7 @@ const filterEmails = (emails: Email[], filters: Omit<FilterState, 'groups'>): Em
         }
 
         // Date created filter
-        if (filters.created !== 'any') {
+        if (filters.created !== 'any' && filters.created !== 'custom') {
             const emailDate = parseISO(email.receivedDateTime);
             let startDate: Date;
             if (filters.created === 'today') {
@@ -97,14 +97,21 @@ const filterEmails = (emails: Email[], filters: Omit<FilterState, 'groups'>): Em
                 startDate = subDays(new Date(), 30);
             } else if (filters.created === '90d') {
                 startDate = subDays(new Date(), 90);
-            } else if (filters.created === 'custom' && filters.dateRange?.from) {
-                const fromDate = filters.dateRange.from;
-                const toDate = filters.dateRange.to || fromDate;
-                if (!isAfter(emailDate, fromDate) || !isBefore(emailDate, toDate)) {
-                    return false;
-                }
+            } else {
+                 return true; // Should not happen for non-custom
+            }
+             if (!isAfter(emailDate, startDate)) {
+                return false;
+            }
+        } else if (filters.created === 'custom' && filters.dateRange?.from) {
+            const emailDate = parseISO(email.receivedDateTime);
+            const fromDate = filters.dateRange.from;
+            const toDate = filters.dateRange.to || new Date(); // default to now if not set
+            if (!isAfter(emailDate, fromDate) || isAfter(emailDate, toDate)) {
+                 return false;
             }
         }
+
 
         return true;
     });
@@ -119,6 +126,11 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
     const { toast } = useToast();
     
     const filteredEmails = useMemo(() => filterEmails(emails, filters), [emails, filters]);
+
+    // Reset page to 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filters]);
 
     // Pagination logic
     const indexOfLastTicket = currentPage * ticketsPerPage;
@@ -152,7 +164,8 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                 description: `${selectedTickets.length} ticket(s) have been archived.`,
             });
             setSelectedTickets([]);
-            onRefresh();
+            // onRefresh is handled by real-time listener, but we might want it for manual refresh
+            if(onRefresh) onRefresh();
         } else {
             toast({
                 variant: 'destructive',
@@ -163,7 +176,6 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
     };
 
     const isAllSelected = filteredEmails.length > 0 && selectedTickets.length === filteredEmails.length;
-    const isSomeSelected = selectedTickets.length > 0 && selectedTickets.length < filteredEmails.length;
 
 
     return (
@@ -227,12 +239,12 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                 )}
             </div>
             {totalPages > 1 && (
-                <div className="flex-shrink-0 flex items-center justify-between p-2 mt-4 border-t">
+                <div className="flex-shrink-0 flex items-center justify-between pt-4 mt-4 border-t">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>Rows per page</span>
                         <Select value={String(ticketsPerPage)} onValueChange={(value) => setTicketsPerPage(Number(value))}>
                             <SelectTrigger className="h-8 w-[70px]">
-                                <SelectValue placeholder={ticketsPerPage} />
+                                <SelectValue placeholder={String(ticketsPerPage)} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="10">10</SelectItem>
