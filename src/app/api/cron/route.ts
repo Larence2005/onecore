@@ -25,8 +25,7 @@ export async function GET(request: Request) {
       console.log(`Processing jobs for organization: ${organizationId}`);
       
       try {
-        // Run email sync and deadline checks for each organization
-        await getLatestEmails(organizationId);
+        // Run deadline checks for each organization
         await checkTicketDeadlinesAndNotify(organizationId);
 
         return { organizationId, status: 'success' };
