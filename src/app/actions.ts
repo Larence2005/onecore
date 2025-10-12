@@ -22,11 +22,12 @@ import { Client } from "@microsoft/microsoft-graph-client";
 
 
 // Initialize caches for different data types
-// Cache TTL: 5 minutes for lists, 2 minutes for individual items
-const ticketsCache = new SimpleCache<any>(300);
-const companiesCache = new SimpleCache<any>(300);
-const membersCache = new SimpleCache<any>(300);
-const activityCache = new SimpleCache<any>(120);
+// Cache TTL: 24 hours for all caches
+const TTL_24_HOURS = 86400;
+const ticketsCache = new SimpleCache<any>(TTL_24_HOURS);
+const companiesCache = new SimpleCache<any>(TTL_24_HOURS);
+const membersCache = new SimpleCache<any>(TTL_24_HOURS);
+const activityCache = new SimpleCache<any>(TTL_24_HOURS);
 
 
 export interface Email {
