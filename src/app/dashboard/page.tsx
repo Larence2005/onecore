@@ -70,7 +70,7 @@ function HomePageContent() {
 
   useEffect(() => {
     runBackgroundTasks(); // Run once on initial load
-    const interval = setInterval(runBackgroundTasks, 5 * 60 * 1000); // Poll every 5 minutes
+    const interval = setInterval(runBackgroundTasks, 30 * 1000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, [runBackgroundTasks]);
 
