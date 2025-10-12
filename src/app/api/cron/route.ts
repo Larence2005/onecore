@@ -21,21 +21,13 @@ export async function GET(request: Request) {
 
     const processingPromises = orgsSnapshot.docs.map(async (orgDoc) => {
       const organizationId = orgDoc.id;
-      const orgData = orgDoc.data();
       
       console.log(`Processing jobs for organization: ${organizationId}`);
       
       try {
-        // Run email sync for all organizations
+        // Run email sync and deadline checks for each organization
         await getLatestEmails(organizationId);
-
-        // Run deadline check only for the organization owner
-        if (orgData.owner) {
-             const ownerUid = orgData.owner;
-             // Here we assume the cron job identity is not a user, so we just run this for the org.
-             // A better approach in a multi-user system would be to ensure this runs only once per org.
-             await checkTicketDeadlinesAndNotify(organizationId);
-        }
+        await checkTicketDeadlinesAndNotify(organizationId);
 
         return { organizationId, status: 'success' };
       } catch (error) {
