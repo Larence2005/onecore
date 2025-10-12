@@ -2131,6 +2131,8 @@ export async function updateCompany(
     return { success: true };
 }
     
+// A simple in-memory lock to ensure the deadline check runs only once per day per org.
+const deadlineCheckLocks = new Map<string, string>();
     
 export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     if (!organizationId) return;
@@ -2138,14 +2140,24 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     const timeZone = 'Asia/Singapore'; // UTC+8
     const now = toDate(new Date(), { timeZone });
     const currentHour = now.getHours();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    const lockKey = `${organizationId}-${currentDate}`;
 
     // This function is intended to be called by a cron job.
-    // This check ensures the core logic only runs once per day at midnight UTC+8,
-    // even if the cron job is configured to run more frequently.
-    if (currentHour !== 0) {
-        console.log(`Skipping deadline checks: Current time in UTC+8 is not 12 AM.`);
+    // These checks ensure the core logic only runs once per day around midnight UTC+8.
+    if (currentHour !== 0 || deadlineCheckLocks.get(organizationId) === currentDate) {
+        if (currentHour !== 0) {
+            // Reset the lock for the next day if it's no longer midnight
+            if(deadlineCheckLocks.has(organizationId)) {
+                deadlineCheckLocks.delete(organizationId);
+            }
+        }
         return;
     }
+
+    // Set the lock to prevent re-running for the same day
+    deadlineCheckLocks.set(organizationId, currentDate);
     
     const orgDocRef = doc(db, 'organizations', organizationId);
     const orgDoc = await getDoc(orgDocRef);
