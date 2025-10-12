@@ -88,7 +88,6 @@ export default function ContactPage() {
             <div className="mt-12 mx-auto max-w-md">
                 <Card>
                     <CardContent className="p-6 flex items-center justify-center gap-4">
-                        <Mail className="h-6 w-6 text-muted-foreground" />
                         <a href="mailto:support@quickdesk-nti.com" className="text-base sm:text-xl font-semibold hover:underline">
                             support@quickdesk-nti.com
                         </a>
