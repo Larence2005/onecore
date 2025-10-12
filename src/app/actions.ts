@@ -2139,7 +2139,9 @@ export async function checkTicketDeadlinesAndNotify(organizationId: string) {
     const now = toDate(new Date(), { timeZone });
     const currentHour = now.getHours();
 
-    // Run only at 12 AM UTC+8
+    // This function is intended to be called by a cron job.
+    // This check ensures the core logic only runs once per day at midnight UTC+8,
+    // even if the cron job is configured to run more frequently.
     if (currentHour !== 0) {
         console.log(`Skipping deadline checks: Current time in UTC+8 is not 12 AM.`);
         return;
