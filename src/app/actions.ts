@@ -22,12 +22,11 @@ import { Client } from "@microsoft/microsoft-graph-client";
 
 
 // Initialize caches for different data types
-// Cache TTL: 1 year for all caches
-const TTL_1_YEAR = 31536000;
-const ticketsCache = new SimpleCache<any>(TTL_1_YEAR);
-const companiesCache = new SimpleCache<any>(TTL_1_YEAR);
-const membersCache = new SimpleCache<any>(TTL_1_YEAR);
-const activityCache = new SimpleCache<any>(TTL_1_YEAR);
+// A null TTL means the cache is permanent until manually invalidated.
+const ticketsCache = new SimpleCache<any>(null);
+const companiesCache = new SimpleCache<any>(null);
+const membersCache = new SimpleCache<any>(null);
+const activityCache = new SimpleCache<any>(null);
 
 
 export interface Email {

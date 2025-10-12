@@ -1,10 +1,10 @@
-// A simple in-memory cache with a TTL (time-to-live)
+// A simple in-memory cache with an optional TTL (time-to-live)
 export class SimpleCache<T> {
-    private cache = new Map<string, { data: T; expires: number }>();
-    private ttl: number;
+    private cache = new Map<string, { data: T; expires: number | null }>();
+    private ttl: number | null;
 
-    constructor(ttlInSeconds: number = 60) {
-        this.ttl = ttlInSeconds * 1000; // Convert seconds to milliseconds
+    constructor(ttlInSeconds: number | null = 60) {
+        this.ttl = ttlInSeconds ? ttlInSeconds * 1000 : null; // Convert seconds to milliseconds
     }
 
     get(key: string): T | undefined {
@@ -13,7 +13,8 @@ export class SimpleCache<T> {
             return undefined;
         }
 
-        if (Date.now() > item.expires) {
+        // If expires is a number and the time has passed, invalidate it.
+        if (item.expires !== null && Date.now() > item.expires) {
             this.cache.delete(key);
             return undefined;
         }
@@ -22,7 +23,7 @@ export class SimpleCache<T> {
     }
 
     set(key: string, data: T): void {
-        const expires = Date.now() + this.ttl;
+        const expires = this.ttl ? Date.now() + this.ttl : null;
         this.cache.set(key, { data, expires });
     }
 
