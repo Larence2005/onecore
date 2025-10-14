@@ -127,10 +127,6 @@ export function CompanyTicketsPageContent({ companyId }: { companyId: string }) 
                             <span>Settings</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarContent>
-                 <SidebarFooter className="p-4 mt-auto">
-                    <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={handleLogout}>
                                 <LogOut className="text-red-500" />
@@ -138,7 +134,7 @@ export function CompanyTicketsPageContent({ companyId }: { companyId: string }) 
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
-                </SidebarFooter>
+                </SidebarContent>
             </div>
         </Sidebar>
          <main className="flex-1 flex flex-col min-w-0 bg-muted">

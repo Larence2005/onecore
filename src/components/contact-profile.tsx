@@ -130,10 +130,6 @@ export function ContactProfilePageContent({ email }: { email: string }) {
                                     <span>Settings</span>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
-                            </SidebarMenu>
-                        </SidebarContent>
-                        <SidebarFooter className="p-4 mt-auto">
-                            <SidebarMenu>
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={handleLogout}>
                                         <LogOut className="text-red-500" />
@@ -141,7 +137,7 @@ export function ContactProfilePageContent({ email }: { email: string }) {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             </SidebarMenu>
-                        </SidebarFooter>
+                        </SidebarContent>
                     </div>
                 </Sidebar>
 

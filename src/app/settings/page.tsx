@@ -112,18 +112,14 @@ function SettingsPageContent() {
                                 <span>Settings</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarContent>
-                    <SidebarFooter className="p-4 mt-auto">
-                        <SidebarMenu>
-                            <SidebarMenuItem>
+                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={handleLogout}>
                                     <LogOut className="text-red-500" />
                                     <span>Log Out</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         </SidebarMenu>
-                    </SidebarFooter>
+                    </SidebarContent>
                 </div>
             </Sidebar>
 

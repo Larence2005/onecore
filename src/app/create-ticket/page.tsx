@@ -120,10 +120,6 @@ function CreateTicketPageContent() {
                                 <span>Settings</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarContent>
-                    <SidebarFooter className="p-4 mt-auto">
-                        <SidebarMenu>
                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={handleLogout}>
                                     <LogOut className="text-red-500" />
@@ -131,7 +127,7 @@ function CreateTicketPageContent() {
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         </SidebarMenu>
-                    </SidebarFooter>
+                    </SidebarContent>
                 </div>
             </Sidebar>
 

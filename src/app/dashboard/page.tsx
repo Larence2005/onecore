@@ -332,18 +332,14 @@ function HomePageContent() {
                       <span>Settings</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleLogout}>
+                        <LogOut className="text-red-500" />
+                        <span>Log Out</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarContent>
-              <SidebarFooter className="p-4 mt-auto">
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton onClick={handleLogout}>
-                            <LogOut className="text-red-500" />
-                            <span>Log Out</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarFooter>
             </div>
         </Sidebar>
 
