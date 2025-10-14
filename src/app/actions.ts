@@ -2639,12 +2639,21 @@ export async function createLicensedUser(
     const client = getGraphClient();
 
     try {
+        // 1️⃣ Create the user (this is relatively fast)
         const newUser = await createGraphUser(client, displayName, username, newDomain, password);
-        await assignLicenseToUser(client, newUser.id);
-        
-        // After assigning the license, poll for mailbox readiness.
-        await pollMailboxReady(client, newUser.id);
-        
+
+        // 2️⃣ Start background task for license assignment + mailbox polling
+        (async () => {
+            try {
+                await assignLicenseToUser(client, newUser.id);
+                await pollMailboxReady(client, newUser.id);
+                console.log(`✅ Background setup completed for user ${newUser.userPrincipalName}`);
+            } catch (err: any) {
+                console.error(`⚠️ Background user setup failed for ${newUser.userPrincipalName}:`, err.message);
+            }
+        })(); // fire and forget
+
+        // 3️⃣ Return immediately so the rest of the flow can continue
         return { success: true, userId: newUser.id, userPrincipalName: newUser.userPrincipalName };
     } catch (e: any) {
         return { success: false, error: e.message };
@@ -2670,7 +2679,6 @@ export async function finalizeUserSetup(
         members[memberIndex].email = userPrincipalName;
         
         await updateDoc(orgRef, { members });
-
         return { success: true };
     } catch (e: any) {
         return { success: false, error: e.message };
@@ -2678,21 +2686,3 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---
-
-
-    
-    
-
-    
-
-    
-
-
-
-    
-
-      
-
-    
-
-    

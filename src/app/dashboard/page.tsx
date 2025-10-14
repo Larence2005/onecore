@@ -270,7 +270,6 @@ function HomePageContent() {
                         </Avatar>
                         <div className="flex flex-col">
                             <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                            <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
                         </div>
                     </div>
                 </SidebarHeader>
@@ -335,6 +334,16 @@ function HomePageContent() {
                   </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarContent>
+              <SidebarFooter className="p-4 mt-auto">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton onClick={handleLogout}>
+                            <LogOut className="text-red-500" />
+                            <span>Log Out</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarFooter>
             </div>
         </Sidebar>
 

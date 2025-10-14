@@ -12,11 +12,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TicketItem } from "@/components/ticket-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ArrowLeft, Mail, Ticket, Forward, Users as UsersIcon, Building as BuildingIcon, Home, Phone, Pencil, RefreshCw } from "lucide-react";
+import { Terminal, ArrowLeft, Mail, Ticket, Forward, Users as UsersIcon, Building as BuildingIcon, Home, Phone, Pencil, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
@@ -83,7 +83,6 @@ export function ContactProfilePageContent({ email }: { email: string }) {
                                 </Avatar>
                                 <div className="flex flex-col">
                                     <span className="font-medium text-sm">{userProfile?.name || user?.email}</span>
-                                    <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
                                 </div>
                             </div>
                         </SidebarHeader>
@@ -133,6 +132,16 @@ export function ContactProfilePageContent({ email }: { email: string }) {
                                 </SidebarMenuItem>
                             </SidebarMenu>
                         </SidebarContent>
+                        <SidebarFooter className="p-4 mt-auto">
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton onClick={handleLogout}>
+                                        <LogOut className="text-red-500" />
+                                        <span>Log Out</span>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </SidebarFooter>
                     </div>
                 </Sidebar>
 

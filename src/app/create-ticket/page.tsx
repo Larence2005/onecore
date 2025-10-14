@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, useSidebar } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
 import { LayoutDashboard, List, Users, Building2, Settings, LogOut, Archive, ArrowLeft, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -67,7 +67,6 @@ function CreateTicketPageContent() {
                             </Avatar>
                             <div className="flex flex-col">
                                 <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
                             </div>
                         </div>
                     </SidebarHeader>
@@ -123,6 +122,16 @@ function CreateTicketPageContent() {
                             </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarContent>
+                    <SidebarFooter className="p-4 mt-auto">
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton onClick={handleLogout}>
+                                    <LogOut className="text-red-500" />
+                                    <span>Log Out</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarFooter>
                 </div>
             </Sidebar>
 

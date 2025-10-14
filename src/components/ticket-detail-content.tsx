@@ -880,12 +880,7 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                        {isFirstInThread && <h2 className="text-xl font-bold p-4 pb-0">{message.subject}</h2>}
-                        {message.body.contentType === 'html' ? (
-                            <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments, () => {})} attachments={message.attachments} />
-                        ) : (
-                            <pre className="whitespace-pre-wrap text-sm p-4">{message.body.content}</pre>
-                        )}
+                        <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments, () => {})} attachments={message.attachments} />
                     </div>
                     {regularAttachments.length > 0 && (
                         <div className="p-4 border-t">
@@ -1174,7 +1169,6 @@ return (
                             </Avatar>
                             <div className="flex flex-col">
                                 <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-xs" onClick={handleLogout}>Log Out</Button>
                             </div>
                         </div>
                     </SidebarHeader>
@@ -1243,6 +1237,16 @@ return (
                             </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarContent>
+                    <SidebarFooter className="p-4 mt-auto">
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton onClick={handleLogout}>
+                                    <LogOut className="text-red-500" />
+                                    <span>Log Out</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarFooter>
                 </div>
             </Sidebar>
 
