@@ -838,6 +838,8 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
     const isForwardingThis = forwardingMessageId === message.id;
     const showReplyAll = (message.ccRecipients && message.ccRecipients.length > 0) || (message.toRecipients && message.toRecipients.length > 1);
 
+    const createdByAgent = members.some(m => m.email.toLowerCase() === message.senderEmail?.toLowerCase());
+    
     return (
         <div key={message.id}>
             <Card className="overflow-hidden">
@@ -848,6 +850,12 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     <div className="flex-1 grid gap-1 text-sm">
                         <div className="font-semibold">{message.sender}</div>
                         <div className="text-xs text-muted-foreground">
+                            {isFirstInThread && email?.creator && message.senderEmail !== email.creator.email && (
+                                <p><span className="font-semibold">Created by:</span> {email.creator.name} &lt;{email.creator.email}&gt;</p>
+                            )}
+                            {(!isFirstInThread || (isFirstInThread && email?.creator?.email === message.senderEmail)) && createdByAgent && (
+                                <p><span className="font-semibold">Replied by:</span> {message.sender}</p>
+                            )}
                             <p>
                                 <span className="font-semibold">From:</span> {message.senderEmail}
                             </p>
@@ -1235,7 +1243,7 @@ return (
                                 <span>Settings</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
-                            <SidebarMenuItem>
+                             <SidebarMenuItem>
                                 <SidebarMenuButton onClick={handleLogout}>
                                     <LogOut className="text-red-500" />
                                     <span>Log Out</span>
@@ -1264,18 +1272,7 @@ return (
                             {isLoading && (
                                 <div className="space-y-4">
                                     {[...Array(2)].map((_, i) => (
-                                        <Card key={i}>
-                                            <CardHeader className="flex flex-row items-center gap-4 p-4">
-                                                <Skeleton className="h-10 w-10 rounded-full" />
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-4 w-1/4" />
-                                                    <Skeleton className="h-3 w-1/3" />
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="p-4">
-                                                <Skeleton className="h-24 w-full" />
-                                            </CardContent>
-                                        </Card>
+                                        <div key={i}></div>
                                     ))}
                                 </div>
                             )}
@@ -1333,27 +1330,7 @@ return (
                         <aside className="border-l bg-muted p-4 sm:p-6 lg:p-8 space-y-4 overflow-y-auto">
                             {isLoading && (
                                 <>
-                                <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader>
-                                        <Skeleton className="h-6 w-1/2" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
+                                    <div></div>
                                 </>
                             )}
                             {!isLoading && email && (
