@@ -521,7 +521,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const isClientReplying = userProfile.isClient === true;
             const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
             
-            await replyToEmailAction(
+            const result = await replyToEmailAction(
                 userProfile.organizationId,
                 email.id,
                 tempReplyToMessageId, 
@@ -540,7 +540,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 replyBcc
             );
             
-            if (email.conversationId) {
+            if (result.success && email.conversationId) {
                 await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
             }
 
@@ -580,7 +580,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const ticketId = email.id;
             if (!forwardingMessageId) throw new Error("Could not determine message to forward.");
     
-            await forwardEmailAction(
+            const result = await forwardEmailAction(
                 userProfile.organizationId, 
                 ticketId, 
                 forwardingMessageId, 
@@ -593,6 +593,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 email.subject
             );
             
+            if (result.success && email?.conversationId) {
+                 await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
+            }
+            
             toast({ title: "Email Forwarded!", description: "Your email has been forwarded successfully." });
             setForwardingMessageId(null);
             setForwardTo('');
@@ -601,10 +605,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setForwardComment('');
             setShowForwardCc(false);
             setShowForwardBcc(false);
-    
-            if (email?.conversationId) {
-                await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
-            }
     
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -852,9 +852,6 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     <div className="flex-1 grid gap-1 text-sm">
                         <div className="font-semibold">{message.sender}</div>
                          <div className="text-xs text-muted-foreground">
-                            {isFirstInThread && email?.creator && message.senderEmail?.toLowerCase() !== email.creator.email.toLowerCase() && (
-                                <p><span className="font-semibold">Created by:</span> {email.creator.name} ({email.creator.email})</p>
-                            )}
                             <p>
                                 <span className="font-semibold">From:</span> {message.senderEmail}
                             </p>
@@ -865,9 +862,6 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                                 <p>
                                     <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
                                 </p>
-                            )}
-                             {isFirstInThread && (
-                                <p><span className="font-semibold">Subject:</span> {message.subject}</p>
                             )}
                         </div>
                     </div>
@@ -1245,7 +1239,7 @@ return (
                                 <span>Settings</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
-                             <SidebarMenuItem>
+                            <SidebarMenuItem>
                                 <SidebarMenuButton onClick={handleLogout}>
                                     <LogOut className="text-red-500" />
                                     <span>Log Out</span>

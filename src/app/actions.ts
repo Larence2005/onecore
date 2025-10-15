@@ -299,7 +299,7 @@ export async function createTicket(
                 let sentEmailResponse: { success: boolean; conversationId?: string; messageId?: string; attachments?: Attachment[] };
                 if (isClient) {
                     // This is the notification TO the admin
-                    const emailBodyToAdmin = `<p>Created by ${author.name}.</p><br>${body}`;
+                    const emailBodyToAdmin = body;
                     
                     // Add the client's email to the CC list for the admin notification
                     const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
@@ -328,7 +328,7 @@ export async function createTicket(
                 } else { // This is for an agent creating a ticket
                     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                     const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
-                    const emailBody = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    const emailBody = `<p>Created by ${author.name}.</p><br>${body}<hr><p>Hello,</p><p>Your ticket with the subject "${title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
                     sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: author.email,
@@ -344,12 +344,13 @@ export async function createTicket(
                     await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
                     
                     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
+                    const initialMessageBody = isClient ? body : `<p>Created by ${author.name}.</p><br>${body}`;
                     const initialMessage: Partial<DetailedEmail> = {
                         id: sentEmailResponse.messageId, // Use the real message ID
                         subject: title,
                         sender: isClient ? author.name : settings.userId,
                         senderEmail: isClient ? author.email : settings.userId,
-                        body: { contentType: 'html', content: body },
+                        body: { contentType: 'html', content: initialMessageBody },
                         receivedDateTime: newTicketData.receivedDateTime,
                         conversationId: sentEmailResponse.conversationId,
                         toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }],
