@@ -39,7 +39,7 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ companies, selectedCompanyId, dateRangeOption, customDateRange }: DashboardViewProps) {
-    const { userProfile } = useAuth();
+    const { user, userProfile } = useAuth();
     const [tickets, setTickets] = useState<Email[]>([]);
     const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -79,9 +79,15 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
     }, [userProfile, toast]);
     
     const stats = useMemo(() => {
+        const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
+        const agentFilteredTickets = isOwner || !user?.uid 
+            ? tickets 
+            : tickets.filter(t => t.assignee === user.uid);
+
         const companyFilteredTickets = selectedCompanyId === 'all'
-            ? tickets
-            : tickets.filter(t => t.companyId === selectedCompanyId);
+            ? agentFilteredTickets
+            : agentFilteredTickets.filter(t => t.companyId === selectedCompanyId);
 
         // This is the total, calculated *before* date filtering.
         const totalTickets = companyFilteredTickets.length;
@@ -154,7 +160,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             .slice(0, 5);
         
         return { totalTickets, unresolvedTickets, archivedTickets, pendingTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
-    }, [tickets, selectedCompanyId, dateRangeOption, customDateRange]);
+    }, [tickets, selectedCompanyId, dateRangeOption, customDateRange, user, userProfile]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
         'None': '#9ca3af',
