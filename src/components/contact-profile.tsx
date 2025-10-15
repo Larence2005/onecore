@@ -225,6 +225,7 @@ export function ContactProfile({ email }: { email: string }) {
     setIsLoading(true);
     setError(null);
     try {
+        const isOwner = user?.uid === userProfile?.organizationOwnerUid;
         const orgMembers = await getOrganizationMembers(userProfile.organizationId);
         const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
         setIsInternalMember(!!member);
@@ -258,7 +259,12 @@ export function ContactProfile({ email }: { email: string }) {
         setUpdatedLandline(foundProfile.landline || '');
 
 
-        const allTickets = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+        const allTicketsFromDb = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
+        
+        // Filter tickets for agent view
+        const allTickets = isOwner
+            ? allTicketsFromDb
+            : allTicketsFromDb.filter(t => t.assignee === user.uid);
         
         const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
         
@@ -403,7 +409,7 @@ export function ContactProfile({ email }: { email: string }) {
 
     const sortedSubmittedTickets = useMemo(() => sortAndFilterTickets(submittedTickets, sortOptions.submitted, statusFilters.submitted), [submittedTickets, sortOptions.submitted, statusFilters.submitted]);
     const sortedCcTickets = useMemo(() => sortAndFilterTickets(ccTickets, sortOptions.cc, statusFilters.cc), [ccTickets, sortOptions.cc, statusFilters.cc]);
-    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.bcc), [bccTickets, sortOptions.bcc, statusFilters.bcc]);
+    const sortedBccTickets = useMemo(() => sortAndFilterTickets(bccTickets, sortOptions.bcc, statusFilters.bcc), [bccTickets, sortOptions.bcc, statusFilters.cc]);
     
     const handleSortChange = (list: 'submitted' | 'cc' | 'bcc', value: SortOption) => {
         setSortOptions(prev => ({ ...prev, [list]: value }));
@@ -651,3 +657,5 @@ export function ContactProfile({ email }: { email: string }) {
     </div>
   );
 }
+
+    
