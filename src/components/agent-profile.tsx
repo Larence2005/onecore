@@ -504,7 +504,6 @@ export function AgentProfile({ email }: { email: string }) {
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold">{profileData.name}</h2>
                         <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                            <Mail className="h-4 w-4" />
                             <span>{profileData.email}</span>
                         </div>
                     </div>
