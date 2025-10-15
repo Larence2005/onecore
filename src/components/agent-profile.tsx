@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TicketItem } from "@/components/ticket-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ArrowLeft, Mail, Ticket, Home, Phone, Activity, Link as LinkIcon, Building, Pencil, RefreshCw, LogOut } from "lucide-react";
+import { Terminal, ArrowLeft, Mail, Ticket, Home, Phone, Activity, Link as LinkIcon, Building, Pencil, RefreshCw, LogOut, Lock } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Header } from "./header";
@@ -435,11 +435,25 @@ export function AgentProfile({ email }: { email: string }) {
         setStatusFilters(prev => ({ ...prev, [list]: value }));
     };
 
-    if (loading || !user) {
+    if (loading || !user || !userProfile) {
         return <div className="flex items-center justify-center min-h-screen"></div>;
     }
     
     const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+    const isViewingOwnProfile = user?.email?.toLowerCase() === email.toLowerCase();
+    
+    if (!loading && !isOwner && !isViewingOwnProfile) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                <div className="bg-red-100 dark:bg-red-900/20 p-4 rounded-full">
+                    <Lock className="h-12 w-12 text-red-500" />
+                </div>
+                <h2 className="mt-6 text-2xl font-bold">Access Denied</h2>
+                <p className="mt-2 text-muted-foreground">You do not have permission to view this agent's profile.</p>
+                <Button onClick={() => router.back()} className="mt-6">Go Back</Button>
+            </div>
+        );
+    }
 
     const renderActiveFilters = () => {
         const currentList = activeTab as 'assigned' | 'cc' | 'bcc';
