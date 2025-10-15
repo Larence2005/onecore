@@ -303,6 +303,8 @@ export async function createTicket(
                 const emailBodyWithCreator = `<p>Created by ${author.name}.</p><br>${body}`;
                 
                 if (isClient) {
+                    const orgOwner = orgData?.members.find((m: OrganizationMember) => m.uid === orgData.owner);
+                    const supportName = `${orgData?.name || 'Support'} Support`;
                     // Email to support with the ticket content
                     sentEmailResponse = await sendEmailAction(organizationId, {
                         recipient: settings.userId,
@@ -325,6 +327,26 @@ export async function createTicket(
                         body: emailBodyToClient,
                     });
 
+                     if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
+                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId, subject: `[Ticket #${ticketNumber}] ${title}` });
+                        
+                        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
+                        
+                        const initialMessage: Partial<DetailedEmail> = {
+                            id: sentEmailResponse.messageId,
+                            subject: `[Ticket #${ticketNumber}] ${title}`,
+                            sender: orgOwner?.name || supportName,
+                            senderEmail: orgOwner?.email || settings.userId,
+                            body: { contentType: 'html', content: emailBodyWithCreator },
+                            receivedDateTime: newTicketData.receivedDateTime,
+                            conversationId: sentEmailResponse.conversationId,
+                            toRecipients: [{ emailAddress: { name: supportName, address: settings.userId } }],
+                            ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
+                            attachments: sentEmailResponse.attachments
+                        };
+                        await setDoc(conversationDocRef, { messages: [initialMessage] });
+                    }
+
                 } else { // This is for an agent creating a ticket
                     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                     const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
@@ -338,28 +360,28 @@ export async function createTicket(
                         body: emailBody,
                         attachments,
                     });
-                }
 
-                if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                    await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId, subject: `[Ticket #${ticketNumber}] ${title}` });
-                    
-                    const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
-                    
-                    const owner = orgData?.members.find((m: OrganizationMember) => m.uid === orgData.owner);
+                    if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
+                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId, subject: `[Ticket #${ticketNumber}] ${title}` });
+                        
+                        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
+                        
+                        const owner = orgData?.members.find((m: OrganizationMember) => m.uid === orgData.owner);
 
-                    const initialMessage: Partial<DetailedEmail> = {
-                        id: sentEmailResponse.messageId, // Use the real message ID
-                        subject: `[Ticket #${ticketNumber}] ${title}`,
-                        sender: isClient ? (owner?.name || "Support") : author.name,
-                        senderEmail: isClient ? (owner?.email || settings.userId) : author.email,
-                        body: { contentType: 'html', content: emailBodyWithCreator },
-                        receivedDateTime: newTicketData.receivedDateTime,
-                        conversationId: sentEmailResponse.conversationId,
-                        toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }],
-                        ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
-                        attachments: sentEmailResponse.attachments
-                    };
-                    await setDoc(conversationDocRef, { messages: [initialMessage] });
+                        const initialMessage: Partial<DetailedEmail> = {
+                            id: sentEmailResponse.messageId, // Use the real message ID
+                            subject: `[Ticket #${ticketNumber}] ${title}`,
+                            sender: isClient ? (owner?.name || "Support") : author.name,
+                            senderEmail: isClient ? (owner?.email || settings.userId) : author.email,
+                            body: { contentType: 'html', content: emailBodyWithCreator },
+                            receivedDateTime: newTicketData.receivedDateTime,
+                            conversationId: sentEmailResponse.conversationId,
+                            toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }],
+                            ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
+                            attachments: sentEmailResponse.attachments
+                        };
+                        await setDoc(conversationDocRef, { messages: [initialMessage] });
+                    }
                 }
 
             } catch(e) {
@@ -600,13 +622,16 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
 
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
-        // Can't fetch from API, return empty array. The caller should handle this.
         return [];
     }
+    
+    const selectFields = "id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments,toRecipients,ccRecipients,bccRecipients";
+    const expandAttachments = "$expand=attachments($select=id,name,contentType,size,isInline,contentId)";
 
-    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments,toRecipients,ccRecipients,bccRecipients&$expand=attachments`, {
+    const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=${selectFields}&${expandAttachments}`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
     });
+
 
     if (!conversationResponse.ok) {
         const error = await conversationResponse.json();
@@ -615,18 +640,11 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
 
     const conversationData: { value: any[] } = await conversationResponse.json() as any;
     
-    // Before storing, let's get the current ticket properties
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     const q = query(ticketsCollectionRef, where('conversationId', '==', conversationId));
     const querySnapshot = await getDocs(q);
     
-    let ticketProperties = {
-        priority: 'None',
-        status: 'Open',
-        type: 'Incident',
-        companyId: null,
-        assignee: null,
-    };
+    let ticketProperties = { priority: 'None', status: 'Open', type: 'Incident', companyId: null, assignee: null };
     let ticketId: string | null = null;
 
     if (!querySnapshot.empty) {
@@ -670,47 +688,24 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         bccRecipients: msg.bccRecipients,
     }));
 
-    // Sort messages by date to process them chronologically
     conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
     
-    // De-duplication logic
     const uniqueMessages: DetailedEmail[] = [];
-    const seenSignatures = new Set<string>();
-
-    const getMessageSignature = (msg: DetailedEmail): string => {
-        // Create a signature based on content that is likely to be identical in duplicates
-        const sender = msg.senderEmail?.toLowerCase() || 'unknown';
-        const body = msg.body?.content?.trim() || '';
-        // A more stable signature
-        return `${sender}:${msg.subject}:${body.length}`;
-    };
-
     for (const msg of conversationMessages) {
-        const signature = getMessageSignature(msg);
-        let isDuplicate = false;
-
-        // Check against already added unique messages
-        for (const uniqueMsg of uniqueMessages) {
-            if (getMessageSignature(uniqueMsg) === signature) {
-                const timeDiff = Math.abs(differenceInSeconds(parseISO(msg.receivedDateTime), parseISO(uniqueMsg.receivedDateTime)));
-                // If signatures match and timestamps are very close, consider it a duplicate
-                if (timeDiff < 20) { // e.g., within 20 seconds
-                    isDuplicate = true;
-                    break;
-                }
-            }
-        }
-
+        const isDuplicate = uniqueMessages.some(uniqueMsg =>
+            uniqueMsg.id === msg.id ||
+            (Math.abs(differenceInSeconds(parseISO(msg.receivedDateTime), parseISO(uniqueMsg.receivedDateTime))) < 5 &&
+             uniqueMsg.senderEmail === msg.senderEmail &&
+             uniqueMsg.subject === msg.subject)
+        );
         if (!isDuplicate) {
             uniqueMessages.push(msg);
         }
     }
 
-
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
     await setDoc(conversationDocRef, { messages: uniqueMessages });
     
-    // When a conversation is updated, we also need to update the main ticket's bodyPreview and received time
     if (uniqueMessages.length > 0 && !querySnapshot.empty) {
         const lastMessage = uniqueMessages[uniqueMessages.length - 1];
         const ticketDocRef = querySnapshot.docs[0].ref;
@@ -720,12 +715,10 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         });
     }
     
-    // Invalidate caches to ensure the UI updates
     if (ticketId) {
         ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
         ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
     }
-
 
     return uniqueMessages;
 }
@@ -930,6 +923,7 @@ export async function sendEmailAction(
                 contentType: att.contentType,
                 size: att.size,
                 isInline: att.isInline,
+                contentId: att.contentId,
             }));
         }
     }
