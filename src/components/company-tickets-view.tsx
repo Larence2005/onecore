@@ -218,7 +218,9 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
         setIsLoading(true);
         try {
-            const [companyDetails, companyTickets, companyEmployees, companyActivity, orgMembers] = await Promise.all([
+            const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+
+            const [companyDetails, allCompanyTickets, companyEmployees, allCompanyActivity, orgMembers] = await Promise.all([
                 getCompanyDetails(userProfile.organizationId!, companyId),
                 getTicketsFromDB(userProfile.organizationId!, { companyId: companyId, fetchAll: true }),
                 getCompanyEmployees(userProfile.organizationId!, companyId),
@@ -232,9 +234,20 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                 return;
             }
 
+            const agentFilteredTickets = isOwner || !user
+                ? allCompanyTickets
+                : allCompanyTickets.filter(t => t.assignee === user.uid);
+            
+            const agentTicketIds = new Set(agentFilteredTickets.map(t => t.id));
+
+            const agentFilteredActivity = isOwner
+                ? allCompanyActivity
+                : allCompanyActivity.filter(log => log.ticketId && agentTicketIds.has(log.ticketId));
+
+
             const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
 
-            const ticketsWithLastReplier = await Promise.all(companyTickets.map(async (ticket) => {
+            const ticketsWithLastReplier = await Promise.all(agentFilteredTickets.map(async (ticket) => {
                 let lastReplier: 'agent' | 'client' | undefined = undefined;
                 if (ticket.conversationId) {
                     const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
@@ -254,7 +267,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
             setCompany(companyDetails);
             setTickets(ticketsWithLastReplier);
             setEmployees(companyEmployees);
-            setActivity(companyActivity);
+            setActivity(agentFilteredActivity);
             
             setUpdatedName(companyDetails.name);
             setUpdatedAddress(companyDetails.address || '');
@@ -267,7 +280,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         } finally {
             setIsLoading(false);
         }
-    }, [userProfile, companyId, toast, router, loading]);
+    }, [user, userProfile, companyId, toast, router, loading]);
 
     useEffect(() => {
         fetchCompanyData();
