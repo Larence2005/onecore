@@ -782,7 +782,6 @@ const handleAttachmentDownload = async (messageId: string, attachment: Attachmen
     try {
         const { contentBytes } = await getAttachmentContent(userProfile.organizationId, messageId, attachment.id);
         
-        // Convert base64 to a Blob
         const byteCharacters = atob(contentBytes);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -791,7 +790,6 @@ const handleAttachmentDownload = async (messageId: string, attachment: Attachmen
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: attachment.contentType });
 
-        // Create a link and trigger the download
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = attachment.name;
@@ -800,8 +798,7 @@ const handleAttachmentDownload = async (messageId: string, attachment: Attachmen
         document.body.removeChild(link);
 
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        toast({ variant: "destructive", title: "Download Failed", description: errorMessage });
+        toast({ variant: "destructive", title: "Download Failed", description: "Please wait a few minutes and try again." });
     }
 }
 
