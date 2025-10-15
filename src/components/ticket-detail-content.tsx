@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
@@ -542,6 +543,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             
             if (result.success && email.conversationId) {
                 await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
+                 toast({ title: "Reply sent.", description: "It may take a few minutes to appear. Kindly refresh the page." });
             }
 
             // Clear state after action
@@ -1159,7 +1161,7 @@ const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unas
 
 return (
         <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
-            <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
+             <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Change</AlertDialogTitle>
