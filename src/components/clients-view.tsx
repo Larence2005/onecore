@@ -11,7 +11,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { PlusCircle, RefreshCw, Building, ChevronLeft, ChevronRight, Ticket, Users } from "lucide-react";
+import { PlusCircle, RefreshCw, Building, ChevronLeft, ChevronRight, Ticket, Users, CheckCircle } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import Link from "next/link";
@@ -104,7 +104,7 @@ export function ClientsView() {
     }
 
     return (
-        <div className="w-full max-w-4xl mx-auto space-y-6 bg-muted">
+        <div className="w-full max-w-5xl mx-auto space-y-6 bg-muted">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold">Companies</h1>
@@ -156,7 +156,8 @@ export function ClientsView() {
                                 <TableRow>
                                     <TableHead>Company Name</TableHead>
                                     <TableHead className="text-right">Employees</TableHead>
-                                    <TableHead className="text-right">Unresolved Tickets</TableHead>
+                                    <TableHead className="text-right">Unresolved</TableHead>
+                                    <TableHead className="text-right">Resolved</TableHead>
                                     <TableHead className="text-right">Total Tickets</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -166,6 +167,7 @@ export function ClientsView() {
                                         <TableCell className="font-medium">{company.name}</TableCell>
                                         <TableCell className="text-right">{company.employeeCount}</TableCell>
                                         <TableCell className="text-right">{company.unresolvedTicketCount}</TableCell>
+                                        <TableCell className="text-right">{company.resolvedTicketCount}</TableCell>
                                         <TableCell className="text-right">{company.ticketCount}</TableCell>
                                     </TableRow>
                                 ))}
@@ -218,3 +220,5 @@ export function ClientsView() {
         </div>
     );
 }
+
+    

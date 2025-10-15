@@ -115,6 +115,7 @@ export interface Company {
     name: string;
     ticketCount?: number;
     unresolvedTicketCount?: number;
+    resolvedTicketCount?: number;
     employeeCount?: number;
     address?: string;
     mobile?: string;
@@ -2067,30 +2068,36 @@ export async function getCompanyWithTicketAndEmployeeCount(organizationId: strin
     
     const companies = await getCompanies(organizationId);
     
-    // Get ticket counts
     const ticketsCollectionRef = collection(db, 'organizations', organizationId, 'tickets');
     const ticketsSnapshot = await getDocs(ticketsCollectionRef);
-    const ticketCounts = new Map<string, number>();
-    const unresolvedTicketCounts = new Map<string, number>();
+    
+    const ticketCounts = new Map<string, { total: number; unresolved: number; resolved: number }>();
 
     ticketsSnapshot.docs.forEach(doc => {
         const data = doc.data();
         const companyId = data.companyId;
-        const status = data.status;
-
         if (companyId) {
-            ticketCounts.set(companyId, (ticketCounts.get(companyId) || 0) + 1);
-            if (status === 'Open' || status === 'Pending') {
-                unresolvedTicketCounts.set(companyId, (unresolvedTicketCounts.get(companyId) || 0) + 1);
+            if (!ticketCounts.has(companyId)) {
+                ticketCounts.set(companyId, { total: 0, unresolved: 0, resolved: 0 });
+            }
+            const counts = ticketCounts.get(companyId)!;
+            counts.total += 1;
+            if (data.status === 'Open' || data.status === 'Pending') {
+                counts.unresolved += 1;
+            }
+            if (data.status === 'Resolved' || data.status === 'Closed') {
+                counts.resolved += 1;
             }
         }
     });
 
     const companiesWithCounts = companies.map(company => {
+        const counts = ticketCounts.get(company.id) || { total: 0, unresolved: 0, resolved: 0 };
         return {
             ...company,
-            ticketCount: ticketCounts.get(company.id) || 0,
-            unresolvedTicketCount: unresolvedTicketCounts.get(company.id) || 0,
+            ticketCount: counts.total,
+            unresolvedTicketCount: counts.unresolved,
+            resolvedTicketCount: counts.resolved,
         };
     });
 
@@ -2709,3 +2716,5 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---
+
+    
