@@ -29,7 +29,7 @@ import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { isPast, isFuture, parseISO } from 'date-fns';
 import Image from 'next/image';
-import { LayoutDashboard, List, Archive, Users, Building2, Settings } from 'lucide-react';
+import { LayoutDashboard, List, Archive, Users, Building2, Settings, PlusCircle } from 'lucide-react';
 
 
 type SortOption = 'newest' | 'oldest' | 'upcoming' | 'overdue' | 'status';
@@ -54,6 +54,8 @@ export function AgentProfilePageContent({ email }: { email: string }) {
     const handleMenuClick = (view: string) => {
         if (view === 'archive') {
             router.push('/archive');
+        } else if (view === 'create-ticket') {
+            router.push('/create-ticket');
         } else {
             router.push(`/dashboard?view=${view}`);
         }
@@ -90,43 +92,62 @@ export function AgentProfilePageContent({ email }: { email: string }) {
                             )}
                         </SidebarHeader>
                         <SidebarContent className="flex-grow">
-                            <SidebarMenu className="flex flex-col gap-2 px-4">
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
-                                    <LayoutDashboard className="text-purple-500" />
-                                    <span>Dashboard</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
-                                    <List className="text-green-500" />
-                                    <span>Tickets</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
-                                    <Pencil className="text-blue-500" />
-                                    <span>Compose</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
-                                        <Archive className="text-orange-500" />
-                                        <span>Archive</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
-                                    <Users className="text-pink-500" />
-                                    <span>Clients</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton onClick={() => handleMenuClick('organization')} isActive>
-                                    <Building2 className="text-yellow-500" />
-                                    <span>Organization</span>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
+                             <SidebarMenu className="flex flex-col gap-2 px-4">
+                                {isClient ? (
+                                    <>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
+                                                <List className="text-green-500" />
+                                                <span>Tickets</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('create-ticket')}>
+                                                <PlusCircle className="text-blue-500" />
+                                                <span>Create Ticket</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </>
+                                ) : (
+                                    <>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('analytics')}>
+                                            <LayoutDashboard className="text-purple-500" />
+                                            <span>Dashboard</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('tickets')}>
+                                            <List className="text-green-500" />
+                                            <span>Tickets</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('compose')}>
+                                            <Pencil className="text-blue-500" />
+                                            <span>Compose</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('archive')}>
+                                                <Archive className="text-orange-500" />
+                                                <span>Archive</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('clients')}>
+                                            <Users className="text-pink-500" />
+                                            <span>Clients</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                        <SidebarMenuItem>
+                                            <SidebarMenuButton onClick={() => handleMenuClick('organization')} isActive>
+                                            <Building2 className="text-yellow-500" />
+                                            <span>Organization</span>
+                                            </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                    </>
+                                )}
                                 <SidebarMenuItem>
                                     <SidebarMenuButton onClick={() => handleMenuClick('settings')}>
                                     <Settings className="text-gray-500" />
@@ -220,7 +241,7 @@ export function AgentProfile({ email }: { email: string }) {
         const orgMembers = await getOrganizationMembers(userProfile.organizationId);
         const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
         
-        if (!member || !member.uid) {
+        if (!member) {
             throw new Error("Agent not found or not fully registered in your organization.");
         }
         
