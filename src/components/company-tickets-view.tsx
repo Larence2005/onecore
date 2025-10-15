@@ -85,7 +85,7 @@ export function CompanyTicketsPageContent({ companyId }: { companyId: string }) 
                             </div>
                         </div>
                     ) : (
-                        <Link href={`/organization/members/${encodeURIComponent(user?.email!)}`} className="flex items-center gap-4 group">
+                        <Link href={`/organization/members/${encodeURIComponent(userProfile?.email!)}`} className="flex items-center gap-4 group">
                             <Avatar className="h-9 w-9">
                             <AvatarFallback>{userProfile?.name || user?.email}</AvatarFallback>
                             </Avatar>
@@ -928,7 +928,3 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         </>
     );
 }
-
-    
-
-    
