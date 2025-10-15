@@ -301,20 +301,14 @@ export async function createTicket(
                 const emailBodyWithCreator = `<p>Created by ${author.name}.</p><br>${body}`;
                 
                 if (isClient) {
-                    // This is the notification TO the admin
-                    const emailBodyToAdmin = emailBodyWithCreator;
-                    
-                    // Add the client's email to the CC list for the admin notification
-                    const ccSet = new Set((cc || '').split(/[,;]\s*/).filter(Boolean).map(e => e.toLowerCase()));
-                    ccSet.add(author.email.toLowerCase());
-
+                    // Email to support with the ticket content
                     sentEmailResponse = await sendEmailAction(organizationId, {
-                        recipient: settings.userId, // Send TO the support email
-                        cc: Array.from(ccSet).join(', '), 
+                        recipient: settings.userId,
+                        cc: cc,
                         bcc: bcc,
                         subject: `[Ticket #${ticketNumber}] ${title}`,
-                        body: emailBodyToAdmin,
-                        attachments,
+                        body: emailBodyWithCreator,
+                        attachments, // Pass attachments here for the main ticket email
                     });
 
                     // Send a separate confirmation notification TO the client who created the ticket
@@ -322,6 +316,7 @@ export async function createTicket(
                     const ticketUrl = `https://${parentDomain}/tickets/${newTicketRef.id}`;
                     const emailBodyToClient = `<p>Hello ${author.name},</p><p>Your ticket with the subject "${title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     
+                    // Do not include attachments in this notification email
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
                         subject: `Ticket Created: #${ticketNumber} - ${title}`,
