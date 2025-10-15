@@ -78,12 +78,14 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         fetchData();
     }, [userProfile, toast]);
     
-    const stats = useMemo(() => {
+    const filteredData = useMemo(() => {
         const isOwner = user?.uid === userProfile?.organizationOwnerUid;
 
         const agentFilteredTickets = isOwner || !user?.uid 
             ? tickets 
             : tickets.filter(t => t.assignee === user.uid);
+            
+        const assignedTicketIds = new Set(agentFilteredTickets.map(t => t.id));
 
         const companyFilteredTickets = selectedCompanyId === 'all'
             ? agentFilteredTickets
@@ -114,6 +116,11 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             // If 'all' or custom is not fully selected, include all tickets from company filter
             return true;
         });
+        
+        const agentFilteredLogs = isOwner 
+            ? activityLogs
+            : activityLogs.filter(log => log.ticketId && assignedTicketIds.has(log.ticketId));
+
 
         const unresolvedTickets = dateFilteredTickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed' && t.status !== 'Archived').length;
         const archivedTickets = dateFilteredTickets.filter(t => t.status === 'Archived').length;
@@ -159,8 +166,8 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())
             .slice(0, 5);
         
-        return { totalTickets, unresolvedTickets, archivedTickets, pendingTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines };
-    }, [tickets, selectedCompanyId, dateRangeOption, customDateRange, user, userProfile]);
+        return { totalTickets, unresolvedTickets, archivedTickets, pendingTickets, resolvedToday, overdueTickets, statusData, priorityData, typeData, upcomingDeadlines, agentFilteredLogs };
+    }, [tickets, activityLogs, selectedCompanyId, dateRangeOption, customDateRange, user, userProfile]);
 
     const PRIORITY_COLORS: {[key: string]: string} = {
         'None': '#9ca3af',
@@ -233,12 +240,12 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
-                <StatCard title="Total Tickets" value={stats.totalTickets} icon={Ticket} iconClassName="text-blue-500" />
-                <StatCard title="Unresolved" value={stats.unresolvedTickets} icon={HelpCircle} iconClassName="text-yellow-500" />
-                <StatCard title="Archived" value={stats.archivedTickets} icon={Archive} iconClassName="text-gray-500" />
-                <StatCard title="Pending" value={stats.pendingTickets} icon={Clock} iconClassName="text-orange-500" />
-                <StatCard title="Resolved Today" value={stats.resolvedToday} icon={CheckCircle} iconClassName="text-green-500" />
-                <StatCard title="Overdue" value={stats.overdueTickets} icon={AlertTriangle} iconClassName="text-red-500" />
+                <StatCard title="Total Tickets" value={filteredData.totalTickets} icon={Ticket} iconClassName="text-blue-500" />
+                <StatCard title="Unresolved" value={filteredData.unresolvedTickets} icon={HelpCircle} iconClassName="text-yellow-500" />
+                <StatCard title="Archived" value={filteredData.archivedTickets} icon={Archive} iconClassName="text-gray-500" />
+                <StatCard title="Pending" value={filteredData.pendingTickets} icon={Clock} iconClassName="text-orange-500" />
+                <StatCard title="Resolved Today" value={filteredData.resolvedToday} icon={CheckCircle} iconClassName="text-green-500" />
+                <StatCard title="Overdue" value={filteredData.overdueTickets} icon={AlertTriangle} iconClassName="text-red-500" />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -250,7 +257,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                         <ResponsiveContainer width="100%" height={300}>
                              <PieChart>
                                 <Pie
-                                    data={stats.statusData}
+                                    data={filteredData.statusData}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
@@ -260,7 +267,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                                     nameKey="name"
                                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                 >
-                                    {stats.statusData.map((entry, index) => (
+                                    {filteredData.statusData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#8884d8'} />
                                     ))}
                                 </Pie>
@@ -279,7 +286,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                          <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
-                                    data={stats.priorityData}
+                                    data={filteredData.priorityData}
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
@@ -289,7 +296,7 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                                     nameKey="name"
                                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                 >
-                                    {stats.priorityData.map((entry, index) => (
+                                    {filteredData.priorityData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={PRIORITY_COLORS[entry.name] || '#8884d8'} />
                                     ))}
                                 </Pie>
@@ -307,12 +314,12 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                           <BarChart layout="vertical" data={stats.typeData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                           <BarChart layout="vertical" data={filteredData.typeData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={100} tickLine={false} axisLine={false} />
                                 <Tooltip cursor={{ fill: 'transparent' }} />
                                 <Bar dataKey="value" layout="vertical" radius={[0, 4, 4, 0]}>
-                                    {stats.typeData.map((entry, index) => (
+                                    {filteredData.typeData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={TYPE_COLORS[entry.name] || '#8884d8'} />
                                     ))}
                                 </Bar>
@@ -328,9 +335,9 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {stats.upcomingDeadlines.length > 0 ? (
+                        {filteredData.upcomingDeadlines.length > 0 ? (
                             <div className="space-y-4">
-                                {stats.upcomingDeadlines.map(ticket => (
+                                {filteredData.upcomingDeadlines.map(ticket => (
                                     <div key={ticket.id} className="flex items-center justify-between">
                                         <div className="flex-1 min-w-0">
                                             <Link href={`/tickets/${ticket.id}`} className="font-medium text-sm truncate block hover:underline" title={ticket.subject}>
@@ -360,8 +367,8 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-                    {activityLogs.length > 0 ? (
-                        activityLogs.map((log) => (
+                    {filteredData.agentFilteredLogs.length > 0 ? (
+                        filteredData.agentFilteredLogs.map((log) => (
                             <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
                                 <div className="flex flex-wrap items-center gap-x-2">
                                    <span>{log.details} on ticket</span> 
@@ -381,3 +388,5 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
         </div>
     );
 }
+
+    
