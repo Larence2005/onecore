@@ -425,9 +425,9 @@ export function ContactProfile({ email }: { email: string }) {
         const currentStatusFilter = statusFilters[currentList];
 
         return (
-            <div className="flex flex-1 items-center gap-2">
+            <div className="flex items-center gap-2">
                 <Select value={currentSort} onValueChange={(value) => handleSortChange(currentList, value as SortOption)}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-auto"><SelectValue placeholder="Sort by" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="newest">Newest</SelectItem>
                         <SelectItem value="oldest">Oldest</SelectItem>
@@ -438,7 +438,7 @@ export function ContactProfile({ email }: { email: string }) {
                 </Select>
                 {currentSort === 'status' && (
                     <Select value={currentStatusFilter} onValueChange={(value) => handleStatusFilterChange(currentList, value as StatusFilter)}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                        <SelectTrigger className="w-full sm:w-auto"><SelectValue placeholder="Filter status" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All</SelectItem>
                             <SelectItem value="Open">Open</SelectItem>
@@ -516,7 +516,7 @@ export function ContactProfile({ email }: { email: string }) {
                             </div>
                         </div>
                         
-                        <div className="hidden sm:flex flex-1 justify-end">
+                        <div className="hidden sm:flex sm:w-auto sm:max-w-md">
                              {activeTab !== 'forwarded' && renderActiveFilters()}
                         </div>
                     </div>
