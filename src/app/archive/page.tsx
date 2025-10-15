@@ -50,6 +50,8 @@ function ArchivePageContent() {
             </div>
         );
     }
+    
+    const isClient = userProfile?.isClient === true;
 
     return (
         <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
@@ -59,14 +61,25 @@ function ArchivePageContent() {
                         <div className="flex items-center justify-center">
                             <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-9 w-9">
-                            <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                                <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                        {isClient ? (
+                             <div className="flex items-center gap-4">
+                                <Avatar className="h-9 w-9">
+                                <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                             <Link href={`/organization/members/${encodeURIComponent(user.email!)}`} className="flex items-center gap-4 group">
+                                <Avatar className="h-9 w-9">
+                                <AvatarFallback>{userProfile?.name || user.email}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm group-hover:underline">{userProfile?.name || user.email}</span>
+                                </div>
+                            </Link>
+                        )}
                     </SidebarHeader>
                     <SidebarContent className="flex-grow">
                         <SidebarMenu className="flex flex-col gap-2 px-4">

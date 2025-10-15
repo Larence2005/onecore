@@ -845,28 +845,30 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
     return (
         <div key={message.id}>
             <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-start gap-4 p-4 border-b">
-                    <Avatar className="h-10 w-10">
-                        <AvatarFallback>{message.sender}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 grid gap-1 text-sm">
-                        <div className="font-semibold">{message.sender}</div>
-                         <div className="text-xs text-muted-foreground">
-                            <p>
-                                <span className="font-semibold">From:</span> {message.senderEmail}
-                            </p>
-                            <p>
-                                <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
-                            </p>
-                            {message.ccRecipients && message.ccRecipients.length > 0 && (
+                <CardHeader className="flex flex-col md:flex-row items-start gap-4 p-4 border-b">
+                    <div className="flex items-start gap-4 flex-1">
+                        <Avatar className="h-10 w-10">
+                            <AvatarFallback>{message.sender}</AvatarFallback>
+                        </Avatar>
+                        <div className="grid gap-1 text-sm">
+                            <div className="font-semibold">{message.sender}</div>
+                            <div className="text-xs text-muted-foreground">
                                 <p>
-                                    <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                                    <span className="font-semibold">From:</span> {message.senderEmail}
                                 </p>
-                            )}
+                                <p>
+                                    <span className="font-semibold">To:</span> {renderRecipientList(message.toRecipients)}
+                                </p>
+                                {message.ccRecipients && message.ccRecipients.length > 0 && (
+                                    <p>
+                                        <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
-                        <span>{format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}</span>
+                    <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto mt-2 md:mt-0">
+                        <span className="text-xs text-muted-foreground">{format(parseISO(message.receivedDateTime), 'eee, MMM d, yyyy h:mm a')}</span>
                          <div className="flex items-center gap-1">
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReplyClick(message.id)}>
                                 <Reply className="h-4 w-4" />
@@ -1167,14 +1169,25 @@ return (
                         <div className="flex items-center justify-center">
                             <Image src="/quickdesk_logowithtext_nobg.png" alt="Quickdesk Logo" width="120" height="60" unoptimized />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-9 w-9">
-                            <AvatarFallback>{userProfile?.name}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                                <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                         {isClient ? (
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-9 w-9">
+                                <AvatarFallback>{userProfile?.name}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{userProfile?.name || user.email}</span>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <Link href={`/organization/members/${encodeURIComponent(user.email!)}`} className="flex items-center gap-4 group">
+                                <Avatar className="h-9 w-9">
+                                <AvatarFallback>{userProfile?.name}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm group-hover:underline">{userProfile?.name || user.email}</span>
+                                </div>
+                            </Link>
+                        )}
                     </SidebarHeader>
                     <SidebarContent className="flex-grow">
                          <SidebarMenu className="flex flex-col gap-2 px-4">
