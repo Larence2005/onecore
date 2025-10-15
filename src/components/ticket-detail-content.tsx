@@ -1161,8 +1161,24 @@ const assigneeName = members.find(m => m.uid === currentAssignee)?.name || 'Unas
 
 
 return (
-    <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
         <div className="grid min-h-screen w-full lg:grid-cols-[220px_1fr]">
+            <AlertDialog open={!!pendingUpdate} onOpenChange={(open) => !open && setPendingUpdate(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Change</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will update the ticket. Are you sure?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setPendingUpdate(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmUpdate} disabled={isUpdating}>
+                            {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+             </AlertDialog>
             <Sidebar className="w-[220px] hidden lg:flex flex-col py-6 h-full">
                 <div className="flex-grow flex flex-col">
                     <SidebarHeader className="p-4 flex flex-col gap-4">
@@ -1550,21 +1566,5 @@ return (
                     </div>
             </main>
         </div>
-         <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Change</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will update the ticket. Are you sure?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setPendingUpdate(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmUpdate} disabled={isUpdating}>
-                    {isUpdating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                    Confirm
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
 );
 }
