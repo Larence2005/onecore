@@ -255,7 +255,9 @@ export async function createTicket(
     let companyId: string | undefined = undefined;
     let isClient = false;
     const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
+    let orgData;
     if (orgDoc.exists()) {
+        orgData = orgDoc.data();
         const companiesSnapshot = await getDocs(collection(orgDoc.ref, 'companies'));
         for (const companyDoc of companiesSnapshot.docs) {
             const employeeDoc = await getDoc(doc(companyDoc.ref, 'employees', author.email));
@@ -342,14 +344,15 @@ export async function createTicket(
                     await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId, subject: `[Ticket #${ticketNumber}] ${title}` });
                     
                     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
-                    const initialMessageBody = emailBodyWithCreator;
                     
+                    const owner = orgData?.members.find((m: OrganizationMember) => m.uid === orgData.owner);
+
                     const initialMessage: Partial<DetailedEmail> = {
                         id: sentEmailResponse.messageId, // Use the real message ID
                         subject: `[Ticket #${ticketNumber}] ${title}`,
-                        sender: isClient ? "Support" : settings.userId,
-                        senderEmail: settings.userId,
-                        body: { contentType: 'html', content: initialMessageBody },
+                        sender: isClient ? (owner?.name || "Support") : author.name,
+                        senderEmail: isClient ? (owner?.email || settings.userId) : author.email,
+                        body: { contentType: 'html', content: emailBodyWithCreator },
                         receivedDateTime: newTicketData.receivedDateTime,
                         conversationId: sentEmailResponse.conversationId,
                         toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }],
