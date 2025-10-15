@@ -425,9 +425,9 @@ export function ContactProfile({ email }: { email: string }) {
         const currentStatusFilter = statusFilters[currentList];
 
         return (
-            <div className="flex flex-1 sm:flex-initial items-center gap-2">
+            <div className="flex flex-1 items-center gap-2">
                 <Select value={currentSort} onValueChange={(value) => handleSortChange(currentList, value as SortOption)}>
-                    <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Sort by" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="newest">Newest</SelectItem>
                         <SelectItem value="oldest">Oldest</SelectItem>
@@ -438,7 +438,7 @@ export function ContactProfile({ email }: { email: string }) {
                 </Select>
                 {currentSort === 'status' && (
                     <Select value={currentStatusFilter} onValueChange={(value) => handleStatusFilterChange(currentList, value as StatusFilter)}>
-                        <SelectTrigger className="w-full sm:w-[120px]"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Filter status" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All</SelectItem>
                             <SelectItem value="Open">Open</SelectItem>
@@ -498,18 +498,22 @@ export function ContactProfile({ email }: { email: string }) {
                         </TabsList>
 
                         <div className="w-full sm:hidden flex items-center justify-between gap-2">
-                             <Select value={activeTab} onValueChange={setActiveTab}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select a category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="submitted">Submitted ({submittedTickets.length})</SelectItem>
-                                    <SelectItem value="cc">Cc'd On ({ccTickets.length})</SelectItem>
-                                    <SelectItem value="bcc">Bcc'd On ({bccTickets.length})</SelectItem>
-                                    <SelectItem value="forwarded">Forwarded To ({forwardedActivities.length})</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {activeTab !== 'forwarded' && renderActiveFilters()}
+                            <div className="flex-1">
+                                <Select value={activeTab} onValueChange={setActiveTab}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="submitted">Submitted ({submittedTickets.length})</SelectItem>
+                                        <SelectItem value="cc">Cc'd On ({ccTickets.length})</SelectItem>
+                                        <SelectItem value="bcc">Bcc'd On ({bccTickets.length})</SelectItem>
+                                        <SelectItem value="forwarded">Forwarded To ({forwardedActivities.length})</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex-1">
+                                {activeTab !== 'forwarded' && renderActiveFilters()}
+                            </div>
                         </div>
                         
                         <div className="hidden sm:flex flex-1 justify-end">
