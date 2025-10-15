@@ -489,15 +489,16 @@ export function ContactProfile({ email }: { email: string }) {
                     </div>
                 </div>
                 <Tabs defaultValue="submitted" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <div className="w-full sm:w-auto">
-                            <TabsList className="hidden sm:inline-flex">
-                                <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
-                                <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
-                                <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
-                                <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
-                            </TabsList>
-                            <Select value={activeTab} onValueChange={setActiveTab} className="sm:hidden">
+                    <div className="flex flex-col sm:flex-row sm:justify-between items-center mb-4 gap-4">
+                        <TabsList className="hidden sm:inline-flex">
+                            <TabsTrigger value="submitted">Submitted ({submittedTickets.length})</TabsTrigger>
+                            <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                            <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                            <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
+                        </TabsList>
+
+                        <div className="w-full sm:hidden flex items-center justify-between gap-2">
+                             <Select value={activeTab} onValueChange={setActiveTab}>
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select a category" />
                                 </SelectTrigger>
@@ -508,8 +509,12 @@ export function ContactProfile({ email }: { email: string }) {
                                     <SelectItem value="forwarded">Forwarded To ({forwardedActivities.length})</SelectItem>
                                 </SelectContent>
                             </Select>
+                            {activeTab !== 'forwarded' && renderActiveFilters()}
                         </div>
-                        {activeTab !== 'forwarded' && renderActiveFilters()}
+                        
+                        <div className="hidden sm:flex flex-1 justify-end">
+                             {activeTab !== 'forwarded' && renderActiveFilters()}
+                        </div>
                     </div>
                     <TabsContent value="submitted">
                         <div className="border-t">

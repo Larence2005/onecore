@@ -239,18 +239,26 @@ export function AgentProfile({ email }: { email: string }) {
     setError(null);
     try {
         const orgMembers = await getOrganizationMembers(userProfile.organizationId);
-        const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
+        let member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
         
-        if (!member && user.email?.toLowerCase() !== email.toLowerCase()) {
-            throw new Error("Agent not found or not fully registered in your organization.");
+        if (!member) {
+            // If viewing own profile and not found in members list (e.g., admin during setup)
+            if (user.email?.toLowerCase() === email.toLowerCase()) {
+                member = {
+                    uid: user.uid,
+                    name: userProfile.name || user.email!,
+                    email: user.email!,
+                    status: userProfile.status || 'Not Verified',
+                    address: userProfile.address,
+                    mobile: userProfile.mobile,
+                    landline: userProfile.landline,
+                };
+            } else {
+                 throw new Error("Agent not found or not fully registered in your organization.");
+            }
         }
         
-        const profile = member || {
-            name: userProfile.name || user.email!,
-            email: user.email!,
-            uid: user.uid,
-            status: userProfile.status || 'Not Verified',
-        };
+        const profile = member;
         
         setProfileData(profile as OrganizationMember);
         setUpdatedName(profile.name);
@@ -502,15 +510,16 @@ export function AgentProfile({ email }: { email: string }) {
                     </div>
                 </div>
                 <Tabs defaultValue="assigned" value={activeTab} onValueChange={(value) => setActiveTab(value)} className="w-full">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <div className="w-full sm:w-auto">
-                            <TabsList className="hidden sm:inline-flex">
-                                <TabsTrigger value="assigned">Assigned ({assignedTickets.length})</TabsTrigger>
-                                <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
-                                <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
-                                <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
-                            </TabsList>
-                             <Select value={activeTab} onValueChange={setActiveTab} className="sm:hidden">
+                    <div className="flex flex-col sm:flex-row sm:justify-between items-center mb-4 gap-4">
+                        <TabsList className="hidden sm:inline-flex">
+                            <TabsTrigger value="assigned">Assigned ({assignedTickets.length})</TabsTrigger>
+                            <TabsTrigger value="cc">Cc'd On ({ccTickets.length})</TabsTrigger>
+                            <TabsTrigger value="bcc">Bcc'd On ({bccTickets.length})</TabsTrigger>
+                            <TabsTrigger value="forwarded">Forwarded To ({forwardedActivities.length})</TabsTrigger>
+                        </TabsList>
+                        
+                        <div className="w-full sm:hidden flex items-center justify-between gap-2">
+                             <Select value={activeTab} onValueChange={setActiveTab}>
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select a category" />
                                 </SelectTrigger>
@@ -521,8 +530,12 @@ export function AgentProfile({ email }: { email: string }) {
                                     <SelectItem value="forwarded">Forwarded To ({forwardedActivities.length})</SelectItem>
                                 </SelectContent>
                             </Select>
+                            {activeTab !== 'forwarded' && renderActiveFilters()}
                         </div>
-                        {activeTab !== 'forwarded' && renderActiveFilters()}
+                        
+                        <div className="hidden sm:flex flex-1 justify-end">
+                            {activeTab !== 'forwarded' && renderActiveFilters()}
+                        </div>
                     </div>
                     <TabsContent value="assigned">
                         <div className="space-y-2">
