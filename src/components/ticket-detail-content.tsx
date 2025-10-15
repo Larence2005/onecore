@@ -501,8 +501,14 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             return;
         }
         setIsSending(true);
+        
+        // Immediately hide reply form and show toast
+        const tempReplyToMessageId = replyingToMessageId;
+        setReplyingToMessageId(null);
+        toast({ title: "Sending Reply...", description: "Your reply is being sent." });
+
         try {
-            if(!replyingToMessageId) throw new Error("Could not determine message to reply to.");
+            if(!tempReplyToMessageId) throw new Error("Could not determine message to reply to.");
             
             const attachmentPayloads: NewAttachment[] = await Promise.all(
                 attachments.map(async (file) => ({
@@ -515,14 +521,10 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const isClientReplying = userProfile.isClient === true;
             const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
             
-            // Immediately hide reply form and show toast
-            setReplyingToMessageId(null);
-            toast({ title: "Sending Reply...", description: "Your reply is being sent." });
-
             await replyToEmailAction(
                 userProfile.organizationId,
                 email.id,
-                replyingToMessageId, 
+                tempReplyToMessageId, 
                 replyContent, 
                 email?.conversationId, 
                 attachmentPayloads,
