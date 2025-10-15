@@ -851,12 +851,9 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     </Avatar>
                     <div className="flex-1 grid gap-1 text-sm">
                         <div className="font-semibold">{message.sender}</div>
-                        <div className="text-xs text-muted-foreground">
-                            {isFirstInThread && email?.creator && message.senderEmail !== email.creator.email && (
-                                <p><span className="font-semibold">Created by:</span> {email.creator.name} &lt;{email.creator.email}&gt;</p>
-                            )}
-                            {(!isFirstInThread || (isFirstInThread && email?.creator?.email === message.senderEmail)) && createdByAgent && (
-                                <p><span className="font-semibold">Replied by:</span> {message.sender}</p>
+                         <div className="text-xs text-muted-foreground">
+                            {isFirstInThread && email?.creator && message.senderEmail?.toLowerCase() !== email.creator.email.toLowerCase() && (
+                                <p><span className="font-semibold">Created by:</span> {email.creator.name} ({email.creator.email})</p>
                             )}
                             <p>
                                 <span className="font-semibold">From:</span> {message.senderEmail}
@@ -868,6 +865,9 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                                 <p>
                                     <span className="font-semibold">CC:</span> {renderRecipientList(message.ccRecipients)}
                                 </p>
+                            )}
+                             {isFirstInThread && (
+                                <p><span className="font-semibold">Subject:</span> {message.subject}</p>
                             )}
                         </div>
                     </div>
