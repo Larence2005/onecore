@@ -343,11 +343,12 @@ export async function createTicket(
                     
                     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                     const initialMessageBody = emailBodyWithCreator;
+                    
                     const initialMessage: Partial<DetailedEmail> = {
                         id: sentEmailResponse.messageId, // Use the real message ID
                         subject: `[Ticket #${ticketNumber}] ${title}`,
-                        sender: isClient ? author.name : settings.userId,
-                        senderEmail: isClient ? author.email : settings.userId,
+                        sender: isClient ? "Support" : settings.userId,
+                        senderEmail: settings.userId,
                         body: { contentType: 'html', content: initialMessageBody },
                         receivedDateTime: newTicketData.receivedDateTime,
                         conversationId: sentEmailResponse.conversationId,
