@@ -329,7 +329,7 @@ export async function createTicket(
                     });
 
                      if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                        await updateDoc(newTicketRef, { subject: title, conversationId: sentEmailResponse.conversationId });
+                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
                         
                         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                         
@@ -363,7 +363,7 @@ export async function createTicket(
                     });
 
                     if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                        await updateDoc(newTicketRef, { subject: title, conversationId: sentEmailResponse.conversationId });
+                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
                         
                         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                         
