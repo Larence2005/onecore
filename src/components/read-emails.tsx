@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -16,7 +17,7 @@ interface ReadEmailsProps {
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
-  filters: FilterState;
+  filters: Omit<FilterState, 'groups'>;
 }
 
 

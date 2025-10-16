@@ -324,12 +324,12 @@ export async function createTicket(
                     // Do not include attachments in this notification email
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
-                        subject: title,
+                        subject: `Ticket Created: ${title}`,
                         body: emailBodyToClient,
                     });
 
                      if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
+                        await updateDoc(newTicketRef, { subject: title, conversationId: sentEmailResponse.conversationId });
                         
                         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                         
@@ -363,7 +363,7 @@ export async function createTicket(
                     });
 
                     if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
+                        await updateDoc(newTicketRef, { subject: title, conversationId: sentEmailResponse.conversationId });
                         
                         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                         
@@ -518,7 +518,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                 try {
                     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                     const ticketUrl = `https://${parentDomain}/tickets/${ticketId}`;
-                    const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.subject}`;
+                    const notificationSubject = `Ticket Created: ${preliminaryTicketData.subject}`;
                     const notificationBody = `<p>Hello ${preliminaryTicketData.sender},</p><p>Your ticket with the subject "${preliminaryTicketData.subject}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     await sendEmailAction(organizationId, {
                         recipient: preliminaryTicketData.senderEmail!,
@@ -1108,9 +1108,9 @@ export async function replyToEmailAction(
             body: { contentType: 'html', content: comment },
             receivedDateTime: new Date().toISOString(),
             conversationId: conversationId,
-            toRecipients: parseRecipients(to),
-            ccRecipients: parseRecipients(cc),
-            bccRecipients: parseRecipients(bcc),
+            toRecipients: parseRecipients(to) || [],
+            ccRecipients: parseRecipients(cc) || [],
+            bccRecipients: parseRecipients(bcc) || [],
             attachments: sentMessage.attachments || [],
             hasAttachments: attachments.length > 0,
             priority: ticketData.priority,
