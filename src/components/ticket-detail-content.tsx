@@ -506,7 +506,6 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         // Immediately hide reply form and show toast
         const tempReplyToMessageId = replyingToMessageId;
         setReplyingToMessageId(null);
-        toast({ title: "Sending Reply...", description: "Your reply is being sent." });
 
         try {
             if(!tempReplyToMessageId) throw new Error("Could not determine message to reply to.");
@@ -541,8 +540,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 replyBcc
             );
             
-            if (result.success && email.conversationId) {
-                await fetchAndStoreFullConversation(userProfile.organizationId, email.conversationId);
+            if (result.success) {
                  toast({ title: "Reply sent.", description: "It may take a few minutes to appear. Kindly refresh the page." });
             }
 

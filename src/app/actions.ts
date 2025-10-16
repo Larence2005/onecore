@@ -277,7 +277,7 @@ export async function createTicket(
         
         const newTicketData: Partial<Email> = {
             id: newTicketRef.id,
-            title: title,
+            subject: title,
             sender: author.name, // The original author
             senderEmail: author.email,
             bodyPreview: body.substring(0, 255),
@@ -472,7 +472,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
                 const preliminaryTicketData: Partial<Email> = {
                     id: ticketId,
-                    title: email.subject || 'No Subject',
+                    subject: email.subject || 'No Subject',
                     sender: email.from.emailAddress.name || 'Unknown Sender',
                     senderEmail: email.from.emailAddress.address || 'Unknown Email',
                     bodyPreview: email.bodyPreview,
@@ -502,8 +502,8 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                 try {
                     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                     const ticketUrl = `https://${parentDomain}/tickets/${ticketId}`;
-                    const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.title}`;
-                    const notificationBody = `<p>Hello ${preliminaryTicketData.sender},</p><p>Your ticket with the subject "${preliminaryTicketData.title}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
+                    const notificationSubject = `Ticket Created: #${ticketNumber} - ${preliminaryTicketData.subject}`;
+                    const notificationBody = `<p>Hello ${preliminaryTicketData.sender},</p><p>Your ticket with the subject "${preliminaryTicketData.subject}" has been successfully received and created.</p><p>Your ticket number is <b>#${ticketNumber}</b>.</p><p>You can view your ticket and any updates at this URL: ${ticketUrl}</p><br><p>This is an automated notification. Replies to this email are not monitored.</p>`;
                     await sendEmailAction(organizationId, {
                         recipient: preliminaryTicketData.senderEmail!,
                         subject: notificationSubject,
@@ -979,6 +979,8 @@ export async function replyToEmailAction(
     
     const isPortalTicket = conversationId?.startsWith('manual-');
     let messageIdToReply = messageId;
+    let sentMessage: { success: boolean; conversationId?: string; messageId?: string, attachments?: Attachment[] };
+
     
     if (isPortalTicket) {
         // For portal tickets, find the first *real* message ID in the conversation to use for threading.
@@ -999,7 +1001,7 @@ export async function replyToEmailAction(
                 const inReplyTo = `<${conversationId}@${settings.userId.split('@')[1]}>`; // Create a fake In-Reply-To
                 const references = inReplyTo;
 
-                await sendEmailAction(organizationId, {
+                sentMessage = await sendEmailAction(organizationId, {
                     recipient: to,
                     cc,
                     bcc,
@@ -1010,55 +1012,109 @@ export async function replyToEmailAction(
                     inReplyTo,
                     references,
                 });
-                // Invalidate caches
-                ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
-                ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
-                return { success: true };
             }
         }
     }
+    
+    if (!sentMessage) { // if sentMessage is not set, it's not a portal ticket or it has a real message to reply to.
+        const finalPayload = {
+            comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
+            message: {
+                toRecipients: parseRecipients(to),
+                ccRecipients: parseRecipients(cc),
+                bccRecipients: parseRecipients(bcc),
+                attachments: attachments.map(att => ({
+                    '@odata.type': '#microsoft.graph.fileAttachment',
+                    name: att.name,
+                    contentBytes: att.contentBytes,
+                    contentType: att.contentType,
+                })),
+            }
+        };
+
+        const replyResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageIdToReply}/replyAll`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${authResponse.accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(finalPayload),
+        });
+
+        if (replyResponse.status !== 202) {
+            const errorText = await replyResponse.text();
+            console.error("Failed to send reply. Status:", replyResponse.status, "Body:", errorText);
+            try {
+                const error = JSON.parse(errorText);
+                throw new Error(`Failed to send reply: ${error.error?.message || replyResponse.statusText}`);
+            } catch (e) {
+                throw new Error(`Failed to send reply: ${replyResponse.statusText} - ${errorText}`);
+            }
+        }
+
+        // To do an optimistic update, we need the sent message ID. Graph API doesn't return it on 202.
+        // We have to make another call to get the latest message in the thread.
+        // This adds a slight delay but is necessary for the optimistic update.
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for 3 seconds for email to be processed.
+        
+        const newMessagesResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,hasAttachments,toRecipients,ccRecipients,bccRecipients&$expand=attachments($select=id,name,contentType,size,isInline)&$orderby=receivedDateTime desc&$top=1`, {
+            headers: { Authorization: `Bearer ${authResponse.accessToken}` }
+        });
+
+        if(newMessagesResponse.ok) {
+            const newMessagesData = await newMessagesResponse.json();
+            const latestMessage = newMessagesData.value[0];
+            sentMessage = { 
+                success: true, 
+                conversationId: conversationId,
+                messageId: latestMessage.id,
+                attachments: latestMessage.attachments?.map((att: any) => ({
+                    id: att.id,
+                    name: att.name,
+                    contentType: att.contentType,
+                    size: att.size,
+                    isInline: att.isInline,
+                })) || []
+            };
+        } else {
+             // If we fail to get the new message, we can't do an optimistic update with the ID.
+             // We can still proceed without it, but the UI won't update immediately with the *sent* message.
+             // It will update on the next cron run.
+             console.error("Could not fetch sent message for optimistic update.");
+        }
+    }
 
 
-    const finalPayload = {
-        comment: `Replied by ${currentUser.name}:<br><br>${comment}`,
-        message: {
+    // Optimistic update to Firestore
+    if (conversationId && sentMessage?.success) {
+        const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
+        
+        const newMessage: DetailedEmail = {
+            id: sentMessage.messageId || `temp-id-${Date.now()}`,
+            subject: `Re: ${messageId}`, // This subject is temporary and will be overwritten
+            sender: currentUser.name,
+            senderEmail: currentUser.email,
+            body: { contentType: 'html', content: comment },
+            receivedDateTime: new Date().toISOString(),
+            conversationId: conversationId,
             toRecipients: parseRecipients(to),
             ccRecipients: parseRecipients(cc),
             bccRecipients: parseRecipients(bcc),
-            attachments: attachments.map(att => ({
-                '@odata.type': '#microsoft.graph.fileAttachment',
-                name: att.name,
-                contentBytes: att.contentBytes,
-                contentType: att.contentType,
-            })),
-        }
-    };
+            attachments: sentMessage.attachments || [],
+            hasAttachments: attachments.length > 0,
+            // These properties will be inherited from the parent ticket
+            priority: '',
+            status: '',
+            type: '',
+            bodyPreview: comment.substring(0, 255),
+        };
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageIdToReply}/replyAll`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${authResponse.accessToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(finalPayload),
-    });
-
-    if (response.status !== 202) { // Graph API returns 202 Accepted on success
-        const errorText = await response.text();
-        console.error("Failed to send reply. Status:", response.status, "Body:", errorText);
-        try {
-            const error = JSON.parse(errorText);
-            throw new Error(`Failed to send reply: ${error.error?.message || response.statusText}`);
-        } catch (e) {
-            throw new Error(`Failed to send reply: ${response.statusText} - ${errorText}`);
-        }
+        await updateDoc(conversationDocRef, {
+            messages: arrayUnion(newMessage)
+        });
+    } else {
+        // If optimistic update fails or isn't possible, invalidate cache to trigger re-fetch on client
+        ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
+        ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
     }
-    
-    // Don't try to parse the (empty) response body. The 202 status is success.
-    
-    // Invalidate caches to ensure next hard-refresh gets new data
-    ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
-    ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
+
 
     return { success: true };
 }
@@ -1142,20 +1198,21 @@ export async function getAttachmentContent(organizationId: string, messageId: st
         throw new Error('Failed to acquire access token to get attachment.');
     }
 
-    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/attachments/${attachmentId}`, {
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/attachments/${attachmentId}/$value`, {
         headers: {
             Authorization: `Bearer ${authResponse.accessToken}`,
         },
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Failed to fetch attachment: ${error.error?.message || response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch attachment: ${errorText || response.statusText}`);
     }
     
-    const attachment = await response.json();
+    const buffer = await response.arrayBuffer();
+    const base64String = Buffer.from(buffer).toString('base64');
     
-    return { contentBytes: attachment.contentBytes };
+    return { contentBytes: base64String };
 }
 
 async function incrementEmployeeCount(organizationId: string, companyId: string) {
