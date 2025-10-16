@@ -13,7 +13,7 @@ import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter } from '@/components/tickets-filter';
 import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
-import { getCompanies, getLatestEmails, getOrganizationMembers, checkTicketDeadlinesAndNotify } from '@/app/actions';
+import { getCompanies, getLatestEmails, getOrganizationMembers, checkForNewMail } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -207,6 +207,36 @@ function HomePageContent() {
       unsubscribePromise.then(unsub => unsub && unsub());
     }
   }, [user, userProfile]);
+
+  // Real-time check for new emails
+  useEffect(() => {
+    if (!userProfile?.organizationId || activeView !== 'tickets') {
+        return;
+    }
+
+    const intervalId = setInterval(async () => {
+        try {
+            // Find the most recent email date we have
+            const latestDate = emails.reduce((latest, email) => {
+                const emailDate = new Date(email.receivedDateTime);
+                return emailDate > latest ? emailDate : latest;
+            }, new Date(0));
+
+            const hasNew = await checkForNewMail(userProfile.organizationId, latestDate.toISOString());
+
+            if (hasNew) {
+                // If there's new mail, trigger the full fetch.
+                // Pass the latestDate to only fetch newer items.
+                await getLatestEmails(userProfile.organizationId, latestDate.toISOString());
+            }
+        } catch (error) {
+            console.error("Failed to check for new mail:", error);
+            // Don't show a toast for background polling failures to avoid spamming the user.
+        }
+    }, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [userProfile?.organizationId, emails, activeView]);
 
 
   useEffect(() => {
@@ -586,4 +616,4 @@ export default function DashboardPage() {
   )
 }
 
-  
+    

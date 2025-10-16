@@ -407,8 +407,38 @@ export async function createTicket(
     }
 }
 
+export async function checkForNewMail(organizationId: string, since: string): Promise<boolean> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        return false;
+    }
+    const authResponse = await getAccessToken(settings);
+    if (!authResponse?.accessToken) {
+        return false;
+    }
+    
+    // Fetch only the most recent email to see if it's newer than `since`
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=1&$select=receivedDateTime&$orderby=receivedDateTime desc`, {
+        headers: { Authorization: `Bearer ${authResponse.accessToken}` },
+    });
 
-export async function getLatestEmails(organizationId: string): Promise<void> {
+    if (!response.ok) {
+        return false; // Silently fail on check
+    }
+
+    const data = await response.json();
+    if (data.value && data.value.length > 0) {
+        const latestEmailDate = parseISO(data.value[0].receivedDateTime);
+        const sinceDate = parseISO(since);
+        // Check if the latest email is newer than the last one we know about
+        return isAfter(latestEmailDate, sinceDate);
+    }
+
+    return false;
+}
+
+
+export async function getLatestEmails(organizationId: string, since?: string): Promise<void> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
         console.log(`[${organizationId}] Skipping email sync: API credentials not configured.`);
@@ -423,7 +453,12 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
         }
         
         console.log(`[${organizationId}] Fetching latest emails...`);
-        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
+        let url = `https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`;
+        if (since) {
+            // Filter for messages received after the `since` date
+            url += `&$filter=receivedDateTime gt ${since}`;
+        }
+        const response = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
             },
@@ -2790,5 +2825,7 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---    
+
+    
 
     
