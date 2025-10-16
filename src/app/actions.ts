@@ -311,7 +311,7 @@ export async function createTicket(
                         recipient: settings.userId,
                         cc: cc,
                         bcc: bcc,
-                        subject: `[Ticket #${ticketNumber}] ${title}`,
+                        subject: title,
                         body: emailBodyWithCreator,
                         attachments, // Pass attachments here for the main ticket email
                     });
@@ -324,7 +324,7 @@ export async function createTicket(
                     // Do not include attachments in this notification email
                     await sendEmailAction(organizationId, {
                         recipient: author.email,
-                        subject: `Ticket Created: #${ticketNumber} - ${title}`,
+                        subject: title,
                         body: emailBodyToClient,
                     });
 
@@ -335,7 +335,7 @@ export async function createTicket(
                         
                         const initialMessage: Partial<DetailedEmail> = {
                             id: sentEmailResponse.messageId,
-                            subject: `[Ticket #${ticketNumber}] ${title}`,
+                            subject: title,
                             sender: orgOwner?.name || supportName,
                             senderEmail: orgOwner?.email || settings.userId,
                             body: { contentType: 'html', content: emailBodyWithCreator },
@@ -357,7 +357,7 @@ export async function createTicket(
                         recipient: author.email,
                         cc: cc,
                         bcc: bcc,
-                        subject: `[Ticket #${ticketNumber}] ${title}`,
+                        subject: title,
                         body: emailBody,
                         attachments,
                     });
@@ -371,7 +371,7 @@ export async function createTicket(
 
                         const initialMessage: Partial<DetailedEmail> = {
                             id: sentEmailResponse.messageId, // Use the real message ID
-                            subject: `[Ticket #${ticketNumber}] ${title}`,
+                            subject: title,
                             sender: isClient ? (owner?.name || "Support") : author.name,
                             senderEmail: isClient ? (owner?.email || settings.userId) : author.email,
                             body: { contentType: 'html', content: emailBodyWithCreator },
@@ -999,7 +999,7 @@ export async function replyToEmailAction(
     
     const isPortalTicket = conversationId?.startsWith('manual-');
     let messageIdToReply = messageId;
-    let sentMessage: { success: boolean; conversationId?: string; messageId?: string, attachments?: Attachment[] };
+    let sentMessage: { success: boolean; conversationId?: string; messageId?: string, attachments?: Attachment[] } | undefined;
 
     
     if (isPortalTicket) {
