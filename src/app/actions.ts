@@ -329,7 +329,7 @@ export async function createTicket(
                     });
 
                      if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId, subject: `[Ticket #${ticketNumber}] ${title}` });
+                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
                         
                         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                         
@@ -363,7 +363,7 @@ export async function createTicket(
                     });
 
                     if (sentEmailResponse.success && sentEmailResponse.conversationId && sentEmailResponse.messageId) {
-                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId, subject: `[Ticket #${ticketNumber}] ${title}` });
+                        await updateDoc(newTicketRef, { conversationId: sentEmailResponse.conversationId });
                         
                         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', sentEmailResponse.conversationId);
                         
@@ -412,17 +412,18 @@ export async function createTicket(
 export async function getLatestEmails(organizationId: string): Promise<void> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
-        console.log("Skipping email sync: API credentials not configured.");
+        console.log(`[${organizationId}] Skipping email sync: API credentials not configured.`);
         return;
     }
     
     try {
         const authResponse = await getAccessToken(settings);
         if (!authResponse?.accessToken) {
-            console.log("Skipping email sync: API credentials not configured.");
+            console.log(`[${organizationId}] Skipping email sync: Failed to acquire access token.`);
             return;
         }
-
+        
+        console.log(`[${organizationId}] Fetching latest emails...`);
         const response = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/mailFolders/inbox/messages?$top=30&$select=id,subject,from,bodyPreview,receivedDateTime,conversationId&$orderby=receivedDateTime desc`, {
             headers: {
                 Authorization: `Bearer ${authResponse.accessToken}`,
@@ -431,19 +432,34 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`Failed to fetch emails: ${error.error?.message || response.statusText}`);
+            throw new Error(`[${organizationId}] Failed to fetch emails: ${error.error?.message || response.statusText}`);
         }
 
         const data: { value: { id: string, subject: string, from: { emailAddress: { address: string, name: string } }, bodyPreview: string, receivedDateTime: string, conversationId: string }[] } = await response.json() as any;
         
         const emailsToProcess = data.value;
+        console.log(`[${organizationId}] Found ${emailsToProcess.length} emails to process.`);
 
         for (const email of emailsToProcess) {
             
-            if (!email.conversationId) continue;
+            if (!email.conversationId) {
+                console.log(`[${organizationId}] Skipping email ID ${email.id} - no conversationId.`);
+                continue;
+            }
             
+            // Skip emails sent from the system's own address
+            const senderEmailLower = email.from.emailAddress.address.toLowerCase();
+            if (senderEmailLower === settings.userId.toLowerCase()) {
+                console.log(`[${organizationId}] Skipping email from system's own address: ${email.subject}`);
+                continue;
+            }
+            
+            // Skip automated replies and system notifications
             const subjectLower = email.subject.toLowerCase();
-            if (subjectLower.includes("notification:") || subjectLower.includes("update on ticket") || subjectLower.includes("you've been assigned") || subjectLower.includes("ticket created:")) {
+            const autoReplyKeywords = ["auto:", "automatic reply", "out of office", "undeliverable", "delivery status notification"];
+            const systemNotificationKeywords = ["notification:", "update on ticket", "you've been assigned", "ticket created:"];
+            if (autoReplyKeywords.some(keyword => subjectLower.includes(keyword)) || systemNotificationKeywords.some(keyword => subjectLower.includes(keyword))) {
+                 console.log(`[${organizationId}] Skipping automated reply/notification: ${email.subject}`);
                 continue; 
             }
 
@@ -452,13 +468,12 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                const senderEmail = email.from.emailAddress.address.toLowerCase();
-                if (senderEmail === settings.userId.toLowerCase()) continue;
-
+                // This is a new ticket
+                console.log(`[${organizationId}] New ticket found from ${senderEmailLower}: ${email.subject}`);
                 let companyId: string | undefined = undefined;
                 const allCompanies = await getCompanies(organizationId);
                 for (const company of allCompanies) {
-                    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', senderEmail);
+                    const employeeDocRef = doc(db, 'organizations', organizationId, 'companies', company.id, 'employees', senderEmailLower);
                     const employeeDoc = await getDoc(employeeDocRef);
                     if (employeeDoc.exists()) {
                         companyId = company.id;
@@ -491,6 +506,7 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                 };
 
                 await setDoc(ticketDocRef, preliminaryTicketData);
+                console.log(`[${organizationId}] Created new ticket #${ticketNumber} with ID ${ticketId}.`);
                 
                 await addActivityLog(organizationId, ticketId, {
                     type: 'Create',
@@ -510,13 +526,14 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                         body: notificationBody,
                     });
                 } catch (e) {
-                    console.error("Failed to send ticket creation notification for email-based ticket:", e);
+                    console.error(`[${organizationId}] Failed to send ticket creation notification for email-based ticket:`, e);
                 }
 
                 await fetchAndStoreFullConversation(organizationId, email.conversationId);
 
             } else {
                 // It's a reply. Check if we need to update.
+                console.log(`[${organizationId}] Reply found for existing conversation: ${email.conversationId}`);
                 const ticketDoc = querySnapshot.docs[0];
                 const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', email.conversationId);
                 const conversationDoc = await getDoc(conversationDocRef);
@@ -526,21 +543,23 @@ export async function getLatestEmails(organizationId: string): Promise<void> {
                     if (messages && messages.length > 0) {
                         const lastStoredMessage = messages[messages.length - 1];
                         if (isAfter(parseISO(email.receivedDateTime), parseISO(lastStoredMessage.receivedDateTime))) {
-                            // New email is newer than our last stored one, so we fetch the whole conversation.
+                            console.log(`[${organizationId}] New message is newer. Fetching full conversation for ${email.conversationId}.`);
                             await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                        } else {
+                            console.log(`[${organizationId}] Existing stored message is newer or same. Skipping fetch for ${email.conversationId}.`);
                         }
                     } else {
-                        // No messages stored, fetch conversation.
+                        console.log(`[${organizationId}] No messages stored. Fetching full conversation for ${email.conversationId}.`);
                         await fetchAndStoreFullConversation(organizationId, email.conversationId);
                     }
                 } else {
-                    // No conversation document exists, fetch it.
+                    console.log(`[${organizationId}] No conversation document exists. Fetching full conversation for ${email.conversationId}.`);
                     await fetchAndStoreFullConversation(organizationId, email.conversationId);
                 }
             }
         }
     } catch (error) {
-        console.error("API call failed, continuing with data from DB:", error);
+        console.error(`[${organizationId}] API call failed, continuing with data from DB:`, error);
     }
 }
 
@@ -577,7 +596,7 @@ export async function getTicketsFromDB(organizationId: string, options?: { inclu
         
         return {
             id: ticketDoc.id, // Ensure we use the firestore document ID
-            subject: data.title || 'No Subject',
+            subject: data.subject || 'No Subject',
             sender: data.sender || 'Unknown Sender',
             senderEmail: data.senderEmail || 'Unknown Email',
             bodyPreview: data.bodyPreview || '',
@@ -647,11 +666,13 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
     
     let ticketProperties = { priority: 'None', status: 'Open', type: 'Incident', companyId: null, assignee: null };
     let ticketId: string | null = null;
+    let ticketSubject: string | null = null;
 
     if (!querySnapshot.empty) {
         const ticketDoc = querySnapshot.docs[0];
         ticketId = ticketDoc.id;
         const ticketData = ticketDoc.data();
+        ticketSubject = ticketData.subject;
         ticketProperties = {
             priority: ticketData.priority || 'None',
             status: ticketData.status || 'Open',
@@ -663,7 +684,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
 
     let conversationMessages: DetailedEmail[] = conversationData.value.map(msg => ({
         id: msg.id,
-        subject: msg.subject,
+        subject: ticketSubject || msg.subject,
         sender: msg.from?.emailAddress?.name || msg.from?.emailAddress?.address || 'Unknown Sender',
         senderEmail: msg.from?.emailAddress?.address,
         body: msg.body,
@@ -777,7 +798,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         // create a placeholder from the ticket data itself.
         const placeholderEmail: DetailedEmail = {
             id: ticketData.id || id,
-            subject: ticketData.title || 'No Subject',
+            subject: ticketData.subject || 'No Subject',
             sender: ticketData.sender || 'Unknown Sender',
             senderEmail: ticketData.senderEmail || 'Unknown Email',
             bodyPreview: ticketData.bodyPreview || '',
@@ -801,7 +822,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     const mainEmailDetails: DetailedEmail = {
         ...ticketData,
         id: ticketData.id || id,
-        subject: ticketData.title,
+        subject: ticketData.subject,
         body: conversationMessages[0]?.body || { contentType: 'html', content: ticketData.bodyPreview || '<p>Full email content not available.</p>' },
         conversation: conversationMessages.map(convMsg => ({
             ...convMsg,
@@ -971,7 +992,6 @@ export async function replyToEmailAction(
         throw new Error('You must be a verified employee to reply to tickets. Please complete your registration.');
     }
     
-    // For regular email tickets, we use the replyAll API
     const authResponse = await getAccessToken(settings);
     if (!authResponse?.accessToken) {
         throw new Error('Failed to acquire access token. Check your API settings.');
@@ -983,7 +1003,6 @@ export async function replyToEmailAction(
 
     
     if (isPortalTicket) {
-        // For portal tickets, find the first *real* message ID in the conversation to use for threading.
         const conversationDoc = await getDoc(doc(db, 'organizations', organizationId, 'conversations', conversationId!));
         if (conversationDoc.exists()) {
             const messages = conversationDoc.data().messages as DetailedEmail[];
@@ -991,13 +1010,11 @@ export async function replyToEmailAction(
             if (firstRealMessage) {
                 messageIdToReply = firstRealMessage.id;
             } else {
-                // If there's no real message yet, we cannot use replyAll.
-                // We'll have to send a new email but with threading headers.
                 const ticketDoc = await getDoc(doc(db, 'organizations', organizationId, 'tickets', ticketId));
                 const ticketData = ticketDoc.data();
                 if (!ticketData) throw new Error("Ticket not found.");
                 
-                const subject = `Re: ${ticketData.title}`;
+                const subject = `Re: ${ticketData.subject}`;
                 const inReplyTo = `<${conversationId}@${settings.userId.split('@')[1]}>`; // Create a fake In-Reply-To
                 const references = inReplyTo;
 
@@ -1048,11 +1065,8 @@ export async function replyToEmailAction(
                 throw new Error(`Failed to send reply: ${replyResponse.statusText} - ${errorText}`);
             }
         }
-
-        // To do an optimistic update, we need the sent message ID. Graph API doesn't return it on 202.
-        // We have to make another call to get the latest message in the thread.
-        // This adds a slight delay but is necessary for the optimistic update.
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for 3 seconds for email to be processed.
+        
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         const newMessagesResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,hasAttachments,toRecipients,ccRecipients,bccRecipients&$expand=attachments($select=id,name,contentType,size,isInline)&$orderby=receivedDateTime desc&$top=1`, {
             headers: { Authorization: `Bearer ${authResponse.accessToken}` }
@@ -1074,21 +1088,21 @@ export async function replyToEmailAction(
                 })) || []
             };
         } else {
-             // If we fail to get the new message, we can't do an optimistic update with the ID.
-             // We can still proceed without it, but the UI won't update immediately with the *sent* message.
-             // It will update on the next cron run.
              console.error("Could not fetch sent message for optimistic update.");
         }
     }
 
 
-    // Optimistic update to Firestore
     if (conversationId && sentMessage?.success) {
         const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
         
+        const ticketDoc = await getDoc(doc(db, 'organizations', organizationId, 'tickets', ticketId));
+        const ticketData = ticketDoc.data();
+        if (!ticketData) throw new Error("Ticket not found for optimistic update.");
+
         const newMessage: DetailedEmail = {
             id: sentMessage.messageId || `temp-id-${Date.now()}`,
-            subject: `Re: ${messageId}`, // This subject is temporary and will be overwritten
+            subject: `Re: ${ticketData.subject}`,
             sender: currentUser.name,
             senderEmail: currentUser.email,
             body: { contentType: 'html', content: comment },
@@ -1099,18 +1113,25 @@ export async function replyToEmailAction(
             bccRecipients: parseRecipients(bcc),
             attachments: sentMessage.attachments || [],
             hasAttachments: attachments.length > 0,
-            // These properties will be inherited from the parent ticket
-            priority: '',
-            status: '',
-            type: '',
+            priority: ticketData.priority,
+            status: ticketData.status,
+            type: ticketData.type,
             bodyPreview: comment.substring(0, 255),
         };
 
-        await updateDoc(conversationDocRef, {
-            messages: arrayUnion(newMessage)
-        });
+        try {
+            await updateDoc(conversationDocRef, {
+                messages: arrayUnion(newMessage)
+            });
+        } catch(e) {
+            console.error("Failed to optimistically update conversation:", e)
+            if (e instanceof Error && e.message.includes("No document to update")) {
+                await setDoc(conversationDocRef, { messages: [newMessage] });
+            } else {
+                throw e; // re-throw other errors
+            }
+        }
     } else {
-        // If optimistic update fails or isn't possible, invalidate cache to trigger re-fetch on client
         ticketsCache.invalidate(`conversation:${organizationId}:${conversationId}`);
         ticketsCache.invalidate(`ticket:${organizationId}:${ticketId}`);
     }
@@ -1464,11 +1485,11 @@ export async function updateTicket(
                 const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
                 const ticketUrl = `https://${parentDomain}/tickets/${id}`;
                 
-                let subject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                let subject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.subject}`;
                 let body = `<p>Hello ${assignee.name},</p>`;
 
                 if (assigneeChanged) {
-                    subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                    subject = `You've been assigned Ticket #${ticketData.ticketNumber}: ${ticketData.subject}`;
                     body += `<p>You have been assigned a new ticket by ${currentUser.name}.</p>`;
                 }
                 
@@ -1521,10 +1542,10 @@ export async function updateTicket(
                 
                 const ccRecipients = Array.from(emailParticipants);
 
-                const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.title}`;
+                const notificationSubject = `Update on Ticket #${ticketData.ticketNumber}: ${ticketData.subject}`;
                 const notificationBody = `
                     <p>Hello,</p>
-                    <p>Your ticket #${ticketData.ticketNumber} with the subject "${ticketData.title}" has been marked as <b>${data.status}</b> by ${currentUser.name}.</p>
+                    <p>Your ticket #${ticketData.ticketNumber} with the subject "${ticketData.subject}" has been marked as <b>${data.status}</b> by ${currentUser.name}.</p>
                     <br>
                     <p>If you have any further questions, please reply to this ticket by responding to any email in this thread.</p>
                     <br>
@@ -1765,7 +1786,7 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
                 id: logDoc.id,
                 ...(logDoc.data() as Omit<ActivityLog, 'id'>),
                 ticketId: ticketDoc.id,
-                ticketSubject: ticketData.title || 'No Subject'
+                ticketSubject: ticketData.subject || 'No Subject'
             }));
             
             allLogs = allLogs.concat(logs);
@@ -1808,7 +1829,7 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
                 id: logDoc.id,
                 ...(logDoc.data() as Omit<ActivityLog, 'id'>),
                 ticketId: ticketDoc.id,
-                ticketSubject: ticketData.title || 'No Subject'
+                ticketSubject: ticketData.subject || 'No Subject'
             }));
             
             allLogs = allLogs.concat(logs);
