@@ -133,7 +133,7 @@ function HomePageContent() {
                 
                 return {
                     id: ticketDoc.id,
-                    subject: data.title || 'No Subject',
+                    subject: data.subject || 'No Subject',
                     sender: data.sender || 'Unknown Sender',
                     senderEmail: data.senderEmail || 'Unknown Email',
                     bodyPreview: data.bodyPreview || '',
@@ -585,3 +585,5 @@ export default function DashboardPage() {
       </React.Suspense>
   )
 }
+
+  
