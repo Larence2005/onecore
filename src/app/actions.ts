@@ -672,7 +672,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
         const ticketDoc = querySnapshot.docs[0];
         ticketId = ticketDoc.id;
         const ticketData = ticketDoc.data();
-        ticketSubject = ticketData.subject;
+        ticketSubject = ticketData.subject; // This is the key change
         ticketProperties = {
             priority: ticketData.priority || 'None',
             status: ticketData.status || 'Open',
