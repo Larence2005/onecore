@@ -1,12 +1,12 @@
 
 "use client";
 
-import { AuthProvider } from "@/providers/auth-provider";
+import { AuthProvider as FirebaseAuthProvider } from "@/providers/auth-provider";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider>
+        <FirebaseAuthProvider>
             {children}
-        </AuthProvider>
+        </FirebaseAuthProvider>
     );
 }
