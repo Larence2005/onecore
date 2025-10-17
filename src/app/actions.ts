@@ -738,10 +738,10 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
             size: att.size,
             isInline: att.isInline,
             contentId: att.contentId,
-        })),
-        toRecipients: msg.toRecipients,
-        ccRecipients: msg.ccRecipients,
-        bccRecipients: msg.bccRecipients,
+        })) || [],
+        toRecipients: msg.toRecipients || [],
+        ccRecipients: msg.ccRecipients || [],
+        bccRecipients: msg.bccRecipients || [],
     }));
 
     conversationMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime());
@@ -2825,6 +2825,8 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---    
+
+    
 
     
 
