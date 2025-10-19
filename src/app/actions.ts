@@ -504,7 +504,8 @@ export async function getLatestEmails(organizationId: string, since?: string): P
             if (querySnapshot.empty) {
                 // This is a new ticket
                 console.log(`[${organizationId}] New ticket found from ${senderEmailLower}: ${email.subject}`);
-                await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                const fullConversation = await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                const firstMessage = fullConversation[0];
                 
                 let companyId: string | undefined = undefined;
                 const allCompanies = await getCompanies(organizationId);
@@ -523,12 +524,12 @@ export async function getLatestEmails(organizationId: string, since?: string): P
 
                 const preliminaryTicketData: Partial<Email> = {
                     id: ticketId,
-                    subject: email.subject || 'No Subject',
-                    sender: email.from.emailAddress.name || 'Unknown Sender',
-                    senderEmail: email.from.emailAddress.address || 'Unknown Email',
-                    bodyPreview: email.bodyPreview,
-                    receivedDateTime: email.receivedDateTime,
-                    conversationId: email.conversationId,
+                    subject: firstMessage.subject || 'No Subject',
+                    sender: firstMessage.sender || 'Unknown Sender',
+                    senderEmail: firstMessage.senderEmail || 'Unknown Email',
+                    bodyPreview: firstMessage.bodyPreview,
+                    receivedDateTime: firstMessage.receivedDateTime,
+                    conversationId: firstMessage.conversationId,
                     priority: 'None',
                     status: 'Open',
                     type: 'Questions',
@@ -538,7 +539,7 @@ export async function getLatestEmails(organizationId: string, since?: string): P
                     ticketNumber: ticketNumber,
                     assignee: null,
                     companyId: companyId,
-                    creator: { name: email.from.emailAddress.name, email: email.from.emailAddress.address }
+                    creator: { name: firstMessage.sender, email: firstMessage.senderEmail! }
                 };
 
                 await setDoc(ticketDocRef, preliminaryTicketData);
@@ -547,8 +548,8 @@ export async function getLatestEmails(organizationId: string, since?: string): P
                 await addActivityLog(organizationId, ticketId, {
                     type: 'Create',
                     details: 'Ticket created',
-                    date: email.receivedDateTime,
-                    user: email.from.emailAddress.address || 'System',
+                    date: firstMessage.receivedDateTime,
+                    user: firstMessage.senderEmail || 'System',
                 });
 
                 try {
@@ -568,14 +569,17 @@ export async function getLatestEmails(organizationId: string, since?: string): P
             } else {
                 // It's a reply. Check if we need to update.
                 console.log(`[${organizationId}] Reply found for existing conversation: ${email.conversationId}`);
-                const ticketDoc = querySnapshot.docs[0];
                 const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', email.conversationId);
                 const conversationDoc = await getDoc(conversationDocRef);
                 
                 if (conversationDoc.exists()) {
                     const messages = conversationDoc.data().messages as DetailedEmail[];
                     if (messages && messages.length > 0) {
-                        const lastStoredMessage = messages[messages.length - 1];
+                        // Find the latest message in the stored conversation
+                        const lastStoredMessage = messages.reduce((latest, current) => 
+                            new Date(current.receivedDateTime) > new Date(latest.receivedDateTime) ? current : latest
+                        );
+
                         if (isAfter(parseISO(email.receivedDateTime), parseISO(lastStoredMessage.receivedDateTime))) {
                             console.log(`[${organizationId}] New message is newer. Fetching full conversation for ${email.conversationId}.`);
                             await fetchAndStoreFullConversation(organizationId, email.conversationId);
