@@ -684,7 +684,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
     }
     
     const selectFields = "id,subject,from,body,receivedDateTime,bodyPreview,conversationId,hasAttachments,toRecipients,ccRecipients,bccRecipients";
-    const expandAttachments = "$expand=attachments($select=id,name,contentType,size,isInline)";
+    const expandAttachments = "$expand=attachments($select=id,name,contentType,size,isInline,contentId)";
 
     const conversationResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=${selectFields}&${expandAttachments}`, {
         headers: { Authorization: `Bearer ${authResponse.accessToken}` }
