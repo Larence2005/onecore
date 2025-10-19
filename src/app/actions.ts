@@ -342,7 +342,8 @@ export async function createTicket(
                             conversationId: sentEmailResponse.conversationId,
                             toRecipients: [{ emailAddress: { name: supportName, address: settings.userId } }],
                             ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
-                            attachments: sentEmailResponse.attachments
+                            attachments: sentEmailResponse.attachments,
+                            hasAttachments: (sentEmailResponse.attachments || []).length > 0
                         };
                         await setDoc(conversationDocRef, { messages: [initialMessage] });
                     }
@@ -378,7 +379,8 @@ export async function createTicket(
                             conversationId: sentEmailResponse.conversationId,
                             toRecipients: [{ emailAddress: { name: 'Support', address: settings.userId } }],
                             ccRecipients: parseRecipients(cc).map(r => ({ emailAddress: { name: r.emailAddress.name || r.emailAddress.address, address: r.emailAddress.address } })),
-                            attachments: sentEmailResponse.attachments
+                            attachments: sentEmailResponse.attachments,
+                            hasAttachments: (sentEmailResponse.attachments || []).length > 0
                         };
                         await setDoc(conversationDocRef, { messages: [initialMessage] });
                     }
@@ -569,31 +571,7 @@ export async function getLatestEmails(organizationId: string, since?: string): P
             } else {
                 // It's a reply. Check if we need to update.
                 console.log(`[${organizationId}] Reply found for existing conversation: ${email.conversationId}`);
-                const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', email.conversationId);
-                const conversationDoc = await getDoc(conversationDocRef);
-                
-                if (conversationDoc.exists()) {
-                    const messages = conversationDoc.data().messages as DetailedEmail[];
-                    if (messages && messages.length > 0) {
-                        // Find the latest message in the stored conversation
-                        const lastStoredMessage = messages.reduce((latest, current) => 
-                            new Date(current.receivedDateTime) > new Date(latest.receivedDateTime) ? current : latest
-                        );
-
-                        if (isAfter(parseISO(email.receivedDateTime), parseISO(lastStoredMessage.receivedDateTime))) {
-                            console.log(`[${organizationId}] New message is newer. Fetching full conversation for ${email.conversationId}.`);
-                            await fetchAndStoreFullConversation(organizationId, email.conversationId);
-                        } else {
-                            console.log(`[${organizationId}] Existing stored message is newer or same. Skipping fetch for ${email.conversationId}.`);
-                        }
-                    } else {
-                        console.log(`[${organizationId}] No messages stored. Fetching full conversation for ${email.conversationId}.`);
-                        await fetchAndStoreFullConversation(organizationId, email.conversationId);
-                    }
-                } else {
-                    console.log(`[${organizationId}] No conversation document exists. Fetching full conversation for ${email.conversationId}.`);
-                    await fetchAndStoreFullConversation(organizationId, email.conversationId);
-                }
+                await fetchAndStoreFullConversation(organizationId, email.conversationId);
             }
         }
     } catch (error) {
