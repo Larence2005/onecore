@@ -1084,7 +1084,7 @@ export async function replyToEmailAction(
         
         await new Promise(resolve => setTimeout(resolve, 3000));
         
-        const newMessagesResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,hasAttachments,toRecipients,ccRecipients,bccRecipients&$expand=attachments($select=id,name,contentType,size,isInline)&$orderby=receivedDateTime desc&$top=1`, {
+        const newMessagesResponse = await fetch(`https://graph.microsoft.com/v1.0/users/${settings.userId}/messages?$filter=conversationId eq '${conversationId}'&$select=id,hasAttachments,toRecipients,ccRecipients,bccRecipients&$expand=attachments($select=id,name,contentType,size,isInline,contentId)&$orderby=receivedDateTime desc&$top=1`, {
             headers: { Authorization: `Bearer ${authResponse.accessToken}` }
         });
 
@@ -1101,6 +1101,7 @@ export async function replyToEmailAction(
                     contentType: att.contentType,
                     size: att.size,
                     isInline: att.isInline,
+                    contentId: att.contentId
                 })) || []
             };
         } else {
