@@ -504,6 +504,8 @@ export async function getLatestEmails(organizationId: string, since?: string): P
             if (querySnapshot.empty) {
                 // This is a new ticket
                 console.log(`[${organizationId}] New ticket found from ${senderEmailLower}: ${email.subject}`);
+                await fetchAndStoreFullConversation(organizationId, email.conversationId);
+                
                 let companyId: string | undefined = undefined;
                 const allCompanies = await getCompanies(organizationId);
                 for (const company of allCompanies) {
@@ -562,8 +564,6 @@ export async function getLatestEmails(organizationId: string, since?: string): P
                 } catch (e) {
                     console.error(`[${organizationId}] Failed to send ticket creation notification for email-based ticket:`, e);
                 }
-
-                await fetchAndStoreFullConversation(organizationId, email.conversationId);
 
             } else {
                 // It's a reply. Check if we need to update.
@@ -760,7 +760,7 @@ export async function fetchAndStoreFullConversation(organizationId: string, conv
     }
 
     const conversationDocRef = doc(db, 'organizations', organizationId, 'conversations', conversationId);
-    await setDoc(conversationDocRef, { messages: uniqueMessages });
+    await setDoc(conversationDocRef, { messages: uniqueMessages }, { merge: true });
     
     if (uniqueMessages.length > 0 && !querySnapshot.empty) {
         const lastMessage = uniqueMessages[uniqueMessages.length - 1];
@@ -2825,6 +2825,8 @@ export async function finalizeUserSetup(
 }
 
 // --- END: Refactored Verification Actions ---    
+
+    
 
     
 
