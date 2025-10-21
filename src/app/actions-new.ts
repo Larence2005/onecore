@@ -1,0 +1,2504 @@
+"use server";
+
+import {
+    ConfidentialClientApplication,
+    Configuration,
+    AuthenticationResult,
+} from '@azure/msal-node';
+import { ClientSecretCredential } from "@azure/identity";
+import { prisma } from '@/lib/prisma';
+import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add, isAfter } from 'date-fns';
+import { formatInTimeZone, toDate } from 'date-fns-tz';
+import { SimpleCache } from '@/lib/cache';
+import { headers } from 'next/headers';
+import axios from 'axios';
+import dns from "dns";
+import { Client } from "@microsoft/microsoft-graph-client";
+import { Prisma } from '@prisma/client';
+import type { Email, Attachment, NewAttachment, ActivityLog, Recipient, Note, DetailedEmail } from '@/app/actions-types';
+
+// Initialize caches for different data types
+// A null TTL means the cache is permanent until manually invalidated.
+const ticketsCache = new SimpleCache<any>(null);
+const companiesCache = new SimpleCache<any>(null);
+const membersCache = new SimpleCache<any>(null);
+const activityCache = new SimpleCache<any>(null);
+
+// Re-export types from actions-types.ts for backward compatibility
+export type { Email, Attachment, NewAttachment, ActivityLog, Recipient, Note, DetailedEmail } from '@/app/actions-types';
+
+export interface OrganizationMember {
+    uid: string | null;
+    name: string;
+    email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    status: 'UNINVITED' | 'INVITED' | 'NOT_VERIFIED' | 'VERIFIED';
+    isClient?: boolean;
+}
+
+export interface Company {
+    id: string;
+    name: string;
+    ticketCount?: number;
+    unresolvedTicketCount?: number;
+    resolvedTicketCount?: number;
+    employeeCount?: number;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    website?: string;
+}
+
+export interface Employee {
+    name: string;
+    email: string;
+    address?: string;
+    mobile?: string;
+    landline?: string;
+    status: 'UNINVITED' | 'INVITED' | 'NOT_VERIFIED' | 'VERIFIED';
+    uid?: string;
+}
+
+interface Settings {
+  clientId: string;
+  tenantId: string;
+  clientSecret: string;
+  userId: string;
+}
+
+export interface DeadlineSettings {
+    Urgent: number;
+    High: number;
+    Medium: number;
+    Low: number;
+}
+
+// ============================================================================
+// MIGRATED FUNCTIONS
+// ============================================================================
+
+export async function getAPISettings(organizationId: string): Promise<Settings | null> {
+    const clientId = process.env.AZURE_CLIENT_ID;
+    const tenantId = process.env.AZURE_TENANT_ID;
+    const clientSecret = process.env.AZURE_CLIENT_SECRET;
+    
+    if (!clientId || !tenantId || !clientSecret) {
+        console.error("Azure API settings are not fully configured in environment variables.");
+        return null;
+    }
+
+    // Get the organization
+    const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+    });
+
+    if (!organization) {
+        console.error(`Organization with ID ${organizationId} not found.`);
+        return null;
+    }
+
+    // Get the owner's organization member record to get their verified email
+    const ownerMember = await prisma.organizationMember.findFirst({
+        where: {
+            organizationId,
+            userId: organization.ownerId,
+        },
+    });
+
+    if (!ownerMember || !ownerMember.email) {
+        console.error(`Owner member for organization ${organizationId} not found or has no email. Owner ID: ${organization.ownerId}`);
+        return null;
+    }
+
+    const userId = ownerMember.email;
+    console.log(`[${organizationId}] Using email: ${userId} for Microsoft Graph API`);
+
+    return {
+        clientId,
+        tenantId,
+        clientSecret,
+        userId,
+    };
+}
+
+const getMsalConfig = (settings: Settings): Configuration => ({
+    auth: {
+        clientId: settings.clientId,
+        authority: `https://login.microsoftonline.com/${settings.tenantId}`,
+        clientSecret: settings.clientSecret,
+    },
+});
+
+export async function getAccessToken(settings: Settings): Promise<string> {
+    const msalConfig = getMsalConfig(settings);
+    const cca = new ConfidentialClientApplication(msalConfig);
+
+    const tokenRequest = {
+        scopes: ['https://graph.microsoft.com/.default'],
+    };
+
+    try {
+        const response: AuthenticationResult | null = await cca.acquireTokenByClientCredential(tokenRequest);
+        if (response && response.accessToken) {
+            return response.accessToken;
+        } else {
+            throw new Error('Failed to acquire access token.');
+        }
+    } catch (error) {
+        console.error('Error acquiring access token:', error);
+        throw error;
+    }
+}
+
+// Email functions remain the same as they use Microsoft Graph API
+export async function getLatestEmails(organizationId: string, maxResults: number = 50): Promise<Email[]> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error("API settings are not configured.");
+    }
+
+    const accessToken = await getAccessToken(settings);
+    const userId = settings.userId;
+
+    const client = Client.init({
+        authProvider: (done: any) => {
+            done(null, accessToken);
+        },
+    });
+
+    try {
+        const response = await client
+            .api(`/users/${userId}/mailFolders/inbox/messages`)
+            .top(maxResults)
+            .select('id,subject,from,bodyPreview,receivedDateTime,conversationId')
+            .orderby('receivedDateTime DESC')
+            .get();
+
+        const emails: Email[] = response.value.map((message: any) => ({
+            id: message.id,
+            subject: message.subject || '(No Subject)',
+            sender: message.from?.emailAddress?.name || 'Unknown',
+            senderEmail: message.from?.emailAddress?.address || '',
+            bodyPreview: message.bodyPreview || '',
+            receivedDateTime: message.receivedDateTime,
+            priority: 'Medium',
+            status: 'Open',
+            type: 'Question',
+            conversationId: message.conversationId,
+        }));
+
+        return emails;
+    } catch (error) {
+        console.error('Error fetching emails:', error);
+        throw error;
+    }
+}
+
+export async function getEmailDetails(organizationId: string, emailId: string): Promise<DetailedEmail | null> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error("API settings are not configured.");
+    }
+
+    const accessToken = await getAccessToken(settings);
+    const userId = settings.userId;
+
+    const client = Client.init({
+        authProvider: (done: any) => {
+            done(null, accessToken);
+        },
+    });
+
+    try {
+        const message = await client
+            .api(`/users/${userId}/messages/${emailId}`)
+            .select('id,subject,from,body,bodyPreview,receivedDateTime,conversationId,hasAttachments,toRecipients,ccRecipients,bccRecipients')
+            .get();
+
+        let attachments: Attachment[] = [];
+        if (message.hasAttachments) {
+            const attachmentsResponse = await client
+                .api(`/users/${userId}/messages/${emailId}/attachments`)
+                .get();
+            attachments = attachmentsResponse.value.map((att: any) => ({
+                id: att.id,
+                name: att.name,
+                contentType: att.contentType,
+                size: att.size,
+                isInline: att.isInline,
+                contentId: att.contentId,
+            }));
+        }
+
+        const detailedEmail: DetailedEmail = {
+            id: message.id,
+            subject: message.subject || '(No Subject)',
+            sender: message.from?.emailAddress?.name || 'Unknown',
+            senderEmail: message.from?.emailAddress?.address || '',
+            bodyPreview: message.bodyPreview || '',
+            receivedDateTime: message.receivedDateTime,
+            priority: 'Medium',
+            status: 'Open',
+            type: 'Question',
+            conversationId: message.conversationId,
+            body: {
+                contentType: message.body?.contentType || 'text',
+                content: message.body?.content || '',
+            },
+            attachments,
+            hasAttachments: message.hasAttachments,
+            toRecipients: message.toRecipients,
+            ccRecipients: message.ccRecipients,
+            bccRecipients: message.bccRecipients,
+        };
+
+        return detailedEmail;
+    } catch (error) {
+        console.error('Error fetching email details:', error);
+        return null;
+    }
+}
+
+export async function sendEmailAction(
+    organizationId: string,
+    emailData: {
+        recipient: string;
+        subject: string;
+        body: string;
+        cc?: string[];
+        bcc?: string[];
+        attachments?: NewAttachment[];
+        inReplyTo?: string;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        return { success: false, error: "API settings are not configured." };
+    }
+
+    const accessToken = await getAccessToken(settings);
+    const userId = settings.userId;
+
+    const client = Client.init({
+        authProvider: (done: any) => {
+            done(null, accessToken);
+        },
+    });
+
+    const message: any = {
+        subject: emailData.subject,
+        body: {
+            contentType: 'HTML',
+            content: emailData.body,
+        },
+        toRecipients: [
+            {
+                emailAddress: {
+                    address: emailData.recipient,
+                },
+            },
+        ],
+    };
+
+    if (emailData.cc && emailData.cc.length > 0) {
+        message.ccRecipients = emailData.cc.map(email => ({
+            emailAddress: { address: email },
+        }));
+    }
+
+    if (emailData.bcc && emailData.bcc.length > 0) {
+        message.bccRecipients = emailData.bcc.map(email => ({
+            emailAddress: { address: email },
+        }));
+    }
+
+    if (emailData.attachments && emailData.attachments.length > 0) {
+        message.attachments = emailData.attachments.map(att => ({
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: att.name,
+            contentBytes: att.contentBytes,
+            contentType: att.contentType,
+        }));
+    }
+
+    try {
+        if (emailData.inReplyTo) {
+            await client
+                .api(`/users/${userId}/messages/${emailData.inReplyTo}/reply`)
+                .post({
+                    message,
+                });
+        } else {
+            await client
+                .api(`/users/${userId}/sendMail`)
+                .post({
+                    message,
+                    saveToSentItems: true,
+                });
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error sending email:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================================================
+// ORGANIZATION MANAGEMENT FUNCTIONS
+// ============================================================================
+
+export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
+    if (!organizationId) return [];
+
+    const cacheKey = `members:${organizationId}`;
+    const cachedMembers = membersCache.get(cacheKey);
+    if (cachedMembers) return cachedMembers;
+
+    const members = await prisma.organizationMember.findMany({
+        where: { organizationId },
+        select: {
+            id: true,
+            userId: true, // Need this to identify owner
+            name: true,
+            email: true,
+            address: true,
+            mobile: true,
+            landline: true,
+            status: true,
+            isClient: true,
+            user: {
+                select: {
+                    id: true,
+                },
+            },
+        },
+        orderBy: { name: 'asc' },
+    });
+
+    const formattedMembers: OrganizationMember[] = members.map((m: any) => ({
+        uid: m.userId,
+        name: m.name,
+        email: m.email,
+        address: m.address || undefined,
+        mobile: m.mobile || undefined,
+        landline: m.landline || undefined,
+        status: m.status,
+        isClient: m.isClient,
+    }));
+
+    membersCache.set(cacheKey, formattedMembers);
+    return formattedMembers;
+}
+
+export async function addMemberToOrganization(
+    organizationId: string,
+    name: string,
+    email: string,
+    address: string,
+    mobile: string,
+    landline: string
+) {
+    if (!organizationId || !email || !name) {
+        throw new Error("Organization ID, member name, and email are required.");
+    }
+
+    // Check if member with this email already exists
+    const existingMember = await prisma.organizationMember.findFirst({
+        where: {
+            organizationId,
+            email: email.toLowerCase(),
+        },
+    });
+
+    if (existingMember) {
+        throw new Error("A contact with this email already exists in your organization.");
+    }
+
+    await prisma.organizationMember.create({
+        data: {
+            organizationId,
+            name,
+            email: email.toLowerCase(),
+            address: address || null,
+            mobile: mobile || null,
+            landline: landline || null,
+            status: 'UNINVITED',
+            isClient: false,
+        },
+    });
+
+    // Invalidate members cache
+    membersCache.invalidate(`members:${organizationId}`);
+
+    return { success: true };
+}
+
+export async function updateMemberInOrganization(
+    organizationId: string,
+    originalEmail: string,
+    newName: string,
+    newEmail: string,
+    newAddress: string,
+    newMobile: string,
+    newLandline: string
+) {
+    if (!organizationId || !originalEmail || !newName || !newEmail) {
+        throw new Error("All parameters are required for updating a member.");
+    }
+
+    // Find the member to update
+    const memberToUpdate = await prisma.organizationMember.findFirst({
+        where: {
+            organizationId,
+            email: originalEmail.toLowerCase(),
+        },
+    });
+
+    if (!memberToUpdate) {
+        throw new Error("Member not found.");
+    }
+
+    // If email is being changed, check if the new email already exists
+    if (originalEmail.toLowerCase() !== newEmail.toLowerCase()) {
+        const existingMember = await prisma.organizationMember.findFirst({
+            where: {
+                organizationId,
+                email: newEmail.toLowerCase(),
+            },
+        });
+
+        if (existingMember) {
+            throw new Error("Another member with this email already exists.");
+        }
+    }
+
+    await prisma.organizationMember.update({
+        where: { id: memberToUpdate.id },
+        data: {
+            name: newName,
+            email: newEmail.toLowerCase(),
+            address: newAddress || null,
+            mobile: newMobile || null,
+            landline: newLandline || null,
+        },
+    });
+
+    // Invalidate members cache
+    membersCache.invalidate(`members:${organizationId}`);
+
+    return { success: true };
+}
+
+export async function deleteMemberFromOrganization(organizationId: string, email: string) {
+    if (!organizationId || !email) {
+        throw new Error("Organization ID and member email are required.");
+    }
+
+    const memberToDelete = await prisma.organizationMember.findFirst({
+        where: {
+            organizationId,
+            email: email.toLowerCase(),
+        },
+    });
+
+    if (!memberToDelete) {
+        throw new Error("Member not found to delete.");
+    }
+
+    // Delete the member
+    await prisma.organizationMember.delete({
+        where: { id: memberToDelete.id },
+    });
+
+    // If member has a user account, optionally delete it
+    if (memberToDelete.userId) {
+        try {
+            await prisma.user.delete({
+                where: { id: memberToDelete.userId },
+            });
+        } catch (error) {
+            console.error(`Failed to delete user with ID: ${memberToDelete.userId}. They may have other associations.`, error);
+        }
+    }
+
+    membersCache.invalidate(`members:${organizationId}`);
+
+    return { success: true };
+}
+
+export async function updateOrganization(
+    organizationId: string,
+    data: { name?: string; address?: string; mobile?: string; landline?: string; website?: string; deadlineSettings?: DeadlineSettings }
+) {
+    if (!organizationId) {
+        throw new Error("Organization ID is required.");
+    }
+
+    const updateData: Prisma.OrganizationUpdateInput = {};
+    if (data.name) updateData.name = data.name;
+    if (data.address !== undefined) updateData.address = data.address || null;
+    if (data.mobile !== undefined) updateData.mobile = data.mobile || null;
+    if (data.landline !== undefined) updateData.landline = data.landline || null;
+    if (data.website !== undefined) updateData.website = data.website || null;
+    if (data.deadlineSettings) updateData.deadlineSettings = data.deadlineSettings as any;
+
+    await prisma.organization.update({
+        where: { id: organizationId },
+        data: updateData,
+    });
+
+    // Invalidate org-level caches
+    membersCache.invalidate(`members:${organizationId}`);
+
+    return { success: true };
+}
+
+export async function deleteOrganization(organizationId: string) {
+    if (!organizationId) {
+        throw new Error("Organization ID is required.");
+    }
+
+    // Prisma will handle cascade deletes based on schema
+    await prisma.organization.delete({
+        where: { id: organizationId },
+    });
+
+    // Invalidate all caches for this organization
+    ticketsCache.invalidate(`tickets:${organizationId}`);
+    companiesCache.invalidate(`companies:${organizationId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+    membersCache.invalidate(`members:${organizationId}`);
+    activityCache.invalidate(`activity:${organizationId}`);
+
+    return { success: true };
+}
+
+// ============================================================================
+// COMPANY MANAGEMENT FUNCTIONS
+// ============================================================================
+
+export async function addCompany(organizationId: string, companyName: string): Promise<{ success: boolean; id?: string; error?: string }> {
+    if (!organizationId || !companyName.trim()) {
+        return { success: false, error: 'Organization ID and company name are required.' };
+    }
+
+    try {
+        // Check if a company with the same name already exists (case-insensitive)
+        const existingCompany = await prisma.company.findFirst({
+            where: {
+                organizationId,
+                name: {
+                    equals: companyName.trim(),
+                    mode: 'insensitive',
+                },
+            },
+        });
+
+        if (existingCompany) {
+            return { success: false, error: 'A company with this name already exists.' };
+        }
+
+        const newCompany = await prisma.company.create({
+            data: {
+                organizationId,
+                name: companyName.trim(),
+            },
+        });
+
+        // Invalidate company list caches
+        companiesCache.invalidate(`companies:${organizationId}`);
+        companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+
+        return { success: true, id: newCompany.id };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getCompanies(organizationId: string): Promise<Company[]> {
+    if (!organizationId) return [];
+
+    const cacheKey = `companies:${organizationId}`;
+    const cachedCompanies = companiesCache.get(cacheKey);
+    if (cachedCompanies) return cachedCompanies;
+
+    const companies = await prisma.company.findMany({
+        where: { organizationId },
+        orderBy: { name: 'asc' },
+    });
+
+    const formattedCompanies: Company[] = companies.map(c => ({
+        id: c.id,
+        name: c.name,
+        address: c.address || undefined,
+        mobile: c.mobile || undefined,
+        landline: c.landline || undefined,
+    }));
+
+    companiesCache.set(cacheKey, formattedCompanies);
+    return formattedCompanies;
+}
+
+export async function getCompanyWithTicketAndEmployeeCount(organizationId: string): Promise<Company[]> {
+    if (!organizationId) return [];
+
+    const cacheKey = `companies_with_counts:${organizationId}`;
+    const cachedData = companiesCache.get(cacheKey);
+    if (cachedData) return cachedData;
+
+    const companies = await prisma.company.findMany({
+        where: { organizationId },
+        include: {
+            _count: {
+                select: { employees: true, tickets: true },
+            },
+            tickets: {
+                select: {
+                    status: true,
+                },
+            },
+        },
+        orderBy: { name: 'asc' },
+    });
+
+    const companiesWithCounts: Company[] = companies.map((company: Prisma.CompanyGetPayload<{ include: { _count: { select: { employees: true, tickets: true } }, tickets: { select: { status: true } } } }>) => {
+        const unresolvedCount = company.tickets.filter(
+            (t: Prisma.TicketGetPayload<{ select: { status: true } }>) => t.status === 'OPEN' || t.status === 'PENDING'
+        ).length;
+        const resolvedCount = company.tickets.filter(
+            (t: Prisma.TicketGetPayload<{ select: { status: true } }>) => t.status === 'CLOSED'
+        ).length;
+
+        return {
+            id: company.id,
+            name: company.name,
+            address: company.address || undefined,
+            mobile: company.mobile || undefined,
+            landline: company.landline || undefined,
+            ticketCount: company._count.tickets,
+            unresolvedTicketCount: unresolvedCount,
+            resolvedTicketCount: resolvedCount,
+            employeeCount: company._count.employees,
+        };
+    });
+
+    companiesCache.set(cacheKey, companiesWithCounts);
+    return companiesWithCounts;
+}
+
+export async function getCompanyDetails(organizationId: string, companyId: string): Promise<Company | null> {
+    if (!organizationId || !companyId) return null;
+
+    const cacheKey = `company_details:${organizationId}:${companyId}`;
+    const cachedCompany = companiesCache.get(cacheKey);
+    if (cachedCompany) return cachedCompany;
+
+    try {
+        const company = await prisma.company.findUnique({
+            where: { id: companyId },
+            include: {
+                _count: {
+                    select: { employees: true, tickets: true },
+                },
+            },
+        });
+
+        if (!company) return null;
+
+        return {
+            id: company.id,
+            name: company.name,
+            address: company.address || undefined,
+            mobile: company.mobile || undefined,
+            landline: company.landline || undefined,
+            website: company.website || undefined,
+            ticketCount: company._count.tickets,
+            employeeCount: company._count.employees,
+        };
+    } catch (error: any) {
+        console.error('Error fetching company details:', error);
+        return null;
+    }
+}
+
+// ...
+
+export async function updateCompany(
+    organizationId: string,
+    companyId: string,
+    data: { name?: string; address?: string; mobile?: string; landline?: string; website?: string }
+) {
+    if (!organizationId || !companyId) {
+        throw new Error("Organization ID and Company ID are required.");
+    }
+
+    const updateData: Prisma.CompanyUpdateInput = {};
+    if (data.name) updateData.name = data.name.trim();
+    if (data.address !== undefined) updateData.address = data.address || null;
+    if (data.mobile !== undefined) updateData.mobile = data.mobile || null;
+    if (data.landline !== undefined) updateData.landline = data.landline || null;
+
+    await prisma.company.update({
+        where: { id: companyId },
+        data: updateData,
+    });
+
+    // Invalidate company caches
+    companiesCache.invalidate(`company_details:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies:${organizationId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+
+    return { success: true };
+}
+
+export async function deleteCompany(organizationId: string, companyId: string) {
+    if (!organizationId || !companyId) {
+        throw new Error("Organization ID and Company ID are required.");
+    }
+
+    // Prisma will handle cascade deletes
+    await prisma.company.delete({
+        where: { id: companyId },
+    });
+
+    // Invalidate caches
+    companiesCache.invalidate(`company_details:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies:${organizationId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+
+    return { success: true };
+}
+
+// ============================================================================
+// EMPLOYEE MANAGEMENT FUNCTIONS
+// ============================================================================
+
+export async function addEmployeeToCompany(organizationId: string, companyId: string, employee: Omit<Employee, 'status' | 'uid'>) {
+    if (!organizationId || !companyId || !employee.email) {
+        return;
+    }
+
+    // Check if employee already exists
+    const existingEmployee = await prisma.employee.findFirst({
+        where: {
+            companyId,
+            email: employee.email.toLowerCase(),
+        },
+    });
+
+    if (existingEmployee) {
+        throw new Error("An employee with this email already exists in this company.");
+    }
+
+    await prisma.employee.create({
+        data: {
+            companyId,
+            name: employee.name,
+            email: employee.email.toLowerCase(),
+            address: employee.address || null,
+            mobile: employee.mobile || null,
+            landline: employee.landline || null,
+            status: 'UNINVITED',
+        },
+    });
+
+    // Invalidate caches
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+}
+
+export async function getCompanyEmployees(organizationId: string, companyId: string): Promise<Employee[]> {
+    if (!organizationId || !companyId) return [];
+
+    const cacheKey = `employees:${organizationId}:${companyId}`;
+    const cachedEmployees = companiesCache.get(cacheKey);
+    if (cachedEmployees) return cachedEmployees;
+
+    const employees = await prisma.employee.findMany({
+        where: { companyId },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                },
+            },
+        },
+        orderBy: { createdAt: 'asc' },
+    });
+
+    const formattedEmployees: Employee[] = employees.map((e: any) => ({
+        name: e.name,
+        email: e.email,
+        address: e.address || undefined,
+        mobile: e.mobile || undefined,
+        landline: e.landline || undefined,
+        status: e.status as 'UNINVITED' | 'INVITED' | 'NOT_VERIFIED' | 'VERIFIED',
+        uid: e.userId || undefined,
+    }));
+
+    companiesCache.set(cacheKey, formattedEmployees);
+    return formattedEmployees;
+}
+
+export async function updateCompanyEmployee(
+    organizationId: string,
+    companyId: string,
+    originalEmail: string,
+    newName: string,
+    newEmail: string,
+    newAddress: string,
+    newMobile: string,
+    newLandline: string
+) {
+    if (!organizationId || !companyId || !originalEmail) {
+        throw new Error("All parameters are required.");
+    }
+
+    const employeeToUpdate = await prisma.employee.findFirst({
+        where: {
+            companyId,
+            email: originalEmail.toLowerCase(),
+        },
+    });
+
+    if (!employeeToUpdate) {
+        throw new Error("Employee not found.");
+    }
+
+    // If email is being changed, check if new email already exists
+    if (originalEmail.toLowerCase() !== newEmail.toLowerCase()) {
+        const existingEmployee = await prisma.employee.findFirst({
+            where: {
+                companyId,
+                email: newEmail.toLowerCase(),
+            },
+        });
+
+        if (existingEmployee) {
+            throw new Error("Another employee with this email already exists.");
+        }
+    }
+
+    await prisma.employee.update({
+        where: { id: employeeToUpdate.id },
+        data: {
+            name: newName,
+            email: newEmail.toLowerCase(),
+            address: newAddress || null,
+            mobile: newMobile || null,
+            landline: newLandline || null,
+        },
+    });
+
+    // Invalidate caches
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+
+    return { success: true };
+}
+
+export async function deleteCompanyEmployee(organizationId: string, companyId: string, email: string) {
+    if (!organizationId || !companyId || !email) {
+        throw new Error("Missing required parameters to delete employee.");
+    }
+
+    const employeeToDelete = await prisma.employee.findFirst({
+        where: {
+            companyId,
+            email: email.toLowerCase(),
+        },
+    });
+
+    if (!employeeToDelete) {
+        throw new Error("Employee not found.");
+    }
+
+    await prisma.employee.delete({
+        where: { id: employeeToDelete.id },
+    });
+
+    // Optionally delete user account if exists
+    if (employeeToDelete.userId) {
+        try {
+            await prisma.user.delete({
+                where: { id: employeeToDelete.userId },
+            });
+        } catch (error) {
+            console.error(`Failed to delete user with ID: ${employeeToDelete.userId}`, error);
+        }
+    }
+
+    // Invalidate caches
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
+
+    return { success: true };
+}
+
+// ============================================================================
+// TICKET MANAGEMENT FUNCTIONS
+// ============================================================================
+
+// Helper function to get next ticket number
+async function getNextTicketNumber(organizationId: string): Promise<number> {
+    const lastTicket = await prisma.ticket.findFirst({
+        where: { organizationId },
+        orderBy: { ticketNumber: 'desc' },
+        select: { ticketNumber: true },
+    });
+
+    return (lastTicket?.ticketNumber || 0) + 1;
+}
+
+// Helper function to map priority strings to enum
+function mapPriorityToEnum(priority: string): 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
+    const map: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'> = {
+        'Low': 'LOW',
+        'Medium': 'MEDIUM',
+        'High': 'HIGH',
+        'Urgent': 'URGENT',
+        'None': 'MEDIUM', // Default to MEDIUM
+    };
+    return map[priority] || 'MEDIUM';
+}
+
+// Helper function to map status strings to enum
+function mapStatusToEnum(status: string): 'OPEN' | 'PENDING' | 'CLOSED' | 'ARCHIVED' {
+    const map: Record<string, 'OPEN' | 'PENDING' | 'CLOSED' | 'ARCHIVED'> = {
+        'Open': 'OPEN',
+        'Pending': 'PENDING',
+        'Resolved': 'CLOSED',
+        'Closed': 'CLOSED',
+        'Archived': 'ARCHIVED',
+    };
+    return map[status] || 'OPEN';
+}
+
+// Helper function to map type strings to enum
+function mapTypeToEnum(type: string): 'QUESTION' | 'INCIDENT' | 'PROBLEM' | 'TASK' {
+    const map: Record<string, 'QUESTION' | 'INCIDENT' | 'PROBLEM' | 'TASK'> = {
+        'Questions': 'QUESTION',
+        'Question': 'QUESTION',
+        'Incident': 'INCIDENT',
+        'Problem': 'PROBLEM',
+        'Task': 'TASK',
+    };
+    return map[type] || 'QUESTION';
+}
+
+export async function createTicket(
+    organizationId: string,
+    author: { uid: string; name: string; email: string },
+    title: string,
+    body: string,
+    attachments: NewAttachment[],
+    cc?: string,
+    bcc?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+    if (!organizationId || !author.uid || !title.trim()) {
+        return { success: false, error: 'Missing required fields to create a ticket.' };
+    }
+
+    try {
+        // Find which company this employee belongs to
+        const employee = await prisma.employee.findFirst({
+            where: {
+                email: author.email.toLowerCase(),
+                company: {
+                    organizationId,
+                },
+            },
+            include: {
+                company: true,
+            },
+        });
+
+        const companyId = employee?.companyId;
+        const isClient = !!employee;
+
+        const ticketNumber = await getNextTicketNumber(organizationId);
+
+        // Create ticket in database
+        const newTicket = await prisma.ticket.create({
+            data: {
+                organizationId,
+                companyId,
+                ticketNumber,
+                subject: title,
+                sender: author.name,
+                senderEmail: author.email.toLowerCase(),
+                bodyPreview: body.substring(0, 255),
+                body,
+                bodyContentType: 'html',
+                receivedDateTime: new Date(),
+                priority: 'MEDIUM',
+                status: 'OPEN',
+                type: 'QUESTION',
+                creatorId: author.uid,
+            },
+        });
+
+        // TODO: Send email notifications (keeping email logic from old function)
+        // This would involve calling sendEmailAction and storing conversation
+
+        // Invalidate tickets cache
+        ticketsCache.invalidate(`tickets:${organizationId}`);
+
+        return { success: true, id: newTicket.id };
+    } catch (error) {
+        console.error('Error creating ticket:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getTicketsFromDB(
+    organizationId: string,
+    options?: { includeArchived?: boolean; fetchAll?: boolean; companyId?: string }
+): Promise<Email[]> {
+    if (!organizationId) return [];
+
+    const cacheKey = `tickets:${organizationId}:${JSON.stringify(options || {})}`;
+    const cachedTickets = ticketsCache.get(cacheKey);
+    if (cachedTickets) return cachedTickets;
+
+    const whereClause: Prisma.TicketWhereInput = {
+        organizationId,
+    };
+
+    if (!options?.includeArchived) {
+        whereClause.status = { not: 'ARCHIVED' };
+    }
+
+    if (options?.companyId) {
+        whereClause.companyId = options.companyId;
+    }
+
+    const tickets = await prisma.ticket.findMany({
+        where: whereClause,
+        select: {
+            id: true,
+            ticketNumber: true,
+            subject: true,
+            sender: true,
+            senderEmail: true,
+            bodyPreview: true,
+            receivedDateTime: true,
+            priority: true,
+            status: true,
+            type: true,
+            conversationId: true,
+            deadline: true,
+            closedAt: true,
+            lastReplier: true,
+            companyId: true,
+            assigneeId: true,
+            company: {
+                select: {
+                    name: true,
+                },
+            },
+            assignee: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            tags: {
+                select: {
+                    tag: true,
+                },
+            },
+        },
+        orderBy: {
+            receivedDateTime: 'desc',
+        },
+        take: 100, // Limit to last 100 tickets for performance
+    });
+
+    // Map to Email interface format for compatibility
+    const formattedTickets: Email[] = tickets.map(ticket => ({
+        id: ticket.id,
+        subject: ticket.subject,
+        sender: ticket.sender,
+        senderEmail: ticket.senderEmail,
+        bodyPreview: ticket.bodyPreview,
+        receivedDateTime: ticket.receivedDateTime.toISOString(),
+        priority: ticket.priority.charAt(0) + ticket.priority.slice(1).toLowerCase(), // LOW -> Low
+        status: ticket.status === 'CLOSED' ? 'Resolved' : ticket.status.charAt(0) + ticket.status.slice(1).toLowerCase(),
+        type: ticket.type.charAt(0) + ticket.type.slice(1).toLowerCase() + 's', // QUESTION -> Questions
+        conversationId: ticket.conversationId || undefined,
+        deadline: ticket.deadline?.toISOString(),
+        tags: ticket.tags.map(t => t.tag),
+        closedAt: ticket.closedAt?.toISOString(),
+        lastReplier: ticket.lastReplier as 'agent' | 'client' | undefined,
+        ticketNumber: ticket.ticketNumber,
+        companyId: ticket.companyId || undefined,
+        companyName: ticket.company?.name,
+        assignee: ticket.assigneeId || undefined,
+        assigneeName: ticket.assignee?.name || 'Unassigned',
+    }));
+
+    ticketsCache.set(cacheKey, formattedTickets);
+    return formattedTickets;
+}
+
+async function sendAssignmentNotification(
+    organizationId: string,
+    ticket: any,
+    assigneeEmail: string,
+    assigneeName: string
+): Promise<void> {
+    try {
+        const settings = await getAPISettings(organizationId);
+        if (!settings) {
+            console.error('Cannot send assignment notification: API settings not configured');
+            return;
+        }
+
+        const accessToken = await getAccessToken(settings);
+        const client = Client.init({
+            authProvider: (done: any) => {
+                done(null, accessToken);
+            },
+        });
+
+        // Get the base URL from environment
+        const baseUrl = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+        const ticketUrl = `${baseUrl}/tickets/${ticket.id}`;
+
+        const subject = `You've been assigned to Ticket #${ticket.ticketNumber}: ${ticket.subject}`;
+        const body = `
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #4F46E5;">Ticket Assignment Notification</h2>
+                <p>Hello ${assigneeName},</p>
+                <p>You have been assigned to the following ticket:</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p><strong>Ticket #:</strong> ${ticket.ticketNumber}</p>
+                    <p><strong>Subject:</strong> ${ticket.subject}</p>
+                    <p><strong>Priority:</strong> ${ticket.priority}</p>
+                    <p><strong>Status:</strong> ${ticket.status}</p>
+                    <p><strong>Type:</strong> ${ticket.type}</p>
+                    ${ticket.deadline ? `<p><strong>Deadline:</strong> ${new Date(ticket.deadline).toLocaleDateString()}</p>` : ''}
+                </div>
+                <div style="margin: 30px 0;">
+                    <a href="${ticketUrl}" 
+                       style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        View Ticket
+                    </a>
+                </div>
+                <p>Or copy this link: <a href="${ticketUrl}" style="color: #4F46E5;">${ticketUrl}</a></p>
+                <p>Please review and respond to this ticket at your earliest convenience.</p>
+                <p style="margin-top: 30px; color: #666; font-size: 12px;">
+                    This is an automated notification from your ticketing system.
+                </p>
+            </body>
+            </html>
+        `;
+
+        const message = {
+            subject,
+            body: {
+                contentType: 'HTML',
+                content: body,
+            },
+            toRecipients: [
+                {
+                    emailAddress: {
+                        address: assigneeEmail,
+                    },
+                },
+            ],
+        };
+
+        await client.api(`/users/${settings.userId}/sendMail`).post({ message });
+        console.log(`Assignment notification sent to ${assigneeEmail} for ticket #${ticket.ticketNumber}`);
+    } catch (error) {
+        console.error('Error sending assignment notification:', error);
+        throw error;
+    }
+}
+
+export async function updateTicket(
+    organizationId: string,
+    id: string,
+    data: {
+        priority?: string;
+        status?: string;
+        type?: string;
+        assignee?: string | null;
+        deadline?: string | null;
+        tags?: string[];
+        companyId?: string | null;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    if (!organizationId || !id) {
+        return { success: false, error: 'Organization ID and Ticket ID are required.' };
+    }
+
+    try {
+        const updateData: Prisma.TicketUpdateInput = {};
+
+        if (data.priority) {
+            updateData.priority = mapPriorityToEnum(data.priority);
+        }
+
+        if (data.status) {
+            updateData.status = mapStatusToEnum(data.status);
+            if (data.status === 'Resolved' || data.status === 'Closed') {
+                updateData.closedAt = new Date();
+            }
+        }
+
+        if (data.type) {
+            updateData.type = mapTypeToEnum(data.type);
+        }
+
+        if (data.assignee !== undefined) {
+            updateData.assigneeId = data.assignee || null;
+        }
+
+        if (data.deadline !== undefined) {
+            updateData.deadline = data.deadline ? new Date(data.deadline) : null;
+        }
+
+        if (data.companyId !== undefined) {
+            updateData.companyId = data.companyId || null;
+        }
+
+        const updatedTicket = await prisma.ticket.update({
+            where: { id },
+            data: updateData,
+            include: {
+                assignee: true,
+            },
+        });
+
+        // Handle tags separately
+        if (data.tags) {
+            // Delete existing tags
+            await prisma.ticketTag.deleteMany({
+                where: { ticketId: id },
+            });
+
+            // Create new tags
+            if (data.tags.length > 0) {
+                await prisma.ticketTag.createMany({
+                    data: data.tags.map(tag => ({
+                        ticketId: id,
+                        tag,
+                    })),
+                });
+            }
+        }
+
+        // Send email notification if assignee was changed
+        if (data.assignee !== undefined && data.assignee) {
+            try {
+                const assignee = await prisma.user.findUnique({
+                    where: { id: data.assignee },
+                    include: {
+                        memberships: {
+                            where: { organizationId },
+                        },
+                    },
+                });
+
+                if (assignee && assignee.memberships.length > 0) {
+                    const assigneeEmail = assignee.memberships[0].email;
+                    const assigneeName = assignee.name || assigneeEmail;
+                    
+                    // Get API settings to send email
+                    const settings = await getAPISettings(organizationId);
+                    if (settings) {
+                        await sendAssignmentNotification(
+                            organizationId,
+                            updatedTicket,
+                            assigneeEmail,
+                            assigneeName
+                        );
+                    }
+                }
+            } catch (emailError) {
+                console.error('Error sending assignment notification:', emailError);
+                // Don't fail the update if email fails
+            }
+        }
+
+        // Invalidate tickets cache
+        ticketsCache.invalidate(`tickets:${organizationId}`);
+        // Also invalidate the individual ticket cache so detail page shows fresh data
+        ticketsCache.invalidate(`ticket:${organizationId}:${id}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error updating ticket:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function archiveTickets(organizationId: string, ticketIds: string[]) {
+    if (!organizationId) {
+        return { success: false, error: 'Organization ID is required.' };
+    }
+
+    if (!ticketIds || ticketIds.length === 0) {
+        return { success: false, error: 'No tickets selected for archiving.' };
+    }
+
+    try {
+        await prisma.ticket.updateMany({
+            where: {
+                id: { in: ticketIds },
+                organizationId,
+            },
+            data: {
+                status: 'ARCHIVED',
+            },
+        });
+
+        // Invalidate tickets cache
+        ticketsCache.invalidate(`tickets:${organizationId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error archiving tickets:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function unarchiveTickets(organizationId: string, ticketIds: string[]) {
+    if (!organizationId) {
+        return { success: false, error: 'Organization ID is required.' };
+    }
+
+    if (!ticketIds || ticketIds.length === 0) {
+        return { success: false, error: 'No tickets selected for unarchiving.' };
+    }
+
+    try {
+        await prisma.ticket.updateMany({
+            where: {
+                id: { in: ticketIds },
+                organizationId,
+            },
+            data: {
+                status: 'OPEN',
+            },
+        });
+
+        // Invalidate tickets cache
+        ticketsCache.invalidate(`tickets:${organizationId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error unarchiving tickets:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+// ============================================================================
+// ACTIVITY LOG FUNCTIONS
+// ============================================================================
+
+export async function addActivityLog(
+    organizationId: string,
+    ticketId: string,
+    logEntry: Omit<ActivityLog, 'id'>
+): Promise<{ success: boolean; error?: string }> {
+    if (!organizationId || !ticketId) {
+        throw new Error('Organization ID and Ticket ID are required.');
+    }
+
+    try {
+        await prisma.activityLog.create({
+            data: {
+                organizationId,
+                ticketId,
+                ticketSubject: logEntry.ticketSubject,
+                type: logEntry.type,
+                details: logEntry.details,
+                userId: logEntry.user, // Assuming 'user' is userId
+                createdAt: new Date(logEntry.date),
+            },
+        });
+
+        // Invalidate activity cache
+        activityCache.invalidate(`activity:${organizationId}:${ticketId}`);
+        activityCache.invalidate(`all_activity:${organizationId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error adding activity log:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getActivityLog(organizationId: string, ticketId: string): Promise<ActivityLog[]> {
+    if (!organizationId || !ticketId) {
+        return [];
+    }
+
+    const cacheKey = `activity:${organizationId}:${ticketId}`;
+    const cachedLogs = activityCache.get(cacheKey);
+    if (cachedLogs) return cachedLogs;
+
+    try {
+        const logs = await prisma.activityLog.findMany({
+            where: {
+                organizationId,
+                ticketId,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
+            id: log.id,
+            type: log.type,
+            details: log.details,
+            date: log.createdAt.toISOString(),
+            user: log.userId || 'System',
+            userName: log.userName || 'System',
+            userEmail: log.userEmail || '',
+            ticketId: log.ticketId || undefined,
+            ticketSubject: log.ticketSubject || undefined,
+        }));
+
+        activityCache.set(cacheKey, formattedLogs);
+        return formattedLogs;
+    } catch (error) {
+        console.error('Error fetching activity log:', error);
+        return [];
+    }
+}
+
+export async function getAllActivityLogs(organizationId: string): Promise<ActivityLog[]> {
+    if (!organizationId) {
+        return [];
+    }
+
+    const cacheKey = `all_activity:${organizationId}`;
+    const cachedLogs = activityCache.get(cacheKey);
+    if (cachedLogs) return cachedLogs;
+
+    try {
+        const logs = await prisma.activityLog.findMany({
+            where: { organizationId },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            take: 100, // Limit to last 100 activities
+        });
+
+        const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
+            id: log.id,
+            type: log.type,
+            details: log.details,
+            date: log.createdAt.toISOString(),
+            user: log.userId || 'System',
+            userName: log.userName || 'System',
+            userEmail: log.userEmail || '',
+            ticketId: log.ticketId || undefined,
+            ticketSubject: log.ticketSubject || undefined,
+        }));
+
+        activityCache.set(cacheKey, formattedLogs);
+        return formattedLogs;
+    } catch (error) {
+        console.error('Error fetching all activity logs:', error);
+        return [];
+    }
+}
+
+export async function getCompanyActivityLogs(organizationId: string, companyId: string): Promise<ActivityLog[]> {
+    if (!organizationId || !companyId) {
+        return [];
+    }
+
+    const cacheKey = `company_activity:${organizationId}:${companyId}`;
+    const cachedLogs = activityCache.get(cacheKey);
+    if (cachedLogs) return cachedLogs;
+
+    try {
+        // Get all tickets for this company
+        const tickets = await prisma.ticket.findMany({
+            where: {
+                organizationId,
+                companyId,
+            },
+            select: {
+                id: true,
+            },
+        });
+
+        const ticketIds = tickets.map(t => t.id);
+
+        // Get activity logs for these tickets
+        const logs = await prisma.activityLog.findMany({
+            where: {
+                organizationId,
+                ticketId: {
+                    in: ticketIds,
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            take: 100,
+        });
+
+        const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
+            id: log.id,
+            type: log.type,
+            details: log.details,
+            date: log.createdAt.toISOString(),
+            user: log.userId || 'System',
+            userName: log.userName || 'System',
+            userEmail: log.userEmail || '',
+            ticketId: log.ticketId || undefined,
+            ticketSubject: log.ticketSubject || undefined,
+        }));
+
+        activityCache.set(cacheKey, formattedLogs);
+        return formattedLogs;
+    } catch (error) {
+        console.error('Error fetching company activity logs:', error);
+        return [];
+    }
+}
+
+// ============================================================================
+// NOTE FUNCTIONS
+// ============================================================================
+
+export async function addNoteToTicket(
+    organizationId: string,
+    ticketId: string,
+    noteData: Omit<Note, 'id'>
+): Promise<{ success: boolean; error?: string }> {
+    if (!organizationId || !ticketId) {
+        throw new Error('Organization ID and Ticket ID are required.');
+    }
+
+    try {
+        await prisma.note.create({
+            data: {
+                ticketId,
+                content: noteData.content,
+                user: noteData.user,
+                createdAt: new Date(noteData.date),
+            },
+        });
+
+        // Log the action
+        await addActivityLog(organizationId, ticketId, {
+            type: 'Note',
+            details: 'created a note',
+            date: noteData.date,
+            user: noteData.user,
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to add note:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getTicketNotes(organizationId: string, ticketId: string): Promise<Note[]> {
+    if (!organizationId || !ticketId) {
+        return [];
+    }
+
+    try {
+        const notes = await prisma.note.findMany({
+            where: { ticketId },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        return notes.map(note => ({
+            id: note.id,
+            content: note.content,
+            date: note.createdAt.toISOString(),
+            user: note.user,
+        }));
+    } catch (error) {
+        console.error('Failed to get ticket notes:', error);
+        return [];
+    }
+}
+
+// ============================================================================
+// EMAIL SYNC FUNCTIONS - Sync emails from Microsoft Graph to PostgreSQL
+// ============================================================================
+
+export async function checkForNewMail(organizationId: string, since: string): Promise<boolean> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        return false;
+    }
+    
+    try {
+        const accessToken = await getAccessToken(settings);
+        const userId = settings.userId;
+
+        const client = Client.init({
+            authProvider: (done: any) => {
+                done(null, accessToken);
+            },
+        });
+
+        // Fetch only the most recent email to see if it's newer than `since`
+        const response = await client
+            .api(`/users/${userId}/mailFolders/inbox/messages`)
+            .top(1)
+            .select('receivedDateTime')
+            .orderby('receivedDateTime DESC')
+            .get();
+
+        if (response.value && response.value.length > 0) {
+            const latestEmailDate = new Date(response.value[0].receivedDateTime);
+            const sinceDate = new Date(since);
+            return isAfter(latestEmailDate, sinceDate);
+        }
+
+        return false;
+    } catch (error) {
+        console.error('Error checking for new mail:', error);
+        return false;
+    }
+}
+
+export async function syncEmailsToTickets(organizationId: string, since?: string): Promise<{ success: boolean; error?: string; ticketsCreated?: number }> {
+    console.log(`[${organizationId}] Starting email sync...`);
+    
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        console.error(`[${organizationId}] Skipping email sync: API credentials not configured.`);
+        return { success: false, error: 'API credentials not configured' };
+    }
+
+    console.log(`[${organizationId}] Got API settings, userId: ${settings.userId}`);
+
+    try {
+        console.log(`[${organizationId}] Acquiring access token...`);
+        const accessToken = await getAccessToken(settings);
+        const userId = settings.userId;
+        console.log(`[${organizationId}] Access token acquired successfully`);
+
+        const client = Client.init({
+            authProvider: (done: any) => {
+                done(null, accessToken);
+            },
+        });
+
+        console.log(`[${organizationId}] Fetching latest emails from inbox...`);
+
+        // Build query
+        let query = client
+            .api(`/users/${userId}/mailFolders/inbox/messages`)
+            .top(30)
+            .select('id,subject,from,bodyPreview,receivedDateTime,conversationId')
+            .orderby('receivedDateTime DESC');
+
+        if (since) {
+            query = query.filter(`receivedDateTime gt ${since}`);
+        }
+
+        console.log(`[${organizationId}] Executing Graph API query...`);
+        const response = await query.get();
+        const emailsToProcess = response.value;
+
+        console.log(`[${organizationId}] Found ${emailsToProcess.length} emails to process.`);
+
+        let ticketsCreated = 0;
+        for (const email of emailsToProcess) {
+            if (!email.conversationId) {
+                console.log(`[${organizationId}] Skipping email ID ${email.id} - no conversationId.`);
+                continue;
+            }
+
+            // Skip emails sent from the system's own address
+            const senderEmailLower = email.from.emailAddress.address.toLowerCase();
+            if (senderEmailLower === userId.toLowerCase()) {
+                console.log(`[${organizationId}] Skipping email from system's own address: ${email.subject}`);
+                continue;
+            }
+
+            // Skip automated replies and system notifications
+            const subjectLower = email.subject.toLowerCase();
+            const autoReplyKeywords = ['auto:', 'automatic reply', 'out of office', 'undeliverable', 'delivery status notification'];
+            const systemNotificationKeywords = ['notification:', 'update on ticket', "you've been assigned", 'ticket created:'];
+            
+            if (autoReplyKeywords.some(keyword => subjectLower.includes(keyword)) || 
+                systemNotificationKeywords.some(keyword => subjectLower.includes(keyword))) {
+                console.log(`[${organizationId}] Skipping automated reply/notification: ${email.subject}`);
+                continue;
+            }
+
+            // Check if ticket already exists for this conversation
+            const existingTicket = await prisma.ticket.findFirst({
+                where: {
+                    organizationId,
+                    conversationId: email.conversationId,
+                },
+            });
+
+            if (existingTicket) {
+                console.log(`[${organizationId}] Ticket already exists for conversation ${email.conversationId}`);
+                continue;
+            }
+
+            // This is a new ticket - fetch full conversation
+            console.log(`[${organizationId}] New ticket found from ${senderEmailLower}: ${email.subject}`);
+            
+            const fullConversation = await fetchAndStoreFullConversation(organizationId, email.conversationId);
+            if (!fullConversation || fullConversation.length === 0) {
+                console.log(`[${organizationId}] Failed to fetch conversation for ${email.conversationId}`);
+                continue;
+            }
+
+            const firstMessage = fullConversation[0];
+
+            // Find company if sender is an employee
+            let companyId: string | undefined = undefined;
+            const employee = await prisma.employee.findFirst({
+                where: {
+                    email: senderEmailLower,
+                    company: {
+                        organizationId,
+                    },
+                },
+                select: {
+                    companyId: true,
+                },
+            });
+
+            if (employee) {
+                companyId = employee.companyId;
+            }
+
+            // Get next ticket number
+            const ticketNumber = await getNextTicketNumber(organizationId);
+
+            // Create ticket in PostgreSQL
+            const newTicket = await prisma.ticket.create({
+                data: {
+                    organizationId,
+                    companyId,
+                    ticketNumber,
+                    subject: firstMessage.subject || 'No Subject',
+                    sender: firstMessage.sender || 'Unknown Sender',
+                    senderEmail: firstMessage.senderEmail || senderEmailLower,
+                    bodyPreview: firstMessage.bodyPreview || '',
+                    body: firstMessage.body?.content || '',
+                    bodyContentType: firstMessage.body?.contentType || 'html',
+                    receivedDateTime: new Date(firstMessage.receivedDateTime),
+                    conversationId: email.conversationId,
+                    priority: 'MEDIUM',
+                    status: 'OPEN',
+                    type: 'QUESTION',
+                },
+            });
+
+            console.log(`[${organizationId}] Created new ticket #${ticketNumber} with ID ${newTicket.id}`);
+            ticketsCreated++;
+
+            // Add activity log
+            await addActivityLog(organizationId, newTicket.id, {
+                type: 'Create',
+                details: 'Ticket created from email',
+                date: firstMessage.receivedDateTime,
+                user: firstMessage.senderEmail || 'System',
+            });
+
+            // Invalidate tickets cache
+            ticketsCache.invalidate(`tickets:${organizationId}`);
+        }
+
+        console.log(`[${organizationId}] Email sync completed successfully. Tickets created: ${ticketsCreated}`);
+        return { success: true, ticketsCreated };
+    } catch (error: any) {
+        console.error(`[${organizationId}] Error syncing emails:`, error);
+        console.error(`[${organizationId}] Error message:`, error?.message);
+        console.error(`[${organizationId}] Error stack:`, error?.stack);
+        if (error?.response) {
+            console.error(`[${organizationId}] API Response:`, error.response);
+        }
+        return { success: false, error: error?.message || 'Unknown error' };
+    }
+}
+
+export async function fetchAndStoreFullConversation(
+    organizationId: string,
+    conversationId: string
+): Promise<DetailedEmail[]> {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error('API settings are not configured.');
+    }
+
+    try {
+        const accessToken = await getAccessToken(settings);
+        const userId = settings.userId;
+
+        const client = Client.init({
+            authProvider: (done: any) => {
+                done(null, accessToken);
+            },
+        });
+
+        // Fetch all messages in the conversation
+        // Note: We can't use both filter and orderby as it creates a complex query
+        const response = await client
+            .api(`/users/${userId}/messages`)
+            .filter(`conversationId eq '${conversationId}'`)
+            .select('id,subject,from,body,bodyPreview,receivedDateTime,conversationId,hasAttachments,toRecipients,ccRecipients')
+            .get();
+
+        const messages: DetailedEmail[] = [];
+
+        // Sort messages by receivedDateTime on client side
+        const sortedMessages = response.value.sort((a: any, b: any) => 
+            new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime()
+        );
+
+        for (const message of sortedMessages) {
+            let attachments: Attachment[] = [];
+            if (message.hasAttachments) {
+                try {
+                    const attachmentsResponse = await client
+                        .api(`/users/${userId}/messages/${message.id}/attachments`)
+                        .get();
+                    attachments = attachmentsResponse.value.map((att: any) => ({
+                        id: att.id,
+                        name: att.name,
+                        contentType: att.contentType,
+                        size: att.size,
+                        isInline: att.isInline,
+                        contentId: att.contentId,
+                    }));
+                } catch (error) {
+                    console.error('Error fetching attachments:', error);
+                }
+            }
+
+            const detailedEmail: DetailedEmail = {
+                id: message.id,
+                subject: message.subject || '(No Subject)',
+                sender: message.from?.emailAddress?.name || 'Unknown',
+                senderEmail: message.from?.emailAddress?.address || '',
+                bodyPreview: message.bodyPreview || '',
+                receivedDateTime: message.receivedDateTime,
+                priority: 'Medium',
+                status: 'Open',
+                type: 'Question',
+                conversationId: message.conversationId,
+                body: {
+                    contentType: message.body?.contentType || 'text',
+                    content: message.body?.content || '',
+                },
+                attachments,
+                hasAttachments: message.hasAttachments,
+                toRecipients: message.toRecipients,
+                ccRecipients: message.ccRecipients,
+            };
+
+            messages.push(detailedEmail);
+        }
+
+        // Store conversation in PostgreSQL
+        await prisma.conversation.upsert({
+            where: { id: conversationId },
+            create: {
+                id: conversationId,
+                organizationId,
+                messages: messages as any,
+            },
+            update: {
+                messages: messages as any,
+                updatedAt: new Date(),
+            },
+        });
+
+        return messages;
+    } catch (error) {
+        console.error('Error fetching and storing conversation:', error);
+        return [];
+    }
+}
+
+// ============================================================================
+// MICROSOFT GRAPH & AZURE HELPER FUNCTIONS
+// ============================================================================
+
+function getGraphClient() {
+    const credential = new ClientSecretCredential(
+        process.env.AZURE_TENANT_ID!,
+        process.env.AZURE_CLIENT_ID!,
+        process.env.AZURE_CLIENT_SECRET!
+    );
+
+    return Client.initWithMiddleware({
+        authProvider: {
+            getAccessToken: async () => {
+                const token = await credential.getToken("https://graph.microsoft.com/.default");
+                return token!.token;
+            },
+        },
+    });
+}
+
+async function addDomain(client: Client, domain: string) {
+    console.log(`Adding domain ${domain}...`);
+    const result = await client.api("/domains").post({ id: domain });
+    await new Promise(r => setTimeout(r, 5000));
+    return result;
+}
+
+async function getDomain(client: Client, domain: string) {
+    const result = await client.api(`/domains/${domain}`).get();
+    await new Promise(r => setTimeout(r, 3000));
+    return result;
+}
+
+async function getDomainVerificationRecords(client: Client, domain: string) {
+    const result = await client.api(`/domains/${domain}/verificationDnsRecords`).get();
+    await new Promise(r => setTimeout(r, 3000));
+    return result.value;
+}
+
+async function getDomainServiceRecords(client: Client, domain: string) {
+    const result = await client.api(`/domains/${domain}/serviceConfigurationRecords`).get();
+    await new Promise(r => setTimeout(r, 3000));
+    return result.value;
+}
+
+async function verifyDomain(client: Client, domain: string) {
+    console.log(`Verifying domain ${domain}...`);
+    const result = await client.api(`/domains/${domain}/verify`).post({});
+    await new Promise(r => setTimeout(r, 3000));
+    return result;
+}
+
+async function createGraphUser(client: Client, displayName: string, username: string, newDomain: string, password: string): Promise<any> {
+    console.log(`Creating user ${username}@${newDomain} in Microsoft 365...`);
+    const user = {
+        accountEnabled: true,
+        displayName: displayName,
+        mailNickname: username,
+        usageLocation: 'US',
+        userPrincipalName: `${username}@${newDomain}`,
+        passwordProfile: {
+            forceChangePasswordNextSignIn: false,
+            password: password,
+        },
+    };
+    return client.api('/users').post(user);
+}
+
+async function assignLicenseToUser(client: Client, userId: string): Promise<any> {
+    console.log(`Assigning license to user ${userId}...`);
+
+    const subscribedSkus = await client.api('/subscribedSkus').get();
+    const businessBasicSku = subscribedSkus.value.find((sku: any) => sku.skuPartNumber === 'O365_BUSINESS_ESSENTIALS');
+
+    if (!businessBasicSku || !businessBasicSku.skuId) {
+        throw new Error("Could not find a suitable Microsoft 365 Business Basic license (SKU) to assign.");
+    }
+
+    const license = {
+        addLicenses: [
+            {
+                skuId: businessBasicSku.skuId,
+                disabledPlans: [],
+            },
+        ],
+        removeLicenses: [],
+    };
+
+    return client.api(`/users/${userId}/assignLicense`).post(license);
+}
+
+async function recordExistsInCloudflare(type: string, name: string) {
+    const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records?type=${type}&name=${name}`;
+    const headers = {
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json",
+    };
+    const response = await axios.get(url, { headers });
+    return response.data.result.length > 0;
+}
+
+async function addDnsRecordToCloudflare(
+    type: string,
+    cfName: string,
+    content: string,
+    priority?: number,
+) {
+    if (await recordExistsInCloudflare(type, cfName)) {
+        console.log(`⚠️ Record already exists: [${type}] ${cfName}. Skipping.`);
+        return;
+    }
+
+    const url = `https://api.cloudflare.com/client/v4/zones/${process.env.CLOUDFLARE_ZONE_ID}/dns_records`;
+    const payload: any = { type, name: cfName, ttl: 3600 };
+
+    if (type === 'TXT') {
+        payload.content = `"${content}"`;
+    } else if (type === 'CNAME') {
+        payload.content = content;
+    } else if (type === 'MX') {
+        payload.content = content;
+        payload.priority = priority;
+    } else {
+        payload.content = content;
+    }
+
+    const headers = {
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json",
+    };
+
+    console.log(`➡️ Adding DNS record to Cloudflare: [${type}] ${cfName} with content ${payload.content}`);
+
+    try {
+        const response = await axios.post(url, payload, { headers });
+        console.log("✅ Cloudflare response:", response.data);
+        await new Promise(r => setTimeout(r, 2000));
+        return response;
+    } catch (err: any) {
+        if (err.response) {
+            console.error("❌ Cloudflare error:", err.response.status, err.response.data);
+        } else if (err.request) {
+            console.error("❌ No response from Cloudflare:", err.request);
+        } else {
+            console.error("❌ Axios error:", err.message);
+        }
+        throw err;
+    }
+}
+
+async function pollDnsPropagation(domain: string, expectedTxt: string) {
+    dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+    console.log("Using DNS servers for polling:", dns.getServers());
+
+    const maxAttempts = 60;
+    let attempt = 0;
+    let resolved = false;
+
+    while (!resolved && attempt < maxAttempts) {
+        attempt++;
+        try {
+            const txtRecords = await dns.promises.resolveTxt(domain);
+            const flattened = txtRecords.map(rec => rec.join(" ").trim());
+            console.log(`Attempt ${attempt}: Current TXT records for ${domain}:`, flattened);
+            if (flattened.includes(expectedTxt.trim())) {
+                resolved = true;
+                console.log("✅ DNS propagated successfully!");
+            } else {
+                console.log(`⏳ TXT record not found yet. Expected: ${expectedTxt}`);
+                await new Promise(r => setTimeout(r, 10000));
+            }
+        } catch (err: any) {
+            console.log(`Attempt ${attempt}: DNS resolution error for ${domain}:`, err.message);
+            console.log("⏳ Waiting for DNS propagation...");
+            await new Promise(r => setTimeout(r, 10000));
+        }
+    }
+
+    if (!resolved) {
+        throw new Error(`❌ DNS propagation timeout after ${maxAttempts} attempts. Check manually.`);
+    }
+}
+
+async function pollMailboxReady(client: Client, userId: string): Promise<boolean> {
+    const maxAttempts = 15;
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+        attempt++;
+        try {
+            await client.api(`/users/${userId}/mailFolders/inbox`).get();
+            console.log(`Mailbox for user ${userId} is ready after ${attempt} attempts.`);
+            return true;
+        } catch (err: any) {
+            if (err.statusCode === 404) {
+                console.log(`Attempt ${attempt}: Mailbox not ready yet. Waiting 20 seconds...`);
+                await new Promise(r => setTimeout(r, 20000));
+            } else {
+                throw err;
+            }
+        }
+    }
+
+    throw new Error("Mailbox did not become ready in time.");
+}
+
+// ============================================================================
+// EMAIL VERIFICATION FUNCTIONS
+// ============================================================================
+
+export async function createAndVerifyDomain(organizationId: string): Promise<{ success: boolean; newDomain?: string; error?: string }> {
+    try {
+        // Get organization from PostgreSQL
+        const organization = await prisma.organization.findUnique({
+            where: { id: organizationId },
+        });
+
+        if (!organization) {
+            throw new Error("Organization not found.");
+        }
+
+        // If domain already verified, return it
+        if (organization.newDomain) {
+            return { success: true, newDomain: organization.newDomain };
+        }
+
+        const client = getGraphClient();
+        const orgDomainName = organization.domain.split('.')[0];
+        const newDomain = `${orgDomainName}.${process.env.NEXT_PUBLIC_PARENT_DOMAIN}`;
+
+        await addDomain(client, newDomain);
+        const domainInfo = await getDomain(client, newDomain);
+
+        if (!domainInfo.isVerified) {
+            const verificationRecords = await getDomainVerificationRecords(client, newDomain);
+            const msTxtRecord = verificationRecords.find((rec: any) => rec.recordType.toLowerCase() === "txt" && rec.text.startsWith("MS="));
+            if (!msTxtRecord) throw new Error("Could not find TXT verification record from Azure.");
+
+            await addDnsRecordToCloudflare("TXT", newDomain, msTxtRecord.text);
+            await pollDnsPropagation(newDomain, msTxtRecord.text);
+
+            let verified = false;
+            let verifyAttempts = 0;
+            while (!verified && verifyAttempts < 10) {
+                verifyAttempts++;
+                try {
+                    await verifyDomain(client, newDomain);
+                    const updatedDomainInfo = await getDomain(client, newDomain);
+                    if (updatedDomainInfo.isVerified) {
+                        verified = true;
+                    }
+                } catch (err) {
+                    if (verifyAttempts >= 10) throw err;
+                    await new Promise(res => setTimeout(res, 30000));
+                }
+            }
+            if (!verified) throw new Error("Domain verification timed out.");
+        }
+
+        // Update organization in PostgreSQL
+        await prisma.organization.update({
+            where: { id: organizationId },
+            data: { newDomain },
+        });
+
+        return { success: true, newDomain };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function configureEmailRecords(organizationId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const organization = await prisma.organization.findUnique({
+            where: { id: organizationId },
+        });
+
+        if (!organization || !organization.newDomain) {
+            throw new Error("Organization domain not found.");
+        }
+
+        const newDomain = organization.newDomain;
+        const client = getGraphClient();
+
+        const serviceRecords = await getDomainServiceRecords(client, newDomain);
+        for (const rec of serviceRecords) {
+            const type = rec.recordType.toLowerCase();
+            if (type === "mx") {
+                await addDnsRecordToCloudflare("MX", newDomain, rec.mailExchange, rec.preference);
+            } else if (type === "cname" && rec.label.toLowerCase().includes("autodiscover")) {
+                await addDnsRecordToCloudflare("CNAME", rec.label, rec.canonicalName);
+            } else if (type === "txt" && rec.text.startsWith("v=spf1")) {
+                await addDnsRecordToCloudflare("TXT", newDomain, rec.text);
+            }
+        }
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function createLicensedUser(
+    organizationId: string,
+    username: string,
+    displayName: string,
+    password: string
+): Promise<{ success: boolean; userId?: string; userPrincipalName?: string; error?: string }> {
+    try {
+        const organization = await prisma.organization.findUnique({
+            where: { id: organizationId },
+        });
+
+        if (!organization || !organization.newDomain) {
+            throw new Error("Organization domain not found.");
+        }
+
+        const newDomain = organization.newDomain;
+        const client = getGraphClient();
+
+        // Create the user
+        const newUser = await createGraphUser(client, displayName, username, newDomain, password);
+
+        // Start background task for license assignment + mailbox polling
+        (async () => {
+            try {
+                await assignLicenseToUser(client, newUser.id);
+                await pollMailboxReady(client, newUser.id);
+            } catch (err) {
+                console.error("Background license/mailbox setup error:", err);
+            }
+        })();
+
+        return {
+            success: true,
+            userId: newUser.id,
+            userPrincipalName: newUser.userPrincipalName,
+        };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+export async function finalizeUserSetup(
+    organizationId: string,
+    userId: string,
+    userPrincipalName: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Update organization member status and email in PostgreSQL
+        await prisma.organizationMember.updateMany({
+            where: {
+                organizationId,
+                userId,
+            },
+            data: {
+                status: 'VERIFIED',
+                email: userPrincipalName,
+            },
+        });
+
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, error: e.message };
+    }
+}
+
+// ============================================================================
+// EMPLOYEE VERIFICATION EMAIL
+// ============================================================================
+
+export async function sendEmployeeVerificationEmail(
+    organizationId: string,
+    companyId: string,
+    recipientEmail: string,
+    recipientName: string
+) {
+    const settings = await getAPISettings(organizationId);
+    if (!settings) {
+        throw new Error("API settings are not configured to send emails.");
+    }
+
+    // Check if employee exists in PostgreSQL
+    const employee = await prisma.employee.findFirst({
+        where: {
+            companyId,
+            email: recipientEmail.toLowerCase(),
+        },
+    });
+
+    if (!employee) {
+        throw new Error("Employee not found in the specified company.");
+    }
+
+    // Update the employee's status to 'INVITED'
+    await prisma.employee.update({
+        where: { id: employee.id },
+        data: { status: 'INVITED' },
+    });
+
+    // Invalidate employee cache
+    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
+
+    const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+    const signupUrl = `https://${parentDomain}/member-signup`;
+
+    const subject = "You've been invited to your company's support portal";
+    const body = `
+        <p>Hello ${recipientName},</p>
+        <p>You have been invited to join your company's support ticketing portal.</p>
+        <p>Please complete your registration by visiting the following link:</p>
+        <p><a href="${signupUrl}">${signupUrl}</a></p>
+        <p>Once registered, you will be able to submit and manage support tickets.</p>
+    `;
+
+    await sendEmailAction(organizationId, {
+        recipient: recipientEmail,
+        subject: subject,
+        body: body,
+    });
+
+    return { success: true };
+}
+
+// ============================================================================
+// GET EMAIL/TICKET DETAILS
+// ============================================================================
+
+export async function getEmail(organizationId: string, id: string): Promise<DetailedEmail | null> {
+    if (!organizationId || !id) {
+        throw new Error("Organization ID and Ticket ID must be provided.");
+    }
+
+    const cacheKey = `ticket:${organizationId}:${id}`;
+    const cachedEmail = ticketsCache.get(cacheKey);
+    if (cachedEmail) return cachedEmail;
+
+    // Get ticket from PostgreSQL
+    const ticket = await prisma.ticket.findFirst({
+        where: {
+            id,
+            organizationId,
+        },
+        include: {
+            tags: true,
+            assignee: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            company: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+        },
+    });
+
+    if (!ticket) {
+        return null;
+    }
+
+    const conversationId = ticket.conversationId;
+    let conversationMessages: DetailedEmail[] = [];
+
+    if (conversationId) {
+        const conversationCacheKey = `conversation:${organizationId}:${conversationId}`;
+        const cachedConversation = ticketsCache.get(conversationCacheKey);
+
+        if (cachedConversation) {
+            conversationMessages = cachedConversation;
+        } else {
+            // Get conversation from PostgreSQL
+            const conversation = await prisma.conversation.findUnique({
+                where: { id: conversationId },
+            });
+
+            if (conversation && conversation.messages) {
+                conversationMessages = conversation.messages as any as DetailedEmail[];
+                ticketsCache.set(conversationCacheKey, conversationMessages);
+            }
+        }
+    }
+
+    // For manual tickets, build better placeholder
+    if (conversationId && conversationId.startsWith('manual-') && conversationMessages.length > 0) {
+        const firstMessage = conversationMessages[0];
+        if (!firstMessage.toRecipients) {
+            const settings = await getAPISettings(organizationId);
+            if (settings) {
+                firstMessage.toRecipients = [{ emailAddress: { name: 'Support', address: settings.userId } }];
+            }
+        }
+    }
+
+    if (conversationMessages.length === 0) {
+        // Create placeholder from ticket data
+        const placeholderEmail: DetailedEmail = {
+            id: ticket.id,
+            subject: ticket.subject || 'No Subject',
+            sender: ticket.sender || 'Unknown Sender',
+            senderEmail: ticket.senderEmail || 'Unknown Email',
+            bodyPreview: ticket.bodyPreview || '',
+            receivedDateTime: ticket.receivedDateTime.toISOString(),
+            priority: ticket.priority,
+            status: ticket.status,
+            type: ticket.type,
+            conversationId: ticket.conversationId || undefined,
+            tags: ticket.tags.map(t => t.tag),
+            deadline: ticket.deadline?.toISOString(),
+            closedAt: ticket.closedAt?.toISOString(),
+            ticketNumber: ticket.ticketNumber,
+            companyId: ticket.companyId || undefined,
+            companyName: ticket.company?.name,
+            assignee: ticket.assignee?.id || undefined,
+            assigneeName: ticket.assignee?.name || 'Unassigned',
+            creator: ticket.creatorId ? { name: ticket.sender, email: ticket.senderEmail } : undefined,
+            body: { contentType: 'html', content: ticket.body || ticket.bodyPreview || '<p>Full email content is not available yet.</p>' }
+        };
+        conversationMessages.push(placeholderEmail);
+    }
+
+    const mainEmailDetails: DetailedEmail = {
+        id: ticket.id,
+        subject: ticket.subject,
+        sender: ticket.sender,
+        senderEmail: ticket.senderEmail,
+        bodyPreview: ticket.bodyPreview,
+        receivedDateTime: ticket.receivedDateTime.toISOString(),
+        priority: ticket.priority,
+        status: ticket.status,
+        type: ticket.type,
+        conversationId: ticket.conversationId || undefined,
+        tags: ticket.tags.map(t => t.tag),
+        deadline: ticket.deadline?.toISOString(),
+        closedAt: ticket.closedAt?.toISOString(),
+        ticketNumber: ticket.ticketNumber,
+        companyId: ticket.companyId || undefined,
+        companyName: ticket.company?.name,
+        assignee: ticket.assignee?.id || undefined,
+        assigneeName: ticket.assignee?.name || 'Unassigned',
+        creator: ticket.creatorId ? { name: ticket.sender, email: ticket.senderEmail } : undefined,
+        body: conversationMessages[0]?.body || { contentType: 'html', content: ticket.body || ticket.bodyPreview || '<p>Full email content not available.</p>' },
+        conversation: conversationMessages.map(convMsg => ({
+            ...convMsg,
+            id: convMsg.id,
+            subject: convMsg.subject,
+            sender: convMsg.sender,
+            senderEmail: convMsg.senderEmail,
+            receivedDateTime: convMsg.receivedDateTime,
+            body: convMsg.body,
+        })),
+    };
+
+    ticketsCache.set(cacheKey, mainEmailDetails);
+    return mainEmailDetails;
+}
+
+// Export all functions

@@ -18,12 +18,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-new";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
-import { LockoutError } from "@/providers/auth-provider";
+import { LockoutError } from "@/providers/auth-provider-new";
 import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({

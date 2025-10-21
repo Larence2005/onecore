@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useTransition } from 'react';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
@@ -12,11 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/header';
 import { cn } from '@/lib/utils';
 import { TicketsFilter } from '@/components/tickets-filter';
-import type { Email, DetailedEmail, Company, OrganizationMember } from '@/app/actions';
-import { getCompanies, getLatestEmails, getOrganizationMembers, checkForNewMail } from '@/app/actions';
+import type { Email, DetailedEmail } from '@/app/actions-types';
+import type { Company, OrganizationMember } from '@/app/actions-new';
+import { getCompanies, getOrganizationMembers, getTicketsFromDB, syncEmailsToTickets } from '@/app/actions-new';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import Image from 'next/image';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -64,179 +63,46 @@ function HomePageContent() {
 
     setIsLoading(true);
 
-    const isOwner = user.uid === userProfile.organizationOwnerUid;
-    const isClient = userProfile.isClient;
-    
-    const ticketsCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets');
-    let q;
+    const fetchTickets = async () => {
+      try {
+        // Sync emails to tickets first (converts new emails to tickets)
+        await syncEmailsToTickets(userProfile.organizationId!);
+        
+        const [fetchedTickets, fetchedCompanies, members] = await Promise.all([
+          getTicketsFromDB(userProfile.organizationId!),
+          getCompanies(userProfile.organizationId!),
+          getOrganizationMembers(userProfile.organizationId!)
+        ]);
 
-    if (isClient) {
-        // Client sees only tickets they created
-        q = query(ticketsCollectionRef, where('senderEmail', '==', user.email), where('status', '!=', 'Archived'));
-    } else if (isOwner) {
-        // Owner sees all non-archived tickets
-        q = query(ticketsCollectionRef, where('status', '!=', 'Archived'));
-    } else {
-        // Member sees only tickets assigned to them
-        q = query(ticketsCollectionRef, where('assignee', '==', user.uid), where('status', '!=', 'Archived'));
-    }
-    
-    
-    let companyMap = new Map<string, string>();
-    let memberMap = new Map<string, string>();
-    let memberEmails = new Set<string>();
-
-    const setupListener = async () => {
-        try {
-            const [fetchedCompanies, members] = await Promise.all([
-                getCompanies(userProfile.organizationId!),
-                getOrganizationMembers(userProfile.organizationId!)
-            ]);
-            companyMap = new Map(fetchedCompanies.map(c => [c.id, c.name]));
-            setCompanies(fetchedCompanies); // Set companies for the dashboard filter
-            memberMap = new Map(members.map(m => [m.uid!, m.name]));
-            memberEmails = new Set(members.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
-
-        } catch(e) {
-            console.error("Could not fetch companies or members for ticket list", e);
+        // Filter tickets based on user role
+        const isOwner = user.id === userProfile.organizationOwnerUid;
+        const isClient = userProfile.isClient === true;
+        
+        let filteredTickets;
+        if (isOwner) {
+          filteredTickets = fetchedTickets; // Admin sees all tickets
+        } else if (isClient) {
+          // Client sees tickets they created (where they are the sender)
+          filteredTickets = fetchedTickets.filter(ticket => 
+            ticket.senderEmail?.toLowerCase() === userProfile.email?.toLowerCase()
+          );
+        } else {
+          // Agent sees only their assigned tickets
+          filteredTickets = fetchedTickets.filter(ticket => ticket.assignee === user.id);
         }
 
-        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-            setError(null);
-            const ticketsFromDb: Email[] = await Promise.all(querySnapshot.docs.map(async (ticketDoc) => {
-                const data = ticketDoc.data();
-                let lastReplier: 'agent' | 'client' | undefined = undefined;
-
-                if (data.conversationId && user.email && userProfile.organizationId) {
-                    try {
-                        const conversationDocRef = doc(db, 'organizations', userProfile.organizationId, 'conversations', data.conversationId);
-                        const conversationDoc = await getDoc(conversationDocRef);
-                        if (conversationDoc.exists()) {
-                            const conversationData = conversationDoc.data();
-                            const messages = conversationData.messages as DetailedEmail[];
-                            if (messages && messages.length > 0) {
-                                const lastMessage = messages[messages.length - 1];
-                                if(memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '')) {
-                                    lastReplier = 'agent';
-                                } else {
-                                    lastReplier = 'client';
-                                }
-                            }
-                        } else if (data.senderEmail && !memberEmails.has(data.senderEmail.toLowerCase())) {
-                            // Conversation doc doesn't exist yet, this is a new ticket from a client
-                            lastReplier = 'client';
-                        }
-                    } catch (e) {
-                        console.error("Could not determine last replier for ticket", ticketDoc.id, e);
-                    }
-                }
-                
-                return {
-                    id: ticketDoc.id,
-                    subject: data.subject || 'No Subject',
-                    sender: data.sender || 'Unknown Sender',
-                    senderEmail: data.senderEmail || 'Unknown Email',
-                    bodyPreview: data.bodyPreview || '',
-                    receivedDateTime: data.receivedDateTime || new Date().toISOString(),
-                    priority: data.priority || 'Low',
-                    assignee: data.assignee,
-                    assigneeName: data.assignee ? memberMap.get(data.assignee) : 'Unassigned',
-                    status: data.status || 'Open',
-                    type: data.type || 'Incident',
-                    conversationId: data.conversationId,
-                    tags: data.tags || [],
-                    deadline: data.deadline,
-                    closedAt: data.closedAt,
-                    lastReplier: lastReplier,
-                    ticketNumber: data.ticketNumber,
-                    companyId: data.companyId,
-                    companyName: data.companyId ? companyMap.get(data.companyId) : undefined,
-                };
-            }));
-
-            ticketsFromDb.sort((a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime());
-            setEmails(ticketsFromDb);
-            setIsLoading(false);
-        }, (err) => {
-            const dbErrorMessage = err instanceof Error ? err.message : "An unknown database error occurred.";
-            setError(dbErrorMessage);
-            setEmails([]);
-            setIsLoading(false);
-        });
-
-        // Add listeners for all conversation documents to update lastReplier status
-        const conversationListeners = new Map<string, () => void>();
-        const ticketsSnapshot = await getDocs(q);
-        ticketsSnapshot.docs.forEach(ticketDoc => {
-            const conversationId = ticketDoc.data().conversationId;
-            if(conversationId) {
-                const convDocRef = doc(db, 'organizations', userProfile.organizationId!, 'conversations', conversationId);
-                const convUnsub = onSnapshot(convDocRef, async (convDoc) => {
-                    if (convDoc.exists()) {
-                        const messages = convDoc.data()?.messages as DetailedEmail[];
-                        if (!messages || messages.length === 0) return;
-
-                        const lastMessage = messages[messages.length - 1];
-                        
-                        const isAgentReply = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '');
-
-                         setEmails(prevEmails => {
-                            const newEmails = [...prevEmails];
-                            const ticketIndex = newEmails.findIndex(e => e.id === ticketDoc.id);
-                            if (ticketIndex !== -1) {
-                                newEmails[ticketIndex].lastReplier = isAgentReply ? 'agent' : 'client';
-                            }
-                            return newEmails;
-                        });
-                    }
-                });
-                conversationListeners.set(conversationId, convUnsub);
-            }
-        });
-
-
-        return () => {
-            unsubscribe();
-            conversationListeners.forEach(unsub => unsub());
-        };
+        setEmails(filteredTickets);
+        setCompanies(fetchedCompanies);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching tickets:', error);
+        setError('Failed to load tickets');
+        setIsLoading(false);
+      }
     };
-    
-    const unsubscribePromise = setupListener();
 
-    return () => {
-      unsubscribePromise.then(unsub => unsub && unsub());
-    }
+    fetchTickets();
   }, [user, userProfile]);
-
-  // Real-time check for new emails
-  useEffect(() => {
-    if (!userProfile?.organizationId || activeView !== 'tickets') {
-        return;
-    }
-
-    const intervalId = setInterval(async () => {
-        try {
-            // Find the most recent email date we have
-            const latestDate = emails.reduce((latest, email) => {
-                const emailDate = new Date(email.receivedDateTime);
-                return emailDate > latest ? emailDate : latest;
-            }, new Date(0));
-
-            const hasNew = await checkForNewMail(userProfile.organizationId, latestDate.toISOString());
-
-            if (hasNew) {
-                // If there's new mail, trigger the full fetch.
-                // Pass the latestDate to only fetch newer items.
-                await getLatestEmails(userProfile.organizationId, latestDate.toISOString());
-            }
-        } catch (error) {
-            console.error("Failed to check for new mail:", error);
-            // Don't show a toast for background polling failures to avoid spamming the user.
-        }
-    }, 30000); // Poll every 30 seconds
-
-    return () => clearInterval(intervalId);
-  }, [userProfile?.organizationId, emails, activeView]);
 
 
   useEffect(() => {

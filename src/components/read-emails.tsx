@@ -3,14 +3,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getLatestEmails, getTicketsFromDB } from "@/app/actions";
-import type { Email } from "@/app/actions";
+import { getLatestEmails } from "@/app/actions-email";
+import { getTicketsFromDB } from "@/app/actions-new";
+import type { Email } from "@/app/actions-types";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal } from "lucide-react";
 import { TicketsView } from "./tickets-view";
 import { FilterState } from "./tickets-filter";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from '@/providers/auth-provider-new';
 
 interface ReadEmailsProps {
   emails: Email[];

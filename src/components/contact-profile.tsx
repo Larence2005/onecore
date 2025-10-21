@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers, getEmail, getCompanies, updateCompanyEmployee } from "@/app/actions";
-import type { Email, OrganizationMember, DetailedEmail, ActivityLog, Company, Employee } from "@/app/actions";
+import { useAuth } from '@/providers/auth-provider-new';
+import { getTicketsFromDB, getOrganizationMembers, getEmail, getCompanies, updateCompanyEmployee } from "@/app/actions-new";
+import type { Email, DetailedEmail, ActivityLog } from "@/app/actions-types";
+import type { OrganizationMember, Company, Employee } from "@/app/actions-new";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,8 +19,6 @@ import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
 import { Label } from "./ui/label";
@@ -225,7 +223,7 @@ export function ContactProfile({ email }: { email: string }) {
     setIsLoading(true);
     setError(null);
     try {
-        const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+        const isOwner = user?.id === userProfile?.organizationOwnerUid;
         const orgMembers = await getOrganizationMembers(userProfile.organizationId);
         const member = orgMembers.find(m => m.email.toLowerCase() === email.toLowerCase());
         setIsInternalMember(!!member);
@@ -235,14 +233,15 @@ export function ContactProfile({ email }: { email: string }) {
         if (member) {
             foundProfile = { ...foundProfile, ...member };
         } else {
+             // Check if this is a company employee (using PostgreSQL)
              const allCompanies = await getCompanies(userProfile.organizationId);
              for(const company of allCompanies) {
-                const employeeDocRef = doc(db, 'organizations', userProfile.organizationId, 'companies', company.id, 'employees', email);
-                const employeeDoc = await getDoc(employeeDocRef);
-                if (employeeDoc.exists()) {
-                    const employeeData = employeeDoc.data() as Employee;
+                const { getCompanyEmployees } = await import('@/app/actions-new');
+                const employees = await getCompanyEmployees(userProfile.organizationId, company.id);
+                const employee = employees.find(e => e.email.toLowerCase() === email.toLowerCase());
+                if (employee) {
                     foundProfile = {
-                        ...employeeData,
+                        ...employee,
                         companyId: company.id,
                         companyName: company.name
                     };
@@ -261,24 +260,17 @@ export function ContactProfile({ email }: { email: string }) {
 
         const allTicketsFromDb = await getTicketsFromDB(userProfile.organizationId, { fetchAll: true });
         
-        // Filter tickets for agent view
-        const allTickets = isOwner
-            ? allTicketsFromDb
-            : allTicketsFromDb.filter(t => t.assignee === user.uid);
-        
         const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
         
         const processTicketsWithLastReplier = async (tickets: Email[]): Promise<Email[]> => {
             return Promise.all(tickets.map(async (ticket) => {
                 let lastReplier: 'agent' | 'client' | undefined = undefined;
                 if(ticket.conversationId) {
-                    const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
-                    if (convDoc.exists()) {
-                        const messages = convDoc.data().messages as DetailedEmail[];
-                        if (messages && messages.length > 0) {
-                            const lastMessage = messages[messages.length - 1];
-                            lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
-                        }
+                    // Get full ticket details which includes conversation from PostgreSQL
+                    const detailedTicket = await getEmail(userProfile.organizationId!, ticket.id);
+                    if (detailedTicket?.conversation && detailedTicket.conversation.length > 0) {
+                        const lastMessage = detailedTicket.conversation[detailedTicket.conversation.length - 1];
+                        lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
                     } else if (ticket.senderEmail && !memberEmails.has(ticket.senderEmail.toLowerCase())) {
                         lastReplier = 'client';
                     }
@@ -287,7 +279,19 @@ export function ContactProfile({ email }: { email: string }) {
             }));
         };
         
-        const tempSubmittedTickets = allTickets.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
+        // Filter tickets by contact email first
+        const contactTickets = allTicketsFromDb.filter(ticket => ticket.senderEmail?.toLowerCase() === email.toLowerCase());
+        
+        // Then apply agent filtering - agents only see contact's tickets if assigned to them
+        const tempSubmittedTickets = isOwner
+            ? contactTickets
+            : contactTickets.filter(t => t.assignee === user.id);
+        
+        // For CC/BCC/Forward checking, use all tickets visible to the user
+        const allTickets = isOwner
+            ? allTicketsFromDb
+            : allTicketsFromDb.filter(t => t.assignee === user.id);
+        
         const tempCcTickets: Email[] = [];
         const tempBccTickets: Email[] = [];
         const tempForwardedActivities: ActivityLog[] = [];
@@ -310,18 +314,27 @@ export function ContactProfile({ email }: { email: string }) {
                 if (isBcc) tempBccTickets.push(ticket);
             }
 
-            const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', ticket.id, 'activity');
-            const q = query(activityCollectionRef, where('type', '==', 'Forward'));
-            const activitySnapshot = await getDocs(q);
-            activitySnapshot.forEach(doc => {
-                const log = doc.data() as Omit<ActivityLog, 'id'>;
+            // Get activity logs from PostgreSQL
+            const { getActivityLog } = await import('@/app/actions-new');
+            const activityLogs = await getActivityLog(userProfile.organizationId, ticket.id);
+            const forwardLogs = activityLogs.filter(log => log.type === 'Forward');
+            
+            for (const log of forwardLogs) {
                 if (log.details.toLowerCase().includes(email.toLowerCase())) {
                     tempForwardedActivities.push({
-                        id: doc.id, ...log, ticketId: ticket.id, ticketSubject: ticket.subject
+                        id: log.id,
+                        type: log.type,
+                        details: log.details,
+                        date: log.date,
+                        userName: log.userName,
+                        userEmail: log.userEmail,
+                        user: log.user,
+                        ticketId: ticket.id,
+                        ticketSubject: ticket.subject
                     });
                     tempInvolvedTickets.set(ticket.id, ticket);
                 }
-            });
+            }
         }
         
         setSubmittedTickets(await processTicketsWithLastReplier(tempSubmittedTickets));
@@ -355,13 +368,16 @@ export function ContactProfile({ email }: { email: string }) {
     }
     setIsUpdating(true);
     try {
-        await updateCompanyEmployee(userProfile.organizationId, profileData.companyId, profileData.email, {
-            name: updatedName,
-            email: updatedEmail,
-            address: updatedAddress,
-            mobile: updatedMobile,
-            landline: updatedLandline,
-        });
+        await updateCompanyEmployee(
+            userProfile.organizationId,
+            profileData.companyId,
+            profileData.email,
+            updatedName,
+            updatedEmail,
+            updatedAddress,
+            updatedMobile,
+            updatedLandline
+        );
         toast({ title: "Contact Updated", description: "The contact's details have been updated." });
         await fetchData(); // Re-fetch data
         setIsEditDialogOpen(false);
@@ -568,7 +584,7 @@ export function ContactProfile({ email }: { email: string }) {
                         <div className="border-t pt-4 space-y-4">
                             {forwardedActivities.length > 0 ? (
                                 forwardedActivities.map((log) => (
-                                    <TimelineItem key={log.id} type="Forward" date={log.date} user={log.user}>
+                                    <TimelineItem key={log.id} type="Forward" date={log.date} user={log.userName || log.user || 'System'}>
                                         <div className="flex flex-wrap items-center gap-x-2">
                                             <span>{log.details} on ticket</span> 
                                             <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>

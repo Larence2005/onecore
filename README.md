@@ -1,7 +1,11 @@
-# Firebase Studio
+# 1. Install dependencies
+npm install
 
-This is a NextJS starter in Firebase Studio.
+# 2. Generate Prisma client
+npm run prisma:generate
 
-To get started, take a look at src/app/page.tsx.
+# 3. Push database schema
+npm run prisma:push
 
-    
+# 4. Start the app
+npm run dev

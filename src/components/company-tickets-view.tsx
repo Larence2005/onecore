@@ -2,15 +2,16 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
 import { Ticket, User, ChevronLeft, ChevronRight, Activity, Building, MapPin, Phone, Link as LinkIcon, RefreshCw, MoreHorizontal, UserPlus, Trash2, Mail, ArrowLeft, Pencil, Users as UsersIcon, LayoutDashboard, List, Archive, Building2, Settings, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { getTicketsFromDB, getCompanyDetails, getCompanyEmployees, getCompanyActivityLogs, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee, sendEmployeeVerificationEmail, getOrganizationMembers } from '@/app/actions';
-import type { Email, Company, Employee, ActivityLog, DetailedEmail, OrganizationMember } from '@/app/actions';
+import { getCompanyDetails, getCompanyEmployees, updateCompany, updateCompanyEmployee, addEmployeeToCompany, deleteCompanyEmployee, getOrganizationMembers, getTicketsFromDB, getCompanyActivityLogs, sendEmployeeVerificationEmail } from '@/app/actions-new';
+import type { Company, Employee, OrganizationMember } from '@/app/actions-new';
+import type { Email, ActivityLog, DetailedEmail } from '@/app/actions-types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TicketItem } from './ticket-item';
@@ -32,8 +33,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
 import { Badge } from './ui/badge';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Header } from './header';
 
 
@@ -218,7 +217,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
         setIsLoading(true);
         try {
-            const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+            const isOwner = user?.id === userProfile?.organizationOwnerUid;
 
             const [companyDetails, allCompanyTickets, companyEmployees, allCompanyActivity, orgMembers] = await Promise.all([
                 getCompanyDetails(userProfile.organizationId!, companyId),
@@ -236,7 +235,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
             const agentFilteredTickets = isOwner || !user
                 ? allCompanyTickets
-                : allCompanyTickets.filter(t => t.assignee === user.uid);
+                : allCompanyTickets.filter(t => t.assignee === user.id);
             
             const agentTicketIds = new Set(agentFilteredTickets.map(t => t.id));
 
@@ -247,21 +246,10 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
 
             const memberEmails = new Set(orgMembers.filter(m => !m.isClient).map(m => m.email.toLowerCase()));
 
-            const ticketsWithLastReplier = await Promise.all(agentFilteredTickets.map(async (ticket) => {
-                let lastReplier: 'agent' | 'client' | undefined = undefined;
-                if (ticket.conversationId) {
-                    const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
-                    if (convDoc.exists()) {
-                        const messages = convDoc.data().messages as DetailedEmail[];
-                        if (messages && messages.length > 0) {
-                            const lastMessage = messages[messages.length - 1];
-                            lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
-                        }
-                    } else if (ticket.senderEmail && !memberEmails.has(ticket.senderEmail.toLowerCase())) {
-                        lastReplier = 'client';
-                    }
-                }
-                return { ...ticket, lastReplier };
+            // TODO: Migrate conversation lookup to PostgreSQL
+            const ticketsWithLastReplier = agentFilteredTickets.map(ticket => ({
+                ...ticket,
+                lastReplier: undefined as 'agent' | 'client' | undefined
             }));
 
             setCompany(companyDetails);
@@ -363,14 +351,16 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         if (!editingEmployee || !company || !userProfile?.organizationId) return;
         setIsUpdatingEmployee(true);
         try {
-            const employeeData: Partial<Employee> = {
-                name: updatedEmployeeName,
-                email: updatedEmployeeEmail,
-                address: updatedEmployeeAddress,
-                mobile: updatedEmployeeMobile,
-                landline: updatedEmployeeLandline,
-            };
-            await updateCompanyEmployee(userProfile.organizationId, company.id, editingEmployee.email, employeeData);
+            await updateCompanyEmployee(
+                userProfile.organizationId,
+                company.id,
+                editingEmployee.email,
+                updatedEmployeeName,
+                updatedEmployeeEmail,
+                updatedEmployeeAddress,
+                updatedEmployeeMobile,
+                updatedEmployeeLandline
+            );
             toast({ title: "Employee Updated", description: "The employee's details have been updated." });
             await fetchCompanyData(); // Re-fetch all company data to reflect changes
             setIsEditEmployeeDialogOpen(false);
@@ -461,7 +451,8 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
         );
     }
     
-    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+    const isOwner = user?.id === userProfile?.organizationOwnerUid;
+    const isAdmin = !userProfile?.isClient; // Admin if not a client
 
     const renderSidebarContent = () => {
         if (activeTab === 'tickets') {
@@ -476,7 +467,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                     <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto">
                         {activity.length > 0 ? (
                             activity.map((log) => (
-                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.userName || log.user || 'System'}>
                                     <div className="flex flex-wrap items-center gap-x-2">
                                        <span>{log.details} on ticket</span> 
                                        <Link href={`/tickets/${log.ticketId}`} className="font-semibold hover:underline truncate" title={log.ticketSubject}>
@@ -568,12 +559,14 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
     
     const renderEmployeeStatusBadge = (status: Employee['status']) => {
         switch (status) {
-            case 'Verified':
+            case 'VERIFIED':
                 return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
-            case 'Invited':
+            case 'INVITED':
                 return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
-            case 'Uninvited':
-                return <Badge variant="destructive">Uninvited</Badge>;
+            case 'UNINVITED':
+                return <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300">Uninvited</Badge>;
+            case 'NOT_VERIFIED':
+                return <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">Not Verified</Badge>;
             default:
                 return <Badge variant="outline">{status || 'Unknown'}</Badge>;
         }
@@ -784,7 +777,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                 <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
                                                                 {isOwner && (
                                                                     <TableCell className="flex items-center justify-end gap-2">
-                                                                        {employee.status !== 'Verified' && (
+                                                                        {employee.status !== 'VERIFIED' && (
                                                                             <TooltipProvider>
                                                                                 <Tooltip>
                                                                                     <AlertDialog>
@@ -802,7 +795,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                                             </TooltipTrigger>
                                                                                         </AlertDialogTrigger>
                                                                                         <TooltipContent>
-                                                                                            <p>{employee.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
+                                                                                            <p>{employee.status === 'UNINVITED' ? 'Send Invite' : 'Resend Invite'}</p>
                                                                                         </TooltipContent>
                                                                                         <AlertDialogContent>
                                                                                             <AlertDialogHeader>

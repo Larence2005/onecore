@@ -17,14 +17,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { sendEmailAction, getOrganizationMembers } from "@/app/actions";
-import type { OrganizationMember } from "@/app/actions";
+import { sendEmailAction } from "@/app/actions-email";
+import { getOrganizationMembers } from "@/app/actions-new";
+import type { OrganizationMember } from "@/app/actions-new";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal, Send, RefreshCw } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
 import { AutocompleteInput } from "./autocomplete-input";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-new";
 
 const emailListRegex = /^$|^([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(, *[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})*$/;
 

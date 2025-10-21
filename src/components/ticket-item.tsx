@@ -1,7 +1,8 @@
 
 "use client";
 
-import type { Email, OrganizationMember } from "@/app/actions";
+import type { Email } from "@/app/actions-types";
+import type { OrganizationMember } from "@/app/actions-new";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
@@ -9,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cn } from "@/lib/utils";
 import { Card } from "./ui/card";
 import Link from 'next/link';
-import { updateTicket, getOrganizationMembers } from "@/app/actions";
+import { updateTicket, getOrganizationMembers } from "@/app/actions-new";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building, FileType, RefreshCw } from 'lucide-react';
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-new";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 
@@ -23,6 +24,7 @@ type TicketItemProps = {
     isSelected: boolean;
     onSelect: (ticketId: string, checked: boolean) => void;
     isArchivedView?: boolean;
+    onRefresh?: () => void;
 };
 
 type PendingUpdate = {
@@ -53,7 +55,7 @@ const types = [
     { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb, color: 'text-purple-500' },
 ];
 
-export function TicketItem({ email, isSelected, onSelect, isArchivedView = false }: TicketItemProps) {
+export function TicketItem({ email, isSelected, onSelect, isArchivedView = false, onRefresh }: TicketItemProps) {
     const { user, userProfile } = useAuth();
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentStatus, setCurrentStatus] = useState(email.status);
@@ -72,7 +74,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         }
     }, [userProfile]);
 
-    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+    const isOwner = user?.id === userProfile?.organizationOwnerUid;
     const isClient = userProfile?.isClient === true;
 
     const priorityDetails = priorities.find(p => p.value === currentPriority) || priorities[0];
@@ -98,13 +100,18 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
 
         const finalValue = field === 'assignee' && value === 'unassigned' ? null : value;
 
-        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, {name: userProfile.name, email: user.email}, new Date().toISOString(), userProfile.deadlineSettings);
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue });
         
         if (result.success) {
             toast({
                 title: 'Ticket Updated',
                 description: `The ${field} has been changed.`,
             });
+            
+            // Refresh the ticket list to show updated data
+            if (onRefresh) {
+                onRefresh();
+            }
         } else {
             // Revert UI on failure
             if (field === 'priority') setCurrentPriority(email.priority);
@@ -256,7 +263,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                                      </SelectTrigger>
                                      <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {members.filter(m => m.uid).map(m => (
+                                        {members.filter(m => m.uid && !m.isClient).map(m => (
                                             <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
                                         ))}
                                      </SelectContent>

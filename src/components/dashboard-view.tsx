@@ -3,8 +3,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import type { Email, ActivityLog, Company } from '@/app/actions';
-import { getTicketsFromDB, getAllActivityLogs } from '@/app/actions';
+import type { Email, ActivityLog } from '@/app/actions-types';
+import type { Company } from '@/app/actions-new';
+import { getTicketsFromDB, syncEmailsToTickets } from '@/app/actions-new';
+import { getAllActivityLogs } from '@/app/actions-new';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +16,7 @@ import { Bar, BarChart, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Toolti
 import { isToday, parseISO, isPast, isFuture, differenceInCalendarDays, subDays, isAfter, format, isBefore } from 'date-fns';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { TimelineItem } from './timeline-item';
 import { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
@@ -54,13 +56,39 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
             setIsLoading(true);
             setError(null);
             try {
+                // Sync emails to tickets first (converts new emails to tickets)
+                console.log('Starting email sync...');
+                const syncResult = await syncEmailsToTickets(userProfile.organizationId!);
+                console.log('Email sync result:', syncResult);
+                
+                if (!syncResult.success) {
+                    console.error('Email sync failed:', syncResult.error);
+                }
+                
                 // Fetch all tickets including archived for historical data
                 const [allTickets, allLogs] = await Promise.all([
                     getTicketsFromDB(userProfile.organizationId!, { fetchAll: true }),
                     getAllActivityLogs(userProfile.organizationId!),
                 ]);
 
-                setTickets(allTickets);
+                // Filter tickets based on user role
+                const isOwner = user?.id === userProfile.organizationOwnerUid;
+                const isClient = userProfile.isClient === true;
+                
+                let filteredTickets;
+                if (isOwner) {
+                    filteredTickets = allTickets; // Admin sees all tickets
+                } else if (isClient) {
+                    // Client sees tickets they created (where they are the sender)
+                    filteredTickets = allTickets.filter(ticket => 
+                        ticket.senderEmail?.toLowerCase() === userProfile.email?.toLowerCase()
+                    );
+                } else {
+                    // Agent sees only their assigned tickets
+                    filteredTickets = allTickets.filter(ticket => ticket.assignee === user?.id);
+                }
+
+                setTickets(filteredTickets);
                 setActivityLogs(allLogs);
 
             } catch (err) {
@@ -80,11 +108,11 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
     }, [userProfile, toast]);
     
     const filteredData = useMemo(() => {
-        const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+        const isOwner = user?.id === userProfile?.organizationOwnerUid;
 
-        const agentFilteredTickets = isOwner || !user?.uid 
+        const agentFilteredTickets = isOwner || !user?.id 
             ? tickets 
-            : tickets.filter(t => t.assignee === user.uid);
+            : tickets.filter(t => t.assignee === user.id);
             
         const assignedTicketIds = new Set(agentFilteredTickets.map(t => t.id));
 

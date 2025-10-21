@@ -17,11 +17,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { createTicket, getAPISettings, getOrganizationMembers } from "@/app/actions";
-import type { OrganizationMember, NewAttachment } from "@/app/actions";
+import { createTicket, getOrganizationMembers } from "@/app/actions-new";
+import { getAPISettings } from "@/app/actions-email";
+import type { NewAttachment } from "@/app/actions-types";
+import type { OrganizationMember } from "@/app/actions-new";
 import { Send, RefreshCw, X, Paperclip } from "lucide-react";
 import RichTextEditor from "./rich-text-editor";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from '@/providers/auth-provider-new';
 import { AutocompleteInput } from "./autocomplete-input";
 import { Badge } from "./ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card";
@@ -101,7 +103,7 @@ export function CreateTicketForm() {
 
     setIsSending(true);
     try {
-      const author = { uid: user.uid, name: userProfile.name || user.email!, email: user.email! };
+      const author = { uid: user.id, name: userProfile.name || user.email!, email: user.email! };
       
       const attachmentPayloads: NewAttachment[] = await Promise.all(
           attachments.map(async (file) => ({

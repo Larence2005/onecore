@@ -3,8 +3,10 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { getEmail, replyToEmailAction, updateTicket, getOrganizationMembers, fetchAndStoreFullConversation, addActivityLog, getActivityLog, forwardEmailAction, getCompanies, addNoteToTicket, getTicketNotes, getAPISettings, getAttachmentContent } from '@/app/actions';
-import type { DetailedEmail, Attachment, NewAttachment, OrganizationMember, ActivityLog, Recipient, Company, Note, DeadlineSettings } from '@/app/actions';
+import { getOrganizationMembers, getCompanies, addActivityLog, getActivityLog, addNoteToTicket, getTicketNotes, getEmail, updateTicket } from '@/app/actions-new';
+import { replyToEmailAction, fetchAndStoreFullConversation, forwardEmailAction, getAPISettings, getAttachmentContent } from '@/app/actions-email';
+import type { DetailedEmail, Attachment, NewAttachment, ActivityLog, Recipient, Note, DeadlineSettings } from '@/app/actions-types';
+import type { OrganizationMember, Company } from '@/app/actions-new';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -13,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, useSidebar } from '@/components/ui/sidebar';
 import { Header } from '@/components/header';
@@ -28,8 +30,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { doc, onSnapshot, collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { TimelineItem } from './timeline-item';
 import { Label } from './ui/label';
 import { TableIcon } from './ui/table-icon';
@@ -305,92 +305,18 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         fetchEmailData();
     }, [fetchEmailData]);
     
-     useEffect(() => {
-        if (!email?.id || !userProfile?.organizationId || !user?.email) return;
-
-        const ticketDocRef = doc(db, 'organizations', userProfile.organizationId, 'tickets', email.id);
-
-        const unsubscribe = onSnapshot(ticketDocRef, async (docSnap) => {
-            if (docSnap.exists()) {
-                const ticketData = { id: docSnap.id, ...docSnap.data() } as DetailedEmail;
-                
-                // Update UI state and ref
-                 setEmail(prevEmail => prevEmail ? ({ ...prevEmail, ...ticketData }) : ticketData);
-                 setCurrentDeadline(ticketData.deadline ? parseISO(ticketData.deadline) : undefined);
-                 previousEmailRef.current = { ...(email || {}), ...ticketData } as DetailedEmail;
-            }
-        });
-
-        return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId]);
-
-     useEffect(() => {
-        if (!email?.id || !userProfile?.organizationId) return;
-
-        const activityCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', email.id, 'activity');
-        const q = query(activityCollectionRef, orderBy('date', 'desc'));
-
-        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-            const fetchedLogs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
-            setActivityLog(fetchedLogs);
-        });
-
-        return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId]);
-
-    useEffect(() => {
-        if (!email?.id || !userProfile?.organizationId) return;
-
-        const notesCollectionRef = collection(db, 'organizations', userProfile.organizationId, 'tickets', email.id, 'notes');
-        const q = query(notesCollectionRef, orderBy('date', 'asc'));
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const fetchedNotes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note));
-            setNotes(fetchedNotes);
-        });
-
-        return () => unsubscribe();
-    }, [email?.id, userProfile?.organizationId]);
-
-    useEffect(() => {
-        if (!email?.conversationId || !userProfile?.organizationId) return;
-
-        const conversationDocRef = doc(db, 'organizations', userProfile.organizationId, 'conversations', email.conversationId);
-        
-        const unsubscribe = onSnapshot(conversationDocRef, async (docSnap) => {
-            if (docSnap.exists()) {
-                const conversationData = docSnap.data();
-                if (conversationData && conversationData.messages) {
-                    const newConversation = conversationData.messages as DetailedEmail[];
-                    setEmail(prevEmail => {
-                        if (prevEmail) {
-                            return { ...prevEmail, conversation: newConversation };
-                        }
-                        return null;
-                    });
-                }
-            }
-        });
-
-        return () => unsubscribe();
-    }, [email?.conversationId, userProfile?.organizationId]);
+    // Data is fetched once and updated via manual refresh or when actions are performed
 
     
     const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any) => {
         if (!email || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
     
         const ticketIdToUpdate = email.id;
-        const clientNow = new Date().toISOString();
-        const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
         const result = await updateTicket(
             userProfile.organizationId,
             ticketIdToUpdate,
-            { [field]: value },
-            { name: userProfile.name, email: user.email },
-            clientNow,
-            userProfile.deadlineSettings,
-            clientTimeZone
+            { [field]: value }
         );
     
         if (!result.success) {
@@ -404,6 +330,9 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 title: 'Ticket Updated',
                 description: `The ${field} has been changed.`,
             });
+            
+            // Refresh ticket data to get updated assignee info
+            await fetchEmailData();
         }
     };
 
@@ -519,7 +448,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             );
 
             const isClientReplying = userProfile.isClient === true;
-            const isOwnerReplying = user.uid === userProfile.organizationOwnerUid;
+            const isOwnerReplying = user.id === userProfile.organizationOwnerUid;
             
             const result = await replyToEmailAction(
                 userProfile.organizationId,
@@ -642,7 +571,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
         } else {
-            if (user.uid !== userProfile.organizationOwnerUid) {
+            if (user.id !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email.toLowerCase());
             }
             if (email?.creator?.email) {
@@ -690,7 +619,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
         } else {
-            if (user.uid !== userProfile.organizationOwnerUid) {
+            if (user.id !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email.toLowerCase());
             }
             if (email?.creator?.email) {
@@ -732,7 +661,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const ccRecipients = new Set<string>();
 
             // Only add current user to CC if they are not the admin
-            if (user.uid !== userProfile.organizationOwnerUid) {
+            if (user.id !== userProfile.organizationOwnerUid) {
                 ccRecipients.add(user.email);
             }
             setForwardCc(Array.from(ccRecipients).join(', '));
@@ -1137,7 +1066,7 @@ if (loading || !user) {
     );
 }
 
-const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+const isOwner = user?.id === userProfile?.organizationOwnerUid;
 const isClient = userProfile?.isClient === true;
 
 const handleMenuClick = (view: string) => {
@@ -1390,7 +1319,7 @@ return (
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {members.filter(m => m.uid).map(m => (
+                                                            {members.filter(m => m.uid && !m.isClient).map(m => (
                                                                 <SelectItem key={m.uid} value={m.uid!}>
                                                                     {m.name}
                                                                 </SelectItem>

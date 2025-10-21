@@ -4,12 +4,13 @@
 import { ReadEmails } from '@/components/read-emails';
 import { SendEmailForm } from '@/components/send-email-form';
 import { SettingsForm } from '@/components/settings-form';
-import type { Email, Company } from '@/app/actions';
+import type { Email } from '@/app/actions-types';
+import type { Company } from '@/app/actions-new';
 import { FilterState } from './tickets-filter';
 import { ArchiveView } from './archive-view';
 import { DashboardView } from './dashboard-view';
 import { OrganizationView } from './organization-view';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { ClientsView } from './clients-view';
 import { DateRange } from 'react-day-picker';
 import { CreateTicketForm } from './create-ticket-form';

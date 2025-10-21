@@ -1,0 +1,321 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String?
+  name              String?
+  emailVerified     DateTime?
+  image             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+  memberships        OrganizationMember[]
+  employeeProfiles   Employee[]
+  assignedTickets    Ticket[] @relation("AssignedTickets")
+  createdTickets     Ticket[] @relation("CreatedTickets")
+  activityLogs       ActivityLog[]
+
+  @@index([email])
+}
+
+// Verification Token for email verification
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Organization model
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  domain           String   @unique
+  newDomain        String?  // Verified Azure domain for email
+  ownerId          String
+  address          String?
+  mobile           String?
+  landline         String?
+  website          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deadlineSettings Json?    // Store deadline settings as JSON
+
+  // Relations
+  owner    User                 @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  OrganizationMember[]
+  companies Company[]
+  tickets  Ticket[]
+  activityLogs ActivityLog[]
+
+  @@index([ownerId])
+  @@index([domain])
+}
+
+// Organization Member model
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?  // Nullable until user signs up
+  name           String
+  email          String
+  address        String?
+  mobile         String?
+  landline       String?
+  status         MemberStatus @default(UNINVITED)
+  isClient       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([email])
+}
+
+enum MemberStatus {
+  UNINVITED
+  INVITED
+  NOT_VERIFIED
+  VERIFIED
+}
+
+// Company model - replaces companies subcollection
+model Company {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  address        String?
+  mobile         String?
+  landline       String?
+  website        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    Employee[]
+  tickets      Ticket[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// Employee model
+model Employee {
+  id        String   @id @default(cuid())
+  companyId String
+  userId    String?  // Nullable until user signs up
+  name      String
+  email     String
+  address   String?
+  mobile    String?
+  landline  String?
+  status    MemberStatus @default(UNINVITED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([userId])
+  @@index([email])
+}
+
+// Ticket model
+model Ticket {
+  id                String    @id @default(cuid())
+  ticketNumber      Int
+  organizationId    String
+  companyId         String?
+  subject           String
+  sender            String
+  senderEmail       String
+  bodyPreview       String    @db.Text
+  body              String    @db.Text
+  bodyContentType   String    @default("html")
+  receivedDateTime  DateTime
+  priority          TicketPriority @default(MEDIUM)
+  status            TicketStatus   @default(OPEN)
+  type              TicketType     @default(QUESTION)
+  conversationId    String?
+  deadline          DateTime?
+  closedAt          DateTime?
+  lastReplier       String?   // 'agent' or 'client'
+  assigneeId        String?
+  creatorId         String?
+  inReplyToId       String?
+  hasAttachments    Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  assignee     User?         @relation("AssignedTickets", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator      User?         @relation("CreatedTickets", fields: [creatorId], references: [id], onDelete: SetNull)
+  
+  tags         TicketTag[]
+  attachments  Attachment[]
+  recipients   Recipient[]
+  conversation Ticket[]      @relation("TicketConversation")
+  parentTicket Ticket?       @relation("TicketConversation", fields: [inReplyToId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, ticketNumber])
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([senderEmail])
+  @@index([status])
+  @@index([conversationId])
+  @@index([organizationId, status]) // Composite for filtering by org and status
+  @@index([organizationId, receivedDateTime]) // Composite for sorting
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING
+  CLOSED
+  ARCHIVED
+}
+
+enum TicketType {
+  QUESTION
+  INCIDENT
+  PROBLEM
+  TASK
+}
+
+// Ticket Tag model - replaces tags array
+model TicketTag {
+  id       String @id @default(cuid())
+  ticketId String
+  tag      String
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, tag])
+  @@index([ticketId])
+  @@index([tag])
+}
+
+// Attachment model
+model Attachment {
+  id          String  @id @default(cuid())
+  ticketId    String
+  name        String
+  contentType String
+  size        Int
+  isInline    Boolean @default(false)
+  contentId   String?
+  url         String? // URL to stored file (S3, etc.)
+  
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+// Recipient model - for email recipients
+model Recipient {
+  id      String @id @default(cuid())
+  ticketId String
+  type    RecipientType
+  name    String
+  email   String
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+enum RecipientType {
+  TO
+  CC
+  BCC
+}
+
+// Activity Log model
+model ActivityLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  ticketId       String?
+  ticketSubject  String?
+  type           String
+  details        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+// Note model - for ticket notes
+model Note {
+  id        String   @id @default(cuid())
+  ticketId  String
+  content   String   @db.Text
+  user      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+// Conversation model
+model Conversation {
+  id             String   @id // conversationId from Microsoft Graph
+  organizationId String
+  messages       Json     // Array of DetailedEmail messages
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+// Login Attempts tracking (for security)
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress])
+}

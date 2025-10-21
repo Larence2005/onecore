@@ -1,40 +1,38 @@
-
-import { getDocs, collection, getDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getLatestEmails, checkTicketDeadlinesAndNotify } from '@/app/actions';
+import { getLatestEmails } from '@/app/actions-email';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic'; // Defaults to auto
-// To secure this endpoint, you would typically check for a secret token
-// passed in the request headers or use a service that provides authentication.
-// For example, in Vercel, you can check for `req.headers.get('x-vercel-cron-secret')`.
+export const dynamic = 'force-dynamic';
+
+// To secure this endpoint, check for a secret token in headers
+// For example: req.headers.get('x-cron-secret') === process.env.CRON_SECRET
 
 export async function GET(request: Request) {
   try {
-    const organizationsRef = collection(db, 'organizations');
-    const orgsSnapshot = await getDocs(organizationsRef);
+    // Get all organizations from PostgreSQL
+    const organizations = await prisma.organization.findMany({
+      select: { id: true, name: true },
+    });
 
-    if (orgsSnapshot.empty) {
+    if (organizations.length === 0) {
       console.log("No organizations found to process.");
       return NextResponse.json({ success: true, message: "No organizations to process." });
     }
 
-    const processingPromises = orgsSnapshot.docs.map(async (orgDoc) => {
-      const organizationId = orgDoc.id;
-      
-      console.log(`Processing jobs for organization: ${organizationId}`);
+    const processingPromises = organizations.map(async (org) => {
+      console.log(`Processing jobs for organization: ${org.name} (${org.id})`);
       
       try {
         // Fetch latest emails to create/update tickets
-        await getLatestEmails(organizationId);
+        await getLatestEmails(org.id);
         
-        // Run deadline checks for each organization
-        await checkTicketDeadlinesAndNotify(organizationId);
-
-        return { organizationId, status: 'success' };
+        // Note: checkTicketDeadlinesAndNotify would need to be implemented
+        // in actions-new.ts to work with PostgreSQL
+        
+        return { organizationId: org.id, status: 'success' };
       } catch (error) {
-        console.error(`Failed to process jobs for organization ${organizationId}:`, error);
-        return { organizationId, status: 'failed', error: (error as Error).message };
+        console.error(`Failed to process jobs for organization ${org.id}:`, error);
+        return { organizationId: org.id, status: 'failed', error: (error as Error).message };
       }
     });
 

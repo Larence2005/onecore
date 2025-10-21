@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useAuth } from "@/providers/auth-provider";
-import { getTicketsFromDB, getOrganizationMembers, getActivityLog, updateMemberInOrganization } from "@/app/actions";
-import type { Email, OrganizationMember, DetailedEmail, ActivityLog } from "@/app/actions";
+import { useAuth } from '@/providers/auth-provider-new';
+import { getTicketsFromDB, getOrganizationMembers, getActivityLog, updateMemberInOrganization, getEmail } from "@/app/actions-new";
+import type { Email, DetailedEmail, ActivityLog } from "@/app/actions-types";
+import type { OrganizationMember } from "@/app/actions-new";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,8 +19,6 @@ import { Header } from "./header";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar, SidebarFooter } from '@/components/ui/sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TimelineItem } from './timeline-item';
-import { collection, query, where, getDocs, or, doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { PropertyItem } from "./property-item";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "./ui/dialog";
 import { Label } from "./ui/label";
@@ -245,10 +243,10 @@ export function AgentProfile({ email }: { email: string }) {
             // If viewing own profile and not found in members list (e.g., admin during setup)
             if (user.email?.toLowerCase() === email.toLowerCase()) {
                 member = {
-                    uid: user.uid,
+                    uid: user.id,
                     name: userProfile.name || user.email!,
                     email: user.email!,
-                    status: userProfile.status || 'Not Verified',
+                    status: userProfile.status || 'NOT_VERIFIED',
                     address: userProfile.address,
                     mobile: userProfile.mobile,
                     landline: userProfile.landline,
@@ -275,13 +273,10 @@ export function AgentProfile({ email }: { email: string }) {
             return Promise.all(tickets.map(async (ticket) => {
                 let lastReplier: 'agent' | 'client' | undefined = undefined;
                 if(ticket.conversationId) {
-                    const convDoc = await getDoc(doc(db, 'organizations', userProfile.organizationId!, 'conversations', ticket.conversationId));
-                    if (convDoc.exists()) {
-                        const messages = convDoc.data().messages as DetailedEmail[];
-                        if (messages && messages.length > 0) {
-                            const lastMessage = messages[messages.length - 1];
-                            lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
-                        }
+                    const detailedTicket = await getEmail(userProfile.organizationId!, ticket.id);
+                    if (detailedTicket?.conversation && detailedTicket.conversation.length > 0) {
+                        const lastMessage = detailedTicket.conversation[detailedTicket.conversation.length - 1];
+                        lastReplier = memberEmails.has(lastMessage.senderEmail?.toLowerCase() || '') ? 'agent' : 'client';
                     } else if (ticket.senderEmail && !memberEmails.has(ticket.senderEmail.toLowerCase())) {
                         lastReplier = 'client';
                     }
@@ -292,24 +287,21 @@ export function AgentProfile({ email }: { email: string }) {
 
         const tempAssignedTickets = allTickets.filter(ticket => ticket.assignee === profile.uid);
         
-        const conversationsRef = collection(db, 'organizations', userProfile.organizationId, 'conversations');
-        
         let tempResponseCount = 0;
         const ccTicketIds = new Set<string>();
         const bccTicketIds = new Set<string>();
         
-        const allConversationsSnapshot = await getDocs(conversationsRef);
-        allConversationsSnapshot.forEach(doc => {
-            const messages = doc.data().messages as DetailedEmail[] || [];
+        // Get conversations from PostgreSQL for each ticket
+        for (const ticket of allTickets) {
+            if (!ticket.conversationId) continue;
+            
+            const detailedTicket = await getEmail(userProfile.organizationId, ticket.id);
+            const messages = detailedTicket?.conversation || [];
+            
             messages.forEach(message => {
                 if (message.senderEmail?.toLowerCase() === email.toLowerCase()) {
                     tempResponseCount++;
                 }
-                const conversationId = message.conversationId;
-                if (!conversationId) return;
-
-                const ticket = allTickets.find(t => t.conversationId === conversationId);
-                if (!ticket) return;
 
                 if (message.ccRecipients?.some(r => r.emailAddress.address.toLowerCase() === email.toLowerCase())) {
                     ccTicketIds.add(ticket.id);
@@ -318,7 +310,7 @@ export function AgentProfile({ email }: { email: string }) {
                     bccTicketIds.add(ticket.id);
                 }
             });
-        });
+        }
         
         const tempCcTickets = allTickets.filter(t => ccTicketIds.has(t.id));
         const tempBccTickets = allTickets.filter(t => bccTicketIds.has(t.id));
@@ -439,7 +431,7 @@ export function AgentProfile({ email }: { email: string }) {
         return <div className="flex items-center justify-center min-h-screen"></div>;
     }
     
-    const isOwner = user?.uid === userProfile?.organizationOwnerUid;
+    const isOwner = user?.id === userProfile?.organizationOwnerUid;
     const isViewingOwnProfile = user?.email?.toLowerCase() === email.toLowerCase();
     
     if (!loading && !isOwner && !isViewingOwnProfile) {

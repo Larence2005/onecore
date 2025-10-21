@@ -2,9 +2,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useAuth } from "@/providers/auth-provider";
-import { addCompany, getCompanyWithTicketAndEmployeeCount } from "@/app/actions";
-import type { Company } from "@/app/actions";
+import { useAuth } from "@/providers/auth-provider-new";
+import { addCompany, getCompanyWithTicketAndEmployeeCount } from "@/app/actions-new";
+import type { Company } from "@/app/actions-new";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "./ui/card";
 import { Button } from "./ui/button";

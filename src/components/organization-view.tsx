@@ -3,14 +3,15 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createOrganization, getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, sendVerificationEmail } from '@/app/actions';
-import type { OrganizationMember } from '@/app/actions';
+import { getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, createOrganization } from '@/app/actions-new';
+import { sendVerificationEmail } from '@/app/actions-email';
+import type { OrganizationMember } from '@/app/actions-new';
 import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, Mail, Send } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -210,7 +211,7 @@ export function OrganizationView() {
         setIsCreating(true);
         try {
             const userName = user.displayName || user.email;
-            await createOrganization(organizationName, userProfile?.organizationDomain || '', user.uid, userName, user.email);
+            await createOrganization(organizationName, userProfile?.organizationDomain || '', user.id, userName, user.email);
             toast({ title: 'Organization Created', description: `The organization "${organizationName}" has been created successfully.` });
             await fetchUserProfile(user);
         } catch (error) {
@@ -225,10 +226,28 @@ export function OrganizationView() {
         if (!userProfile?.organizationId || !member) return;
 
         setIsSendingVerification(member.email);
+        
         try {
-            await sendVerificationEmail(userProfile.organizationId, member.email, member.name);
-            toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${member.email}.` });
-            await fetchMembers(); // Re-fetch to get updated verificationSent status
+            const result = await sendVerificationEmail(userProfile.organizationId, member.email, member.name);
+            
+            if (result.success) {
+                // Update local state immediately for instant UI feedback
+                setMembers(prevMembers => 
+                    prevMembers.map(m => 
+                        m.email === member.email 
+                            ? { ...m, status: 'INVITED' as const }
+                            : m
+                    )
+                );
+                
+                toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${member.email}.` });
+            } else {
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Failed to Send', 
+                    description: result.error || 'Failed to send invitation email. Please check your email settings.' 
+                });
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
             toast({ variant: 'destructive', title: 'Failed to Send', description: errorMessage });
@@ -298,18 +317,18 @@ export function OrganizationView() {
         );
     }
     
-    const isOwner = user?.uid === userProfile.organizationOwnerUid;
+    const isOwner = user?.id === userProfile.organizationOwnerUid;
 
     const renderStatusBadge = (status: OrganizationMember['status']) => {
         switch (status) {
-            case 'Verified':
+            case 'VERIFIED':
                 return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Verified</Badge>;
-            case 'Invited':
+            case 'INVITED':
                 return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Invited</Badge>;
-            case 'Uninvited':
-                return <Badge variant="destructive">Uninvited</Badge>;
-            case 'Not Verified':
-                return <Badge variant="destructive">Not Verified</Badge>;
+            case 'UNINVITED':
+                return <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300">Uninvited</Badge>;
+            case 'NOT_VERIFIED':
+                return <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">Not Verified</Badge>;
             default:
                 return <Badge variant="outline">{status || 'Unknown'}</Badge>;
         }
@@ -426,7 +445,7 @@ export function OrganizationView() {
                                             </TableCell>
                                             {isOwner && (
                                                 <TableCell className="flex items-center gap-2">
-                                                    {(member.status === 'Uninvited' || member.status === 'Invited') && !memberIsOwner && (
+                                                    {(member.status === 'UNINVITED' || member.status === 'INVITED') && !memberIsOwner && (
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <AlertDialog>
@@ -444,7 +463,7 @@ export function OrganizationView() {
                                                                         </TooltipTrigger>
                                                                     </AlertDialogTrigger>
                                                                     <TooltipContent>
-                                                                        <p>{member.status === 'Uninvited' ? 'Send Invite' : 'Resend Invite'}</p>
+                                                                        <p>{member.status === 'UNINVITED' ? 'Send Invite' : 'Resend Invite'}</p>
                                                                     </TooltipContent>
                                                                     <AlertDialogContent>
                                                                         <AlertDialogHeader>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Email } from "@/app/actions";
+import type { Email } from "@/app/actions-types";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
@@ -11,11 +11,10 @@ import { TicketItem } from "./ticket-item";
 import { FilterState } from "./tickets-filter";
 import { useMemo, useState, useEffect } from "react";
 import { isAfter, subDays, parseISO, isPast, isBefore } from "date-fns";
-import { archiveTickets } from "@/app/actions";
+import { archiveTickets } from "@/app/actions-new";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { useAuth } from "@/providers/auth-provider";
-
+import { useAuth } from '@/providers/auth-provider-new';
 
 type TicketsViewProps = {
     emails: Email[];
@@ -225,6 +224,7 @@ export function TicketsView({ emails, isLoading, error, onRefresh, filters }: Ti
                                     email={email} 
                                     isSelected={selectedTickets.includes(email.id)}
                                     onSelect={handleSelectTicket}
+                                    onRefresh={onRefresh}
                                 />
                             ))}
                         </ul>

@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import type { Email } from "@/app/actions";
-import { getTicketsFromDB, unarchiveTickets } from "@/app/actions";
+import type { Email } from "@/app/actions-types";
+import { getTicketsFromDB, unarchiveTickets } from "@/app/actions-new";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Terminal, Archive, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { TicketItem } from "./ticket-item";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from '@/providers/auth-provider-new';
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardFooter } from "./ui/card";

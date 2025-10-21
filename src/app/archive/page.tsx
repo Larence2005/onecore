@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-new';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarHeader, SidebarFooter, useSidebar } from '@/components/ui/sidebar';
 import { MainView } from '@/components/main-view';
