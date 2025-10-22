@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from '@/providers/auth-provider-new';
-import { updateOrganization, deleteOrganization, createAndVerifyDomain, configureEmailRecords, createLicensedUser, finalizeUserSetup } from "@/app/actions-new";
+import { updateOrganization, deleteOrganization, deleteUserAccount, createAndVerifyDomain, configureEmailRecords, createLicensedUser, finalizeUserSetup } from "@/app/actions-new";
 import type { DeadlineSettings } from "@/app/actions-types";
 import { useRouter } from "next/navigation";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
@@ -404,21 +404,20 @@ export function SettingsForm() {
         // Note: With NextAuth, password verification would need to be done server-side
         // For now, we'll proceed with deletion after user confirms
         
-        const isOwner = user.id === userProfile.organizationOwnerUid;
-        if (isOwner && userProfile.organizationId) {
-            await deleteOrganization(userProfile.organizationId);
+        // Delete user account - this will cascade delete all owned organizations and associated data
+        const result = await deleteUserAccount(user.id);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to delete account');
         }
-
-        // Delete user account via NextAuth/database
-        // This would need a server action to delete the user from the database
-        // await deleteUserAccount(user.id);
 
         toast({
             title: "Account Deleted",
             description: "Your account and all associated data have been successfully deleted.",
         });
         
-        // No need to call logout(), deleteUser signs them out.
+        // Sign out and redirect to login
+        await logout();
         router.push('/login'); 
 
     } catch (error) {

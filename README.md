@@ -1,4 +1,6 @@
 # 1. Install dependencies
+sudo apt install -y nodejs npm
+
 npm install
 
 # 2. Generate Prisma client

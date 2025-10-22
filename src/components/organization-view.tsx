@@ -231,14 +231,8 @@ export function OrganizationView() {
             const result = await sendVerificationEmail(userProfile.organizationId, member.email, member.name);
             
             if (result.success) {
-                // Update local state immediately for instant UI feedback
-                setMembers(prevMembers => 
-                    prevMembers.map(m => 
-                        m.email === member.email 
-                            ? { ...m, status: 'INVITED' as const }
-                            : m
-                    )
-                );
+                // Fetch fresh data from server to ensure consistency
+                await fetchMembers();
                 
                 toast({ title: 'Verification Email Sent', description: `An invitation has been sent to ${member.email}.` });
             } else {
@@ -484,29 +478,28 @@ export function OrganizationView() {
                                                             </Tooltip>
                                                         </TooltipProvider>
                                                     )}
-                                                    <AlertDialog>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    Edit
-                                                                </DropdownMenuItem>
-                                                                {!memberIsOwner && (
+                                                    {!memberIsOwner && (
+                                                        <AlertDialog>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        Edit
+                                                                    </DropdownMenuItem>
                                                                     <AlertDialogTrigger asChild>
                                                                         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(member); }} className="text-destructive focus:text-destructive">
                                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                                             Delete
                                                                         </DropdownMenuItem>
                                                                     </AlertDialogTrigger>
-                                                                )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        <AlertDialogContent>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                            <AlertDialogContent>
                                                             <AlertDialogHeader>
                                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                                 <AlertDialogDescription>
@@ -521,7 +514,8 @@ export function OrganizationView() {
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
-                                                    </AlertDialog>
+                                                        </AlertDialog>
+                                                    )}
                                                 </TableCell>
                                             )}
                                         </TableRow>

@@ -9,7 +9,6 @@ import { ClientSecretCredential } from "@azure/identity";
 import { prisma } from '@/lib/prisma';
 import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add, isAfter } from 'date-fns';
 import { formatInTimeZone, toDate } from 'date-fns-tz';
-import { SimpleCache } from '@/lib/cache';
 import { headers } from 'next/headers';
 import axios from 'axios';
 import dns from "dns";
@@ -17,12 +16,7 @@ import { Client } from "@microsoft/microsoft-graph-client";
 import { Prisma } from '@prisma/client';
 import type { Email, Attachment, NewAttachment, ActivityLog, Recipient, Note, DetailedEmail } from '@/app/actions-types';
 
-// Initialize caches for different data types
-// A null TTL means the cache is permanent until manually invalidated.
-const ticketsCache = new SimpleCache<any>(null);
-const companiesCache = new SimpleCache<any>(null);
-const membersCache = new SimpleCache<any>(null);
-const activityCache = new SimpleCache<any>(null);
+// Caches removed to save RAM - all data now fetched directly from database
 
 // Re-export types from actions-types.ts for backward compatibility
 export type { Email, Attachment, NewAttachment, ActivityLog, Recipient, Note, DetailedEmail } from '@/app/actions-types';
@@ -353,10 +347,6 @@ export async function sendEmailAction(
 export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
     if (!organizationId) return [];
 
-    const cacheKey = `members:${organizationId}`;
-    const cachedMembers = membersCache.get(cacheKey);
-    if (cachedMembers) return cachedMembers;
-
     const members = await prisma.organizationMember.findMany({
         where: { organizationId },
         select: {
@@ -389,7 +379,6 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
         isClient: m.isClient,
     }));
 
-    membersCache.set(cacheKey, formattedMembers);
     return formattedMembers;
 }
 
@@ -430,10 +419,12 @@ export async function addMemberToOrganization(
         },
     });
 
-    // Invalidate members cache
-    membersCache.invalidate(`members:${organizationId}`);
-
     return { success: true };
+}
+
+// Helper function to invalidate members cache (can be called from other files)
+export async function invalidateMembersCache(organizationId: string): Promise<void> {
+    // Cache removed - no action needed
 }
 
 export async function updateMemberInOrganization(
@@ -486,9 +477,6 @@ export async function updateMemberInOrganization(
         },
     });
 
-    // Invalidate members cache
-    membersCache.invalidate(`members:${organizationId}`);
-
     return { success: true };
 }
 
@@ -524,8 +512,6 @@ export async function deleteMemberFromOrganization(organizationId: string, email
         }
     }
 
-    membersCache.invalidate(`members:${organizationId}`);
-
     return { success: true };
 }
 
@@ -550,9 +536,6 @@ export async function updateOrganization(
         data: updateData,
     });
 
-    // Invalidate org-level caches
-    membersCache.invalidate(`members:${organizationId}`);
-
     return { success: true };
 }
 
@@ -566,14 +549,25 @@ export async function deleteOrganization(organizationId: string) {
         where: { id: organizationId },
     });
 
-    // Invalidate all caches for this organization
-    ticketsCache.invalidate(`tickets:${organizationId}`);
-    companiesCache.invalidate(`companies:${organizationId}`);
-    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
-    membersCache.invalidate(`members:${organizationId}`);
-    activityCache.invalidate(`activity:${organizationId}`);
-
     return { success: true };
+}
+
+export async function deleteUserAccount(userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!userId) {
+        return { success: false, error: 'User ID is required.' };
+    }
+
+    try {
+        // Delete the user account - Prisma cascade will handle organizations and all related data
+        await prisma.user.delete({
+            where: { id: userId },
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting user account:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to delete user account' };
+    }
 }
 
 // ============================================================================
@@ -608,10 +602,6 @@ export async function addCompany(organizationId: string, companyName: string): P
             },
         });
 
-        // Invalidate company list caches
-        companiesCache.invalidate(`companies:${organizationId}`);
-        companiesCache.invalidate(`companies_with_counts:${organizationId}`);
-
         return { success: true, id: newCompany.id };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -621,10 +611,6 @@ export async function addCompany(organizationId: string, companyName: string): P
 
 export async function getCompanies(organizationId: string): Promise<Company[]> {
     if (!organizationId) return [];
-
-    const cacheKey = `companies:${organizationId}`;
-    const cachedCompanies = companiesCache.get(cacheKey);
-    if (cachedCompanies) return cachedCompanies;
 
     const companies = await prisma.company.findMany({
         where: { organizationId },
@@ -639,16 +625,11 @@ export async function getCompanies(organizationId: string): Promise<Company[]> {
         landline: c.landline || undefined,
     }));
 
-    companiesCache.set(cacheKey, formattedCompanies);
     return formattedCompanies;
 }
 
 export async function getCompanyWithTicketAndEmployeeCount(organizationId: string): Promise<Company[]> {
     if (!organizationId) return [];
-
-    const cacheKey = `companies_with_counts:${organizationId}`;
-    const cachedData = companiesCache.get(cacheKey);
-    if (cachedData) return cachedData;
 
     const companies = await prisma.company.findMany({
         where: { organizationId },
@@ -686,16 +667,11 @@ export async function getCompanyWithTicketAndEmployeeCount(organizationId: strin
         };
     });
 
-    companiesCache.set(cacheKey, companiesWithCounts);
     return companiesWithCounts;
 }
 
 export async function getCompanyDetails(organizationId: string, companyId: string): Promise<Company | null> {
     if (!organizationId || !companyId) return null;
-
-    const cacheKey = `company_details:${organizationId}:${companyId}`;
-    const cachedCompany = companiesCache.get(cacheKey);
-    if (cachedCompany) return cachedCompany;
 
     try {
         const company = await prisma.company.findUnique({
@@ -747,11 +723,6 @@ export async function updateCompany(
         data: updateData,
     });
 
-    // Invalidate company caches
-    companiesCache.invalidate(`company_details:${organizationId}:${companyId}`);
-    companiesCache.invalidate(`companies:${organizationId}`);
-    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
-
     return { success: true };
 }
 
@@ -764,11 +735,6 @@ export async function deleteCompany(organizationId: string, companyId: string) {
     await prisma.company.delete({
         where: { id: companyId },
     });
-
-    // Invalidate caches
-    companiesCache.invalidate(`company_details:${organizationId}:${companyId}`);
-    companiesCache.invalidate(`companies:${organizationId}`);
-    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
 
     return { success: true };
 }
@@ -805,18 +771,10 @@ export async function addEmployeeToCompany(organizationId: string, companyId: st
             status: 'UNINVITED',
         },
     });
-
-    // Invalidate caches
-    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
-    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
 }
 
 export async function getCompanyEmployees(organizationId: string, companyId: string): Promise<Employee[]> {
     if (!organizationId || !companyId) return [];
-
-    const cacheKey = `employees:${organizationId}:${companyId}`;
-    const cachedEmployees = companiesCache.get(cacheKey);
-    if (cachedEmployees) return cachedEmployees;
 
     const employees = await prisma.employee.findMany({
         where: { companyId },
@@ -840,7 +798,6 @@ export async function getCompanyEmployees(organizationId: string, companyId: str
         uid: e.userId || undefined,
     }));
 
-    companiesCache.set(cacheKey, formattedEmployees);
     return formattedEmployees;
 }
 
@@ -894,9 +851,6 @@ export async function updateCompanyEmployee(
         },
     });
 
-    // Invalidate caches
-    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
-
     return { success: true };
 }
 
@@ -931,10 +885,6 @@ export async function deleteCompanyEmployee(organizationId: string, companyId: s
         }
     }
 
-    // Invalidate caches
-    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
-    companiesCache.invalidate(`companies_with_counts:${organizationId}`);
-
     return { success: true };
 }
 
@@ -954,15 +904,15 @@ async function getNextTicketNumber(organizationId: string): Promise<number> {
 }
 
 // Helper function to map priority strings to enum
-function mapPriorityToEnum(priority: string): 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
-    const map: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'> = {
+function mapPriorityToEnum(priority: string): 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
+    const map: Record<string, 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'> = {
+        'None': 'NONE',
         'Low': 'LOW',
         'Medium': 'MEDIUM',
         'High': 'HIGH',
         'Urgent': 'URGENT',
-        'None': 'MEDIUM', // Default to MEDIUM
     };
-    return map[priority] || 'MEDIUM';
+    return map[priority] || 'NONE';
 }
 
 // Helper function to map status strings to enum
@@ -1034,18 +984,23 @@ export async function createTicket(
                 body,
                 bodyContentType: 'html',
                 receivedDateTime: new Date(),
-                priority: 'MEDIUM',
+                priority: 'NONE',
                 status: 'OPEN',
                 type: 'QUESTION',
                 creatorId: author.uid,
+                hasAttachments: attachments && attachments.length > 0,
             },
         });
 
-        // TODO: Send email notifications (keeping email logic from old function)
-        // This would involve calling sendEmailAction and storing conversation
-
-        // Invalidate tickets cache
-        ticketsCache.invalidate(`tickets:${organizationId}`);
+        // Send ticket creation notification to client
+        if (isClient) {
+            await sendTicketCreationNotification(
+                organizationId,
+                newTicket,
+                author.email,
+                author.name
+            );
+        }
 
         return { success: true, id: newTicket.id };
     } catch (error) {
@@ -1057,21 +1012,29 @@ export async function createTicket(
 
 export async function getTicketsFromDB(
     organizationId: string,
-    options?: { includeArchived?: boolean; fetchAll?: boolean; companyId?: string }
+    options?: { includeArchived?: boolean; onlyArchived?: boolean; fetchAll?: boolean; companyId?: string }
 ): Promise<Email[]> {
     if (!organizationId) return [];
-
-    const cacheKey = `tickets:${organizationId}:${JSON.stringify(options || {})}`;
-    const cachedTickets = ticketsCache.get(cacheKey);
-    if (cachedTickets) return cachedTickets;
 
     const whereClause: Prisma.TicketWhereInput = {
         organizationId,
     };
 
-    if (!options?.includeArchived) {
-        whereClause.status = { not: 'ARCHIVED' };
+    // Handle archived ticket filtering
+    if (options?.onlyArchived) {
+        // Show ONLY archived tickets
+        whereClause.AND = [
+            { status: 'ARCHIVED' },
+            { archivedAt: { not: null } }
+        ];
+    } else if (!options?.includeArchived) {
+        // Filter out archived tickets using both status and archivedAt for extra safety
+        whereClause.AND = [
+            { status: { not: 'ARCHIVED' } },
+            { archivedAt: null }
+        ];
     }
+    // If includeArchived is true and onlyArchived is false, show all tickets
 
     if (options?.companyId) {
         whereClause.companyId = options.companyId;
@@ -1096,6 +1059,7 @@ export async function getTicketsFromDB(
             lastReplier: true,
             companyId: true,
             assigneeId: true,
+            archivedAt: true,
             company: {
                 select: {
                     name: true,
@@ -1118,6 +1082,21 @@ export async function getTicketsFromDB(
         },
         take: 100, // Limit to last 100 tickets for performance
     });
+
+    // Log ticket filtering for debugging
+    const archivedCount = tickets.filter(t => t.status === 'ARCHIVED').length;
+    const nonArchivedCount = tickets.filter(t => t.status !== 'ARCHIVED').length;
+    console.log(`[getTicketsFromDB] Query options:`, { 
+        includeArchived: options?.includeArchived, 
+        onlyArchived: options?.onlyArchived,
+        companyId: options?.companyId 
+    });
+    console.log(`[getTicketsFromDB] Results: ${tickets.length} total (${archivedCount} archived, ${nonArchivedCount} non-archived)`);
+    
+    if (archivedCount > 0 && !options?.onlyArchived) {
+        console.warn(`[getTicketsFromDB] WARNING: Returning ${archivedCount} archived tickets when onlyArchived is not set!`);
+        console.log(`[getTicketsFromDB] Archived ticket IDs:`, tickets.filter(t => t.status === 'ARCHIVED').map(t => `#${t.ticketNumber}`));
+    }
 
     // Map to Email interface format for compatibility
     const formattedTickets: Email[] = tickets.map(ticket => ({
@@ -1142,8 +1121,76 @@ export async function getTicketsFromDB(
         assigneeName: ticket.assignee?.name || 'Unassigned',
     }));
 
-    ticketsCache.set(cacheKey, formattedTickets);
     return formattedTickets;
+}
+
+async function sendTicketCreationNotification(
+    organizationId: string,
+    ticket: any,
+    clientEmail: string,
+    clientName: string
+): Promise<void> {
+    try {
+        const settings = await getAPISettings(organizationId);
+        if (!settings) {
+            console.error('Cannot send ticket creation notification: API settings not configured');
+            return;
+        }
+
+        const accessToken = await getAccessToken(settings);
+        const client = Client.init({
+            authProvider: (done: any) => {
+                done(null, accessToken);
+            },
+        });
+
+        // Get the base URL from environment
+        const baseUrl = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+        const ticketUrl = `https://${baseUrl}/tickets/${ticket.id}`;
+
+        const subject = `Ticket Created: #${ticket.ticketNumber} - ${ticket.subject}`;
+        const body = `
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #4F46E5;">Ticket Created Successfully</h2>
+                <p>Hello ${clientName},</p>
+                <p>Your support ticket has been created and our team will respond shortly.</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p><strong>Ticket #:</strong> ${ticket.ticketNumber}</p>
+                    <p><strong>Subject:</strong> ${ticket.subject}</p>
+                    <p><strong>Status:</strong> ${ticket.status}</p>
+                    <p><strong>Created:</strong> ${new Date(ticket.receivedDateTime).toLocaleString()}</p>
+                </div>
+                <p>${ticketUrl}</p>
+                <p>You can track the status of your ticket using the link above.</p>
+                <p style="margin-top: 30px; color: #666; font-size: 12px;">
+                    This is an automated notification from your ticketing system.
+                </p>
+            </body>
+            </html>
+        `;
+
+        const message = {
+            subject,
+            body: {
+                contentType: 'HTML',
+                content: body,
+            },
+            toRecipients: [
+                {
+                    emailAddress: {
+                        address: clientEmail,
+                    },
+                },
+            ],
+        };
+
+        await client.api(`/users/${settings.userId}/sendMail`).post({ message });
+        console.log(`Ticket creation notification sent to ${clientEmail} for ticket #${ticket.ticketNumber}`);
+    } catch (error) {
+        console.error('Error sending ticket creation notification:', error);
+        // Don't throw error - notification failure shouldn't block ticket creation
+    }
 }
 
 async function sendAssignmentNotification(
@@ -1168,7 +1215,7 @@ async function sendAssignmentNotification(
 
         // Get the base URL from environment
         const baseUrl = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
-        const ticketUrl = `${baseUrl}/tickets/${ticket.id}`;
+        const ticketUrl = `https://${baseUrl}/tickets/${ticket.id}`;
 
         const subject = `You've been assigned to Ticket #${ticket.ticketNumber}: ${ticket.subject}`;
         const body = `
@@ -1185,13 +1232,7 @@ async function sendAssignmentNotification(
                     <p><strong>Type:</strong> ${ticket.type}</p>
                     ${ticket.deadline ? `<p><strong>Deadline:</strong> ${new Date(ticket.deadline).toLocaleDateString()}</p>` : ''}
                 </div>
-                <div style="margin: 30px 0;">
-                    <a href="${ticketUrl}" 
-                       style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                        View Ticket
-                    </a>
-                </div>
-                <p>Or copy this link: <a href="${ticketUrl}" style="color: #4F46E5;">${ticketUrl}</a></p>
+                <p>${ticketUrl}</p>
                 <p>Please review and respond to this ticket at your earliest convenience.</p>
                 <p style="margin-top: 30px; color: #666; font-size: 12px;">
                     This is an automated notification from your ticketing system.
@@ -1248,6 +1289,12 @@ export async function updateTicket(
         }
 
         if (data.status) {
+            // Prevent setting ARCHIVED status through updateTicket - must use archiveTickets function
+            if (data.status === 'Archived') {
+                console.warn(`[updateTicket] Attempted to set ticket ${id} to ARCHIVED via updateTicket. Use archiveTickets() instead.`);
+                return { success: false, error: 'Cannot archive tickets through status update. Use the archive function instead.' };
+            }
+            
             updateData.status = mapStatusToEnum(data.status);
             if (data.status === 'Resolved' || data.status === 'Closed') {
                 updateData.closedAt = new Date();
@@ -1329,11 +1376,6 @@ export async function updateTicket(
             }
         }
 
-        // Invalidate tickets cache
-        ticketsCache.invalidate(`tickets:${organizationId}`);
-        // Also invalidate the individual ticket cache so detail page shows fresh data
-        ticketsCache.invalidate(`ticket:${organizationId}:${id}`);
-
         return { success: true };
     } catch (error) {
         console.error('Error updating ticket:', error);
@@ -1359,11 +1401,11 @@ export async function archiveTickets(organizationId: string, ticketIds: string[]
             },
             data: {
                 status: 'ARCHIVED',
+                archivedAt: new Date(),
             },
         });
 
-        // Invalidate tickets cache
-        ticketsCache.invalidate(`tickets:${organizationId}`);
+        console.log(`[archiveTickets] Archived ${ticketIds.length} tickets:`, ticketIds);
 
         return { success: true };
     } catch (error) {
@@ -1390,11 +1432,11 @@ export async function unarchiveTickets(organizationId: string, ticketIds: string
             },
             data: {
                 status: 'OPEN',
+                archivedAt: null,
             },
         });
 
-        // Invalidate tickets cache
-        ticketsCache.invalidate(`tickets:${organizationId}`);
+        console.log(`[unarchiveTickets] Unarchived ${ticketIds.length} tickets:`, ticketIds);
 
         return { success: true };
     } catch (error) {
@@ -1430,10 +1472,6 @@ export async function addActivityLog(
             },
         });
 
-        // Invalidate activity cache
-        activityCache.invalidate(`activity:${organizationId}:${ticketId}`);
-        activityCache.invalidate(`all_activity:${organizationId}`);
-
         return { success: true };
     } catch (error) {
         console.error('Error adding activity log:', error);
@@ -1446,10 +1484,6 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
     if (!organizationId || !ticketId) {
         return [];
     }
-
-    const cacheKey = `activity:${organizationId}:${ticketId}`;
-    const cachedLogs = activityCache.get(cacheKey);
-    if (cachedLogs) return cachedLogs;
 
     try {
         const logs = await prisma.activityLog.findMany({
@@ -1474,7 +1508,6 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
             ticketSubject: log.ticketSubject || undefined,
         }));
 
-        activityCache.set(cacheKey, formattedLogs);
         return formattedLogs;
     } catch (error) {
         console.error('Error fetching activity log:', error);
@@ -1486,10 +1519,6 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
     if (!organizationId) {
         return [];
     }
-
-    const cacheKey = `all_activity:${organizationId}`;
-    const cachedLogs = activityCache.get(cacheKey);
-    if (cachedLogs) return cachedLogs;
 
     try {
         const logs = await prisma.activityLog.findMany({
@@ -1512,7 +1541,6 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
             ticketSubject: log.ticketSubject || undefined,
         }));
 
-        activityCache.set(cacheKey, formattedLogs);
         return formattedLogs;
     } catch (error) {
         console.error('Error fetching all activity logs:', error);
@@ -1524,10 +1552,6 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
     if (!organizationId || !companyId) {
         return [];
     }
-
-    const cacheKey = `company_activity:${organizationId}:${companyId}`;
-    const cachedLogs = activityCache.get(cacheKey);
-    if (cachedLogs) return cachedLogs;
 
     try {
         // Get all tickets for this company
@@ -1569,7 +1593,6 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
             ticketSubject: log.ticketSubject || undefined,
         }));
 
-        activityCache.set(cacheKey, formattedLogs);
         return formattedLogs;
     } catch (error) {
         console.error('Error fetching company activity logs:', error);
@@ -1726,6 +1749,8 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
 
         let ticketsCreated = 0;
         for (const email of emailsToProcess) {
+            console.log(`[${organizationId}] Processing email: "${email.subject}" from ${email.from.emailAddress.address}`);
+            
             if (!email.conversationId) {
                 console.log(`[${organizationId}] Skipping email ID ${email.id} - no conversationId.`);
                 continue;
@@ -1789,6 +1814,9 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
 
             if (employee) {
                 companyId = employee.companyId;
+                console.log(`[${organizationId}] Found employee for ${senderEmailLower}, companyId: ${companyId}`);
+            } else {
+                console.log(`[${organizationId}] No employee found for ${senderEmailLower}, creating ticket without company`);
             }
 
             // Get next ticket number
@@ -1808,14 +1836,30 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
                     bodyContentType: firstMessage.body?.contentType || 'html',
                     receivedDateTime: new Date(firstMessage.receivedDateTime),
                     conversationId: email.conversationId,
-                    priority: 'MEDIUM',
+                    priority: 'NONE',
                     status: 'OPEN',
                     type: 'QUESTION',
+                    hasAttachments: firstMessage.hasAttachments || false,
                 },
             });
 
             console.log(`[${organizationId}] Created new ticket #${ticketNumber} with ID ${newTicket.id}`);
             ticketsCreated++;
+
+            // Store attachments if any
+            if (firstMessage.attachments && firstMessage.attachments.length > 0) {
+                await prisma.attachment.createMany({
+                    data: firstMessage.attachments.map(att => ({
+                        ticketId: newTicket.id,
+                        name: att.name,
+                        contentType: att.contentType,
+                        size: att.size,
+                        isInline: att.isInline || false,
+                        contentId: att.contentId || null,
+                    })),
+                });
+                console.log(`[${organizationId}] Stored ${firstMessage.attachments.length} attachments for ticket #${ticketNumber}`);
+            }
 
             // Add activity log
             await addActivityLog(organizationId, newTicket.id, {
@@ -1825,8 +1869,15 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
                 user: firstMessage.senderEmail || 'System',
             });
 
-            // Invalidate tickets cache
-            ticketsCache.invalidate(`tickets:${organizationId}`);
+            // Send ticket creation notification to client
+            const senderEmail = firstMessage.senderEmail || senderEmailLower;
+            const senderName = firstMessage.sender || 'Client';
+            await sendTicketCreationNotification(
+                organizationId,
+                newTicket,
+                senderEmail,
+                senderName
+            );
         }
 
         console.log(`[${organizationId}] Email sync completed successfully. Tickets created: ${ticketsCreated}`);
@@ -2341,9 +2392,6 @@ export async function sendEmployeeVerificationEmail(
         data: { status: 'INVITED' },
     });
 
-    // Invalidate employee cache
-    companiesCache.invalidate(`employees:${organizationId}:${companyId}`);
-
     const parentDomain = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
     const signupUrl = `https://${parentDomain}/member-signup`;
 
@@ -2374,9 +2422,7 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         throw new Error("Organization ID and Ticket ID must be provided.");
     }
 
-    const cacheKey = `ticket:${organizationId}:${id}`;
-    const cachedEmail = ticketsCache.get(cacheKey);
-    if (cachedEmail) return cachedEmail;
+    console.log(`[getEmail] Looking for ticket with ID: ${id}, orgId: ${organizationId}`);
 
     // Get ticket from PostgreSQL
     const ticket = await prisma.ticket.findFirst({
@@ -2402,28 +2448,23 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     });
 
     if (!ticket) {
+        console.log(`[getEmail] Ticket not found in database for ID: ${id}`);
         return null;
     }
+    
+    console.log(`[getEmail] Found ticket #${ticket.ticketNumber}: ${ticket.subject}`);
 
     const conversationId = ticket.conversationId;
     let conversationMessages: DetailedEmail[] = [];
 
     if (conversationId) {
-        const conversationCacheKey = `conversation:${organizationId}:${conversationId}`;
-        const cachedConversation = ticketsCache.get(conversationCacheKey);
+        // Get conversation from PostgreSQL
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+        });
 
-        if (cachedConversation) {
-            conversationMessages = cachedConversation;
-        } else {
-            // Get conversation from PostgreSQL
-            const conversation = await prisma.conversation.findUnique({
-                where: { id: conversationId },
-            });
-
-            if (conversation && conversation.messages) {
-                conversationMessages = conversation.messages as any as DetailedEmail[];
-                ticketsCache.set(conversationCacheKey, conversationMessages);
-            }
+        if (conversation && conversation.messages) {
+            conversationMessages = conversation.messages as any as DetailedEmail[];
         }
     }
 
@@ -2497,7 +2538,6 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         })),
     };
 
-    ticketsCache.set(cacheKey, mainEmailDetails);
     return mainEmailDetails;
 }
 

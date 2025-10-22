@@ -54,6 +54,10 @@ const prepareHtmlContent = (htmlContent: string, attachments: Attachment[] | und
 
     let processedHtml = htmlContent;
 
+    // Remove "Reply by [Name]:" prefix from frontend display (it's only for email inbox)
+    processedHtml = processedHtml.replace(/^<strong>Reply by .*?:<\/strong><br\s*\/?><br\s*\/?>/i, '');
+    processedHtml = processedHtml.replace(/^Reply by .*?:\s*(<br\s*\/?>){1,2}/i, '');
+
     if (attachments) {
         // Find all inline attachments
         const inlineAttachments = attachments.filter(att => att.isInline && att.contentId);
@@ -266,10 +270,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         fetchDropdownData();
     }, [userProfile]);
 
-    const fetchEmailData = useCallback(async () => {
+    const fetchEmailData = useCallback(async (showLoading = false) => {
         if (!id || !userProfile?.organizationId) return;
     
-        setIsLoading(true);
+        if (showLoading) {
+            setIsLoading(true);
+        }
+        
         try {
             const detailedEmail = await getEmail(userProfile.organizationId, id);
             
@@ -291,21 +298,92 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
             setError(errorMessage);
-            toast({
-                variant: "destructive",
-                title: "Failed to load email.",
-                description: "This might happen if the email was deleted or if there's a network issue.",
-            });
+            if (showLoading) {
+                toast({
+                    variant: "destructive",
+                    title: "Failed to load email.",
+                    description: "This might happen if the email was deleted or if there's a network issue.",
+                });
+            }
         } finally {
-            setIsLoading(false);
+            if (showLoading) {
+                setIsLoading(false);
+            }
         }
     }, [id, toast, userProfile?.organizationId]);
 
     useEffect(() => {
-        fetchEmailData();
+        // Initial fetch with loading state
+        fetchEmailData(true);
+
+        // Smart polling with activity detection
+        let pollInterval: NodeJS.Timeout | null = null;
+        let lastActivityTime = Date.now();
+        let currentInterval = 5000; // Start with 5 seconds
+
+        const ACTIVE_INTERVAL = 10000;    // 5 seconds when active
+        const IDLE_INTERVAL = 30000;     // 30 seconds when idle (no activity for 2 minutes)
+        const IDLE_THRESHOLD = 120000;   // 2 minutes of inactivity
+
+        const updatePollInterval = () => {
+            const timeSinceActivity = Date.now() - lastActivityTime;
+            const newInterval = timeSinceActivity > IDLE_THRESHOLD ? IDLE_INTERVAL : ACTIVE_INTERVAL;
+
+            if (newInterval !== currentInterval) {
+                currentInterval = newInterval;
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                }
+                pollInterval = setInterval(() => {
+                    if (!document.hidden) {
+                        fetchEmailData(false);
+                    }
+                }, currentInterval);
+                console.log(`[Smart Polling - Ticket Detail] Interval changed to ${currentInterval / 1000}s`);
+            }
+        };
+
+        const handleActivity = () => {
+            lastActivityTime = Date.now();
+            updatePollInterval();
+        };
+
+        // Track user activity
+        const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => {
+            window.addEventListener(event, handleActivity);
+        });
+
+        // Handle visibility change (stop polling when tab is hidden)
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                // Tab became visible, fetch immediately and reset activity
+                lastActivityTime = Date.now();
+                fetchEmailData(false);
+                updatePollInterval();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Start initial polling
+        pollInterval = setInterval(() => {
+            if (!document.hidden) {
+                fetchEmailData(false);
+                updatePollInterval();
+            }
+        }, currentInterval);
+
+        // Cleanup
+        return () => {
+            if (pollInterval) clearInterval(pollInterval);
+            activityEvents.forEach(event => {
+                window.removeEventListener(event, handleActivity);
+            });
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [fetchEmailData]);
     
-    // Data is fetched once and updated via manual refresh or when actions are performed
+    // Data is fetched automatically every 5 seconds to show new replies without refreshing
 
     
     const handleUpdate = async (field: 'priority' | 'status' | 'type' | 'deadline' | 'tags' | 'companyId' | 'assignee', value: any) => {
@@ -331,8 +409,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                 description: `The ${field} has been changed.`,
             });
             
-            // Refresh ticket data to get updated assignee info
-            await fetchEmailData();
+            // Refresh ticket data to get updated assignee info (without loading state)
+            await fetchEmailData(false);
         }
     };
 
@@ -450,15 +528,28 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const isClientReplying = userProfile.isClient === true;
             const isOwnerReplying = user.id === userProfile.organizationOwnerUid;
             
+            // Get the original message to include as quoted text
+            const originalMessage = email.conversation?.find(m => m.id === tempReplyToMessageId);
+            
+            // Add "Reply by [Name]:" prefix to the email content (for inbox only)
+            const senderName = userProfile.name || user.email;
+            let emailContent = `<strong>Reply by ${senderName}:</strong><br><br>${replyContent}`;
+            
+            // Add quoted original message
+            if (originalMessage) {
+                const originalDate = format(parseISO(originalMessage.receivedDateTime), 'EEE, MMM d, yyyy \'at\' h:mm a');
+                emailContent += `<br><br><hr><br><strong>On ${originalDate}, ${originalMessage.sender} &lt;${originalMessage.senderEmail}&gt; wrote:</strong><br><blockquote style="margin: 0 0 0 10px; padding-left: 10px; border-left: 2px solid #ccc;">${originalMessage.body.content}</blockquote>`;
+            }
+            
             const result = await replyToEmailAction(
                 userProfile.organizationId,
                 email.id,
                 tempReplyToMessageId, 
-                replyContent, 
+                emailContent, // Send with "Reply by" prefix
                 email?.conversationId, 
                 attachmentPayloads,
                 { 
-                    name: userProfile.name || user.email, 
+                    name: senderName, 
                     email: user.email, 
                     isClient: isClientReplying, 
                     status: userProfile.status,
@@ -470,7 +561,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             );
             
             if (result.success) {
-                 toast({ title: "Reply sent.", description: "It may take a few minutes to appear. Kindly refresh the page." });
+                toast({ title: "Reply sent.", description: "Your reply has been sent successfully." });
+                
+                // Refresh the email data to show the new reply
+                const refreshedEmail = await getEmail(userProfile.organizationId, email.id);
+                if (refreshedEmail) {
+                    setEmail(refreshedEmail);
+                }
             }
 
             // Clear state after action
@@ -482,6 +579,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             setReplyBcc('');
             setShowReplyCc(false);
             setShowReplyBcc(false);
+            setReplyingToMessageId(null);
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -552,6 +650,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if (!message || !user?.email || !userProfile || !adminEmail || !email) return;
 
         const isClientReplying = userProfile.isClient === true;
+        const isAdminReplying = user.id === userProfile.organizationOwnerUid;
         
         setReplyingToMessageId(messageId);
         setForwardingMessageId(null);
@@ -563,27 +662,33 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyType('reply');
     
         const ccRecipients = new Set<string>();
+        const adminEmailLower = adminEmail.toLowerCase();
 
         if (isClientReplying) {
-            ccRecipients.add(user.email.toLowerCase());
+            // Client replying - add assigned agent
+            const assignedAgent = members.find(m => m.uid === email.assignee);
+            if (assignedAgent?.email) {
+                ccRecipients.add(assignedAgent.email.toLowerCase());
+            }
+        } else if (isAdminReplying) {
+            // Admin replying - CC: sender + assigned agent (if exists)
+            if (email?.senderEmail) {
+                ccRecipients.add(email.senderEmail.toLowerCase());
+            }
+            
             const assignedAgent = members.find(m => m.uid === email.assignee);
             if (assignedAgent?.email) {
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
         } else {
-            if (user.id !== userProfile.organizationOwnerUid) {
-                ccRecipients.add(user.email.toLowerCase());
+            // Assigned agent replying - CC: sender + agent's own email
+            if (email?.senderEmail) {
+                ccRecipients.add(email.senderEmail.toLowerCase());
             }
-            if (email?.creator?.email) {
-                ccRecipients.add(email.creator.email.toLowerCase());
-            }
-            const assignedAgent = members.find(m => m.uid === email.assignee);
-             if (assignedAgent?.email) {
-                ccRecipients.add(assignedAgent.email.toLowerCase());
-            }
+            
+            // Add the agent's own email
+            ccRecipients.add(user.email.toLowerCase());
         }
-        
-        ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
@@ -595,6 +700,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         if (!message || !user?.email || !userProfile || !adminEmail || !email) return;
         
         const isClientReplying = userProfile.isClient === true;
+        const isAdminReplying = user.id === userProfile.organizationOwnerUid;
 
         setReplyingToMessageId(messageId);
         setReplyType('reply-all');
@@ -604,34 +710,48 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setReplyContent('');
 
         const ccRecipients = new Set<string>();
+        const adminEmailLower = adminEmail.toLowerCase();
 
-        message.ccRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
-        message.toRecipients?.forEach(r => ccRecipients.add(r.emailAddress.address.toLowerCase()));
+        // Add original CC recipients
+        message.ccRecipients?.forEach(r => {
+            ccRecipients.add(r.emailAddress.address.toLowerCase());
+        });
         
+        // Add original To recipients
+        message.toRecipients?.forEach(r => {
+            ccRecipients.add(r.emailAddress.address.toLowerCase());
+        });
+        
+        // Add sender
         if (message.senderEmail) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
         if (isClientReplying) {
-            ccRecipients.add(user.email.toLowerCase());
+            // Client replying - add assigned agent
+            const assignedAgent = members.find(m => m.uid === email.assignee);
+            if (assignedAgent?.email) {
+                ccRecipients.add(assignedAgent.email.toLowerCase());
+            }
+        } else if (isAdminReplying) {
+            // Admin replying - ensure sender + assigned agent are in CC
+            if (email?.senderEmail) {
+                ccRecipients.add(email.senderEmail.toLowerCase());
+            }
+            
             const assignedAgent = members.find(m => m.uid === email.assignee);
             if (assignedAgent?.email) {
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
         } else {
-            if (user.id !== userProfile.organizationOwnerUid) {
-                ccRecipients.add(user.email.toLowerCase());
+            // Assigned agent replying - ensure sender + agent's own email are in CC
+            if (email?.senderEmail) {
+                ccRecipients.add(email.senderEmail.toLowerCase());
             }
-            if (email?.creator?.email) {
-                ccRecipients.add(email.creator.email.toLowerCase());
-            }
-            const assignedAgent = members.find(m => m.uid === email.assignee);
-             if (assignedAgent?.email) {
-                ccRecipients.add(assignedAgent.email.toLowerCase());
-            }
+            
+            // Add the agent's own email
+            ccRecipients.add(user.email.toLowerCase());
         }
-
-        ccRecipients.delete(adminEmail.toLowerCase());
         
         setReplyTo(adminEmail);
         setReplyCc(Array.from(ccRecipients).join(', '));
@@ -776,8 +896,10 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                         <Avatar className="h-10 w-10">
                             <AvatarFallback>{message.sender}</AvatarFallback>
                         </Avatar>
-                        <div className="grid gap-1 text-sm">
-                            <div className="font-semibold">{message.sender}</div>
+                        <div className="grid gap-1 text-sm flex-1">
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold">{message.sender}</span>
+                            </div>
                             <div className="text-xs text-muted-foreground">
                                 <p>
                                     <span className="font-semibold">From:</span> {message.senderEmail}
@@ -811,7 +933,12 @@ const renderMessageCard = (message: DetailedEmail, isFirstInThread: boolean) => 
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {isFirstInThread && message.subject && (
+                        <div className="px-4 pt-4 pb-1">
+                            <h2 className="font-bold text-lg">{message.subject}</h2>
+                        </div>
+                    )}
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:no-underline hover:[&_a]:text-blue-800 dark:hover:[&_a]:text-blue-300">
                         <CollapsibleEmailContent htmlContent={prepareHtmlContent(message.body.content, message.attachments, () => {})} attachments={message.attachments} />
                     </div>
                     {regularAttachments.length > 0 && (
@@ -1214,7 +1341,7 @@ return (
                             </Link>
                         </Button>
                         <h1 className="text-xl font-bold truncate">
-                            {email?.ticketNumber && <span className="text-muted-foreground">#{email.ticketNumber}</span>} {email?.subject || "Ticket Details"}
+                            {email?.ticketNumber && <span className="text-muted-foreground">Ticket #{email.ticketNumber}</span>}
                         </h1>
                     </div>
                 </Header>

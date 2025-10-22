@@ -157,12 +157,13 @@ model Ticket {
   body              String    @db.Text
   bodyContentType   String    @default("html")
   receivedDateTime  DateTime
-  priority          TicketPriority @default(MEDIUM)
+  priority          TicketPriority @default(NONE)
   status            TicketStatus   @default(OPEN)
   type              TicketType     @default(QUESTION)
   conversationId    String?
   deadline          DateTime?
   closedAt          DateTime?
+  archivedAt        DateTime? // Timestamp when ticket was archived
   lastReplier       String?   // 'agent' or 'client'
   assigneeId        String?
   creatorId         String?
@@ -196,6 +197,7 @@ model Ticket {
 }
 
 enum TicketPriority {
+  NONE
   LOW
   MEDIUM
   HIGH

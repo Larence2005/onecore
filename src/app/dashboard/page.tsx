@@ -63,7 +63,7 @@ function HomePageContent() {
 
     setIsLoading(true);
 
-    const fetchTickets = async () => {
+    const fetchTickets = async (isInitialLoad = false) => {
       try {
         // Sync emails to tickets first (converts new emails to tickets)
         await syncEmailsToTickets(userProfile.organizationId!);
@@ -93,15 +93,86 @@ function HomePageContent() {
 
         setEmails(filteredTickets);
         setCompanies(fetchedCompanies);
-        setIsLoading(false);
+        if (isInitialLoad) {
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('Error fetching tickets:', error);
         setError('Failed to load tickets');
-        setIsLoading(false);
+        if (isInitialLoad) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchTickets();
+    // Initial fetch
+    fetchTickets(true);
+
+    // Smart polling with activity detection
+    let pollInterval: NodeJS.Timeout | null = null;
+    let lastActivityTime = Date.now();
+    let currentInterval = 10000; // Start with 5 seconds
+
+    const ACTIVE_INTERVAL = 10000;    // 5 seconds when active
+    const IDLE_INTERVAL = 30000;     // 30 seconds when idle (no activity for 2 minutes)
+    const IDLE_THRESHOLD = 120000;   // 2 minutes of inactivity
+
+    const updatePollInterval = () => {
+      const timeSinceActivity = Date.now() - lastActivityTime;
+      const newInterval = timeSinceActivity > IDLE_THRESHOLD ? IDLE_INTERVAL : ACTIVE_INTERVAL;
+
+      if (newInterval !== currentInterval) {
+        currentInterval = newInterval;
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+        pollInterval = setInterval(() => {
+          if (!document.hidden) {
+            fetchTickets(false);
+          }
+        }, currentInterval);
+        console.log(`[Smart Polling] Interval changed to ${currentInterval / 1000}s`);
+      }
+    };
+
+    const handleActivity = () => {
+      lastActivityTime = Date.now();
+      updatePollInterval();
+    };
+
+    // Track user activity
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity);
+    });
+
+    // Handle visibility change (stop polling when tab is hidden)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab became visible, fetch immediately and reset activity
+        lastActivityTime = Date.now();
+        fetchTickets(false);
+        updatePollInterval();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Start initial polling
+    pollInterval = setInterval(() => {
+      if (!document.hidden) {
+        fetchTickets(false);
+        updatePollInterval();
+      }
+    }, currentInterval);
+
+    // Cleanup
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user, userProfile]);
 
 

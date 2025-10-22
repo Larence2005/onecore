@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
           data: {
             email: validatedData.email.toLowerCase(),
             password: hashedPassword,
+            name: orgMember.name,
             emailVerified: new Date(),
           },
         });

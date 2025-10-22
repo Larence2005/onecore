@@ -34,7 +34,7 @@ interface TicketsFilterProps {
 }
 
 const statusOptions = ['Open', 'Pending', 'Resolved', 'Closed'];
-const priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
+const priorityOptions = ['None', 'Low', 'Medium', 'High', 'Urgent'];
 const typeOptions = ['Questions', 'Incident', 'Problem', 'Feature Request'];
 
 export function TicketsFilter({ onApplyFilters }: TicketsFilterProps) {

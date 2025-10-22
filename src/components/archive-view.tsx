@@ -31,7 +31,7 @@ export function ArchiveView() {
         setError(null);
         try {
             const tickets = await getTicketsFromDB(userProfile.organizationId, { 
-                includeArchived: true, 
+                onlyArchived: true, 
             });
             setArchivedTickets(tickets);
         } catch (err) {
@@ -48,10 +48,10 @@ export function ArchiveView() {
     };
 
     useEffect(() => {
-        if (user && userProfile) {
+        if (user && userProfile?.organizationId) {
             fetchArchivedTickets();
         }
-    }, [user, userProfile]);
+    }, [userProfile?.organizationId]); // Only depend on organizationId to avoid double-fetch
 
     const paginatedTickets = useMemo(() => {
         const startIndex = (currentPage - 1) * ticketsPerPage;

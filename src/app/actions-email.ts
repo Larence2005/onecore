@@ -159,40 +159,147 @@ export async function replyToEmailAction(
     ticketId: string,
     messageId: string,
     replyBody: string,
-    replyAll: boolean = false,
-    attachments?: NewAttachment[]
+    conversationId: string | null | undefined,
+    attachments: NewAttachment[] | undefined,
+    sender: { name: string; email: string; isClient: boolean; status: string; isOwner: boolean },
+    toRecipient: string,
+    ccRecipients: string,
+    bccRecipients: string
 ): Promise<{ success: boolean; error?: string }> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
         return { success: false, error: 'API credentials not configured.' };
     }
 
-    const url = replyAll
-        ? `https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/replyAll`
-        : `https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`;
+    const url = `https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`;
 
     const headers = {
         Authorization: `Bearer ${settings.accessToken}`,
         'Content-Type': 'application/json',
     };
 
-    const payload: any = {
-        comment: replyBody,
+    const payload: any = {};
+
+    // Set the reply body as HTML in the message object to preserve quoted text
+    payload.message = {
+        body: {
+            contentType: 'HTML',
+            content: replyBody
+        }
     };
 
+    // Add To, CC, BCC recipients
+    if (toRecipient || ccRecipients || bccRecipients) {
+        
+        // Admin email should never be in recipients
+        const adminEmail = settings.userId.toLowerCase();
+        
+        if (toRecipient) {
+            payload.message.toRecipients = toRecipient
+                .split(',')
+                .map((email: string) => email.trim())
+                .filter((email: string) => email.toLowerCase() !== adminEmail)
+                .map((email: string) => ({
+                    emailAddress: { address: email }
+                }));
+        }
+        
+        if (ccRecipients) {
+            payload.message.ccRecipients = ccRecipients
+                .split(',')
+                .map((email: string) => email.trim())
+                .filter((email: string) => email.toLowerCase() !== adminEmail)
+                .map((email: string) => ({
+                    emailAddress: { address: email }
+                }));
+        }
+        
+        if (bccRecipients) {
+            payload.message.bccRecipients = bccRecipients
+                .split(',')
+                .map((email: string) => email.trim())
+                .filter((email: string) => email.toLowerCase() !== adminEmail)
+                .map((email: string) => ({
+                    emailAddress: { address: email }
+                }));
+        }
+    }
+
     if (attachments && attachments.length > 0) {
-        payload.message = {
-            attachments: attachments.map(att => ({
-                '@odata.type': '#microsoft.graph.fileAttachment',
-                name: att.name,
-                contentType: att.contentType,
-                contentBytes: att.contentBytes,
-            })),
-        };
+        payload.message = payload.message || {};
+        payload.message.attachments = attachments.map(att => ({
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: att.name,
+            contentType: att.contentType,
+            contentBytes: att.contentBytes,
+        }));
     }
 
     try {
-        await axios.post(url, payload, { headers });
+        // Send the reply via Microsoft Graph API
+        const response = await axios.post(url, payload, { headers });
+        
+        // Store the reply in the database immediately
+        const { prisma } = await import('@/lib/prisma');
+        
+        // Get the ticket to find conversationId
+        const ticket = await prisma.ticket.findUnique({
+            where: { id: ticketId },
+            select: { conversationId: true },
+        });
+        
+        if (ticket?.conversationId) {
+            // Fetch current conversation
+            const conversation = await prisma.conversation.findUnique({
+                where: { id: ticket.conversationId },
+            });
+            
+            if (conversation) {
+                const messages = (conversation.messages as any[]) || [];
+                
+                // Create the new reply message object
+                const newMessage = {
+                    id: `reply-${Date.now()}`, // Temporary ID until email sync updates it
+                    subject: `Re: ${(messages[0] as any)?.subject || 'No Subject'}`,
+                    sender: sender.name,
+                    senderEmail: sender.email,
+                    bodyPreview: replyBody.substring(0, 255).replace(/<[^>]*>/g, ''),
+                    receivedDateTime: new Date().toISOString(),
+                    body: {
+                        contentType: 'html',
+                        content: replyBody,
+                    },
+                    attachments: attachments?.map(att => ({
+                        id: `att-${Date.now()}-${Math.random()}`,
+                        name: att.name,
+                        contentType: att.contentType,
+                        size: att.contentBytes ? Buffer.from(att.contentBytes, 'base64').length : 0,
+                        isInline: false,
+                    })) || [],
+                    hasAttachments: attachments && attachments.length > 0,
+                    toRecipients: toRecipient ? toRecipient.split(',').map((email: string) => ({
+                        emailAddress: { address: email.trim() }
+                    })) : [],
+                    ccRecipients: ccRecipients ? ccRecipients.split(',').map((email: string) => ({
+                        emailAddress: { address: email.trim() }
+                    })) : [],
+                    isReply: true, // Mark this as a reply to show badge
+                    repliedBy: sender.name, // Store who replied
+                };
+                
+                // Add the new message to the conversation
+                messages.push(newMessage);
+                
+                // Update the conversation in the database
+                await prisma.conversation.update({
+                    where: { id: ticket.conversationId },
+                    data: { messages: messages as any },
+                });
+                
+                console.log(`Stored reply in database for ticket ${ticketId}`);
+            }
+        }
+        
         return { success: true };
     } catch (error: any) {
         console.error('Error replying to email:', error.response?.data || error.message);
@@ -218,10 +325,16 @@ export async function forwardEmailAction(
         'Content-Type': 'application/json',
     };
 
+    // Filter out admin email from forward recipients
+    const adminEmail = settings.userId.toLowerCase();
+    const filteredRecipients = toRecipients
+        .map(email => email.trim())
+        .filter(email => email.toLowerCase() !== adminEmail);
+
     const payload = {
         comment: comment || '',
-        toRecipients: toRecipients.map(email => ({
-            emailAddress: { address: email.trim() }
+        toRecipients: filteredRecipients.map(email => ({
+            emailAddress: { address: email }
         })),
     };
 
@@ -326,6 +439,10 @@ export async function sendVerificationEmail(
                 status: 'INVITED',
             },
         });
+        
+        // Invalidate members cache so UI gets fresh data
+        const { invalidateMembersCache } = await import('@/app/actions-new');
+        await invalidateMembersCache(organizationId);
     }
 
     return result;

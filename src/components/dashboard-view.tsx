@@ -62,7 +62,11 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                 console.log('Email sync result:', syncResult);
                 
                 if (!syncResult.success) {
-                    console.error('Email sync failed:', syncResult.error);
+                    console.warn('Email sync skipped:', syncResult.error);
+                    // Don't show error if it's just API credentials not configured
+                    if (!syncResult.error?.includes('not configured') && !syncResult.error?.includes('invalid')) {
+                        console.error('Email sync failed:', syncResult.error);
+                    }
                 }
                 
                 // Fetch all tickets including archived for historical data
