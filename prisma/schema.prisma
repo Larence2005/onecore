@@ -41,6 +41,24 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// OTP model for signup verification
+model Otp {
+  id             String   @id @default(cuid())
+  email          String
+  otp            String
+  expiresAt      DateTime
+  resendCount    Int      @default(0)
+  verifyAttempts Int      @default(0)
+  firstSentAt    DateTime @default(now())
+  signupData     Json     // Store signup form data
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([email])
+  @@index([otp])
+  @@map("Otp")
+}
+
 // Organization model
 model Organization {
   id               String   @id @default(cuid())

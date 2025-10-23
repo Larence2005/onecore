@@ -171,6 +171,212 @@ export async function replyToEmailAction(
         return { success: false, error: 'API credentials not configured.' };
     }
 
+    // Check if this is a portal-created ticket (conversationId starts with "manual-")
+    const isPortalTicket = conversationId?.startsWith('manual-');
+    
+    // For portal tickets, we need to send as a new email (not a reply) since there's no original email to reply to
+    if (isPortalTicket) {
+        const { prisma } = await import('@/lib/prisma');
+        
+        // Get the ticket to find the subject
+        const ticket = await prisma.ticket.findUnique({
+            where: { id: ticketId },
+            select: { subject: true, conversationId: true },
+        });
+        
+        if (!ticket) {
+            return { success: false, error: 'Ticket not found.' };
+        }
+        
+        // Send as a new email with "Re:" prefix
+        const subject = `Re: ${ticket.subject}`;
+        
+        try {
+            // Send the email using sendMail endpoint instead of reply
+            const url = `https://graph.microsoft.com/v1.0/users/${settings.userId}/sendMail`;
+            const headers = {
+                Authorization: `Bearer ${settings.accessToken}`,
+                'Content-Type': 'application/json',
+            };
+            
+            const adminEmail = settings.userId.toLowerCase();
+            
+            const message: any = {
+                subject: subject,
+                body: {
+                    contentType: 'HTML',
+                    content: replyBody,
+                },
+                toRecipients: toRecipient
+                    .split(',')
+                    .map((email: string) => email.trim())
+                    .filter((email: string) => email && email.toLowerCase() !== adminEmail)
+                    .map((email: string) => ({
+                        emailAddress: { address: email }
+                    })),
+            };
+            
+            if (ccRecipients) {
+                message.ccRecipients = ccRecipients
+                    .split(',')
+                    .map((email: string) => email.trim())
+                    .filter((email: string) => email && email.toLowerCase() !== adminEmail)
+                    .map((email: string) => ({
+                        emailAddress: { address: email }
+                    }));
+            }
+            
+            if (bccRecipients) {
+                message.bccRecipients = bccRecipients
+                    .split(',')
+                    .map((email: string) => email.trim())
+                    .filter((email: string) => email && email.toLowerCase() !== adminEmail)
+                    .map((email: string) => ({
+                        emailAddress: { address: email }
+                    }));
+            }
+            
+            if (attachments && attachments.length > 0) {
+                message.attachments = attachments.map(att => ({
+                    '@odata.type': '#microsoft.graph.fileAttachment',
+                    name: att.name,
+                    contentType: att.contentType,
+                    contentBytes: att.contentBytes,
+                }));
+            }
+            
+            await axios.post(url, { message, saveToSentItems: true }, { headers });
+            
+            // Wait longer for email to be processed
+            console.log(`[Portal Ticket Reply] Waiting 5 seconds for email to be processed...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Fetch the reply back from Sent Items to get real message ID and attachment IDs
+            let realMessageId = `reply-${Date.now()}`;
+            let realAttachments: any[] = [];
+            
+            try {
+                const { Client } = await import('@microsoft/microsoft-graph-client');
+                const client = Client.init({
+                    authProvider: (done: any) => {
+                        done(null, settings.accessToken);
+                    },
+                });
+                
+                console.log(`[Portal Ticket Reply] Searching for reply with subject: "${subject}"`);
+                const response = await client
+                    .api(`/users/${settings.userId}/mailFolders/SentItems/messages`)
+                    .filter(`sentDateTime ge ${new Date(Date.now() - 15000).toISOString()}`)
+                    .top(10)
+                    .select('id,subject,sentDateTime')
+                    .orderby('sentDateTime desc')
+                    .get();
+                
+                console.log(`[Portal Ticket Reply] Found ${response.value?.length || 0} recent emails in Sent Items`);
+                if (response.value && response.value.length > 0) {
+                    console.log(`[Portal Ticket Reply] Recent email subjects:`, response.value.map((m: any) => m.subject));
+                }
+                
+                const matchingReply = response.value?.find((msg: any) => msg.subject === subject);
+                
+                if (matchingReply) {
+                    realMessageId = matchingReply.id;
+                    console.log(`[Portal Ticket Reply] Found reply - Message ID: ${realMessageId}`);
+                    
+                    // Fetch full message with attachments
+                    const fullMessage = await client
+                        .api(`/users/${settings.userId}/messages/${realMessageId}`)
+                        .expand('attachments')
+                        .get();
+                    
+                    if (fullMessage.attachments && fullMessage.attachments.length > 0) {
+                        console.log(`[Portal Ticket Reply] Fetched ${fullMessage.attachments.length} real attachments from Microsoft Graph`);
+                        realAttachments = fullMessage.attachments.map((att: any) => {
+                            console.log(`[Portal Ticket Reply] Real attachment - ID: ${att.id}, Name: ${att.name}`);
+                            return {
+                                id: att.id,
+                                name: att.name,
+                                contentType: att.contentType,
+                                size: att.size,
+                                isInline: att.isInline || false,
+                                contentId: att.contentId || null,
+                            };
+                        });
+                        console.log(`[Portal Ticket Reply] ✓ Successfully mapped ${realAttachments.length} attachments with real IDs`);
+                    } else {
+                        console.log(`[Portal Ticket Reply] No attachments found in Microsoft Graph`);
+                    }
+                }
+            } catch (fetchError) {
+                console.error('[Portal Ticket] Failed to fetch reply from Sent Items:', fetchError);
+                // Continue with temporary IDs if fetch fails
+            }
+            
+            // Store the reply in the conversation
+            if (ticket.conversationId) {
+                const conversation = await prisma.conversation.findUnique({
+                    where: { id: ticket.conversationId },
+                });
+                
+                if (conversation) {
+                    const messages = (conversation.messages as any[]) || [];
+                    
+                    // Use real attachments if we fetched them, otherwise use temp IDs as fallback
+                    const finalAttachments = realAttachments.length > 0 ? realAttachments : (attachments?.map(att => ({
+                        id: `att-${Date.now()}-${Math.random()}`,
+                        name: att.name,
+                        contentType: att.contentType,
+                        size: att.contentBytes ? Buffer.from(att.contentBytes, 'base64').length : 0,
+                        isInline: false,
+                    })) || []);
+                    
+                    console.log(`[Portal Ticket Reply] Storing message with ${finalAttachments.length} attachments`);
+                    if (finalAttachments.length > 0) {
+                        console.log(`[Portal Ticket Reply] First attachment ID: ${finalAttachments[0].id}`);
+                    }
+                    
+                    const newMessage = {
+                        id: realMessageId,
+                        subject: subject,
+                        sender: sender.name,
+                        senderEmail: sender.email,
+                        bodyPreview: replyBody.substring(0, 255).replace(/<[^>]*>/g, ''),
+                        receivedDateTime: new Date().toISOString(),
+                        body: {
+                            contentType: 'html',
+                            content: replyBody,
+                        },
+                        attachments: finalAttachments,
+                        hasAttachments: finalAttachments.length > 0,
+                        toRecipients: toRecipient.split(',').map((email: string) => ({
+                            emailAddress: { address: email.trim() }
+                        })),
+                        ccRecipients: ccRecipients ? ccRecipients.split(',').map((email: string) => ({
+                            emailAddress: { address: email.trim() }
+                        })) : [],
+                        isReply: true,
+                        repliedBy: sender.name,
+                    };
+                    
+                    messages.push(newMessage);
+                    
+                    await prisma.conversation.update({
+                        where: { id: ticket.conversationId },
+                        data: { messages: messages as any },
+                    });
+                    
+                    console.log(`[Portal Ticket Reply] ✓ Stored reply in database with real attachment IDs for ticket ${ticketId}`);
+                }
+            }
+            
+            return { success: true };
+        } catch (error: any) {
+            console.error('[Portal Ticket] Error sending reply email:', error.response?.data || error.message);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // For email-based tickets, use the normal reply endpoint
     const url = `https://graph.microsoft.com/v1.0/users/${settings.userId}/messages/${messageId}/reply`;
 
     const headers = {
@@ -239,7 +445,77 @@ export async function replyToEmailAction(
         // Send the reply via Microsoft Graph API
         const response = await axios.post(url, payload, { headers });
         
-        // Store the reply in the database immediately
+        console.log(`[Email Reply] Reply sent successfully`);
+        
+        // Wait for email to be processed
+        console.log(`[Email Reply] Waiting 5 seconds for email to be processed...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Fetch the reply back from Sent Items to get real message ID and attachment IDs
+        let realMessageId = `reply-${Date.now()}`;
+        let realAttachments: any[] = [];
+        
+        try {
+            const { Client } = await import('@microsoft/microsoft-graph-client');
+            const client = Client.init({
+                authProvider: (done: any) => {
+                    done(null, settings.accessToken);
+                },
+            });
+            
+            const subject = `Re: ${conversationId}`;
+            console.log(`[Email Reply] Searching for reply in Sent Items...`);
+            const searchResponse = await client
+                .api(`/users/${settings.userId}/mailFolders/SentItems/messages`)
+                .filter(`sentDateTime ge ${new Date(Date.now() - 15000).toISOString()}`)
+                .top(10)
+                .select('id,subject,sentDateTime,conversationId')
+                .orderby('sentDateTime desc')
+                .get();
+            
+            console.log(`[Email Reply] Found ${searchResponse.value?.length || 0} recent emails in Sent Items`);
+            
+            // Find the matching reply by conversationId
+            const matchingReply = searchResponse.value?.find((msg: any) => 
+                msg.conversationId === conversationId
+            );
+            
+            if (matchingReply) {
+                realMessageId = matchingReply.id;
+                console.log(`[Email Reply] Found reply - Message ID: ${realMessageId}`);
+                
+                // Fetch full message with attachments
+                const fullMessage = await client
+                    .api(`/users/${settings.userId}/messages/${realMessageId}`)
+                    .expand('attachments')
+                    .get();
+                
+                if (fullMessage.attachments && fullMessage.attachments.length > 0) {
+                    console.log(`[Email Reply] Fetched ${fullMessage.attachments.length} real attachments from Microsoft Graph`);
+                    realAttachments = fullMessage.attachments.map((att: any) => {
+                        console.log(`[Email Reply] Real attachment - ID: ${att.id}, Name: ${att.name}`);
+                        return {
+                            id: att.id,
+                            name: att.name,
+                            contentType: att.contentType,
+                            size: att.size,
+                            isInline: att.isInline || false,
+                            contentId: att.contentId || null,
+                        };
+                    });
+                    console.log(`[Email Reply] ✓ Successfully mapped ${realAttachments.length} attachments with real IDs`);
+                } else {
+                    console.log(`[Email Reply] No attachments found in Microsoft Graph`);
+                }
+            } else {
+                console.warn(`[Email Reply] Could not find reply in Sent Items`);
+            }
+        } catch (fetchError) {
+            console.error('[Email Reply] Failed to fetch reply from Sent Items:', fetchError);
+            // Continue with temporary IDs if fetch fails
+        }
+        
+        // Store the reply in the database
         const { prisma } = await import('@/lib/prisma');
         
         // Get the ticket to find conversationId
@@ -257,9 +533,23 @@ export async function replyToEmailAction(
             if (conversation) {
                 const messages = (conversation.messages as any[]) || [];
                 
+                // Use real attachments if we fetched them, otherwise use temp IDs as fallback
+                const finalAttachments = realAttachments.length > 0 ? realAttachments : (attachments?.map(att => ({
+                    id: `att-${Date.now()}-${Math.random()}`,
+                    name: att.name,
+                    contentType: att.contentType,
+                    size: att.contentBytes ? Buffer.from(att.contentBytes, 'base64').length : 0,
+                    isInline: false,
+                })) || []);
+                
+                console.log(`[Email Reply] Storing message with ${finalAttachments.length} attachments`);
+                if (finalAttachments.length > 0) {
+                    console.log(`[Email Reply] First attachment ID: ${finalAttachments[0].id}`);
+                }
+                
                 // Create the new reply message object
                 const newMessage = {
-                    id: `reply-${Date.now()}`, // Temporary ID until email sync updates it
+                    id: realMessageId,
                     subject: `Re: ${(messages[0] as any)?.subject || 'No Subject'}`,
                     sender: sender.name,
                     senderEmail: sender.email,
@@ -269,14 +559,8 @@ export async function replyToEmailAction(
                         contentType: 'html',
                         content: replyBody,
                     },
-                    attachments: attachments?.map(att => ({
-                        id: `att-${Date.now()}-${Math.random()}`,
-                        name: att.name,
-                        contentType: att.contentType,
-                        size: att.contentBytes ? Buffer.from(att.contentBytes, 'base64').length : 0,
-                        isInline: false,
-                    })) || [],
-                    hasAttachments: attachments && attachments.length > 0,
+                    attachments: finalAttachments,
+                    hasAttachments: finalAttachments.length > 0,
                     toRecipients: toRecipient ? toRecipient.split(',').map((email: string) => ({
                         emailAddress: { address: email.trim() }
                     })) : [],
@@ -296,7 +580,7 @@ export async function replyToEmailAction(
                     data: { messages: messages as any },
                 });
                 
-                console.log(`Stored reply in database for ticket ${ticketId}`);
+                console.log(`[Email Reply] ✓ Stored reply in database with real attachment IDs for ticket ${ticketId}`);
             }
         }
         

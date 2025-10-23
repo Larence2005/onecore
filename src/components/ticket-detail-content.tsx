@@ -152,12 +152,12 @@ const CollapsibleEmailContent = ({ htmlContent, attachments }: { htmlContent: st
         <div className="p-4">
             <div className="prose prose-sm dark:prose-invert max-w-none">{parse(styledHtml(mainContent))}</div>
             {quotedContent && (
-                 <Accordion type="single" collapsible className="my-4">
-                    <AccordionItem value="item-1" className="border-0 pl-4">
-                        <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1">
+                 <Accordion type="single" collapsible className="mt-2 mb-0 border-0 [&_hr]:hidden">
+                    <AccordionItem value="item-1" className="border-0 pl-4 [&>*]:border-0">
+                        <AccordionTrigger className="py-0 hover:no-underline -ml-4 justify-start w-auto h-auto p-1 border-0 before:hidden after:hidden">
                             <span className="sr-only">Show quoted text</span>
                         </AccordionTrigger>
-                        <AccordionContent>
+                        <AccordionContent className="pb-0">
                            <div className="prose prose-sm dark:prose-invert max-w-none">{parse(styledHtml(quotedContent))}</div>
                         </AccordionContent>
                     </AccordionItem>
@@ -538,7 +538,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             // Add quoted original message
             if (originalMessage) {
                 const originalDate = format(parseISO(originalMessage.receivedDateTime), 'EEE, MMM d, yyyy \'at\' h:mm a');
-                emailContent += `<br><br><hr><br><strong>On ${originalDate}, ${originalMessage.sender} &lt;${originalMessage.senderEmail}&gt; wrote:</strong><br><blockquote style="margin: 0 0 0 10px; padding-left: 10px; border-left: 2px solid #ccc;">${originalMessage.body.content}</blockquote>`;
+                emailContent += `<br><br><br>On ${originalDate}, ${originalMessage.sender} &lt;${originalMessage.senderEmail}&gt; wrote:</strong><br><blockquote style="margin: 0 0 0 10px; padding-left: 10px; border-left: 2px solid #ccc;">${originalMessage.body.content}</blockquote>`;
             }
             
             const result = await replyToEmailAction(
@@ -665,11 +665,13 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const adminEmailLower = adminEmail.toLowerCase();
 
         if (isClientReplying) {
-            // Client replying - add assigned agent
+            // Client replying - add assigned agent + client's own email
             const assignedAgent = members.find(m => m.uid === email.assignee);
             if (assignedAgent?.email) {
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
+            // Add the client's own email
+            ccRecipients.add(user.email.toLowerCase());
         } else if (isAdminReplying) {
             // Admin replying - CC: sender + assigned agent (if exists)
             if (email?.senderEmail) {
@@ -712,27 +714,35 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const ccRecipients = new Set<string>();
         const adminEmailLower = adminEmail.toLowerCase();
 
-        // Add original CC recipients
+        // Add original CC recipients (excluding admin email)
         message.ccRecipients?.forEach(r => {
-            ccRecipients.add(r.emailAddress.address.toLowerCase());
+            const recipientEmail = r.emailAddress.address.toLowerCase();
+            if (recipientEmail !== adminEmailLower) {
+                ccRecipients.add(recipientEmail);
+            }
         });
         
-        // Add original To recipients
+        // Add original To recipients (excluding admin email)
         message.toRecipients?.forEach(r => {
-            ccRecipients.add(r.emailAddress.address.toLowerCase());
+            const recipientEmail = r.emailAddress.address.toLowerCase();
+            if (recipientEmail !== adminEmailLower) {
+                ccRecipients.add(recipientEmail);
+            }
         });
         
-        // Add sender
-        if (message.senderEmail) {
+        // Add sender (excluding admin email)
+        if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmailLower) {
             ccRecipients.add(message.senderEmail.toLowerCase());
         }
 
         if (isClientReplying) {
-            // Client replying - add assigned agent
+            // Client replying - add assigned agent + client's own email
             const assignedAgent = members.find(m => m.uid === email.assignee);
             if (assignedAgent?.email) {
                 ccRecipients.add(assignedAgent.email.toLowerCase());
             }
+            // Add the client's own email
+            ccRecipients.add(user.email.toLowerCase());
         } else if (isAdminReplying) {
             // Admin replying - ensure sender + assigned agent are in CC
             if (email?.senderEmail) {

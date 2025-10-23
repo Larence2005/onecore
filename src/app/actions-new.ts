@@ -970,6 +970,13 @@ export async function createTicket(
         const isClient = !!employee;
 
         const ticketNumber = await getNextTicketNumber(organizationId);
+        
+        // Generate a unique conversation ID for portal-created tickets
+        const conversationId = `manual-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        
+        // Get admin email for To recipient
+        const settings = await getAPISettings(organizationId);
+        const adminEmail = settings?.userId || 'support@example.com';
 
         // Create ticket in database
         const newTicket = await prisma.ticket.create({
@@ -980,7 +987,7 @@ export async function createTicket(
                 subject: title,
                 sender: author.name,
                 senderEmail: author.email.toLowerCase(),
-                bodyPreview: body.substring(0, 255),
+                bodyPreview: body.substring(0, 255).replace(/<[^>]*>/g, ''),
                 body,
                 bodyContentType: 'html',
                 receivedDateTime: new Date(),
@@ -989,8 +996,278 @@ export async function createTicket(
                 type: 'QUESTION',
                 creatorId: author.uid,
                 hasAttachments: attachments && attachments.length > 0,
+                conversationId,
             },
         });
+        
+        // Parse CC and BCC recipients
+        const ccRecipients = cc ? cc.split(',').map(email => email.trim()).filter(e => e) : [];
+        const bccRecipients = bcc ? bcc.split(',').map(email => email.trim()).filter(e => e) : [];
+        
+        // Store recipients in database
+        const recipientData: any[] = [];
+        
+        // Add To recipient (admin email)
+        recipientData.push({
+            ticketId: newTicket.id,
+            type: 'TO',
+            name: 'Support',
+            email: adminEmail,
+        });
+        
+        // Add CC recipients
+        ccRecipients.forEach(email => {
+            recipientData.push({
+                ticketId: newTicket.id,
+                type: 'CC',
+                name: email.split('@')[0],
+                email: email,
+            });
+        });
+        
+        // Add BCC recipients
+        bccRecipients.forEach(email => {
+            recipientData.push({
+                ticketId: newTicket.id,
+                type: 'BCC',
+                name: email.split('@')[0],
+                email: email,
+            });
+        });
+        
+        if (recipientData.length > 0) {
+            await prisma.recipient.createMany({
+                data: recipientData,
+            });
+        }
+        
+        // Create initial conversation message (like email-based tickets)
+        const initialMessage: DetailedEmail = {
+            id: newTicket.id,
+            subject: title,
+            sender: author.name,
+            senderEmail: author.email.toLowerCase(),
+            bodyPreview: body.substring(0, 255).replace(/<[^>]*>/g, ''),
+            receivedDateTime: newTicket.receivedDateTime.toISOString(),
+            priority: 'NONE',
+            status: 'OPEN',
+            type: 'QUESTION',
+            conversationId,
+            body: {
+                contentType: 'html',
+                content: body,
+            },
+            attachments: attachments.map((att, index) => ({
+                id: `att-${Date.now()}-${index}`,
+                name: att.name,
+                contentType: att.contentType,
+                size: att.contentBytes ? Buffer.from(att.contentBytes, 'base64').length : 0,
+                isInline: false,
+            })),
+            hasAttachments: attachments && attachments.length > 0,
+            toRecipients: [{ emailAddress: { name: 'Support', address: adminEmail } }],
+            ccRecipients: ccRecipients.map(email => ({ emailAddress: { address: email } })),
+        };
+        
+        // Store conversation in database
+        await prisma.conversation.create({
+            data: {
+                id: conversationId,
+                organizationId,
+                messages: [initialMessage] as any,
+            },
+        });
+        
+        // Store attachments if any
+        if (attachments && attachments.length > 0) {
+            await prisma.attachment.createMany({
+                data: attachments.map(att => ({
+                    ticketId: newTicket.id,
+                    name: att.name,
+                    contentType: att.contentType,
+                    size: att.contentBytes ? Buffer.from(att.contentBytes, 'base64').length : 0,
+                    isInline: false,
+                    contentId: null,
+                })),
+            });
+            console.log(`[createTicket] Stored ${attachments.length} attachments for ticket #${ticketNumber}`);
+        }
+
+        // Add activity log
+        await addActivityLog(organizationId, newTicket.id, {
+            type: 'Create',
+            details: 'Ticket created from portal',
+            date: newTicket.receivedDateTime.toISOString(),
+            user: author.email,
+        });
+
+        // Send email to admin inbox (so portal tickets appear in inbox like email-based tickets)
+        if (settings) {
+            try {
+                // Add "Created by" prefix to email body for inbox visibility
+                const emailBody = `<p><strong>Created by ${author.name}:</strong></p>${body}`;
+                
+                await sendEmailAction(organizationId, {
+                    recipient: adminEmail,
+                    subject: title,
+                    body: emailBody,
+                    cc: ccRecipients,
+                    bcc: bccRecipients,
+                    attachments: attachments,
+                });
+
+                console.log(`[createTicket] Sent ticket #${ticketNumber} to admin inbox: ${adminEmail}`);
+                
+                // Wait longer for the email to be processed by Microsoft Graph
+                console.log(`[createTicket] Waiting 5 seconds for email to be processed...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                
+                // Fetch the email back from inbox to get real message ID and conversation ID
+                try {
+                    const accessToken = await getAccessToken(settings);
+                    const { Client } = await import('@microsoft/microsoft-graph-client');
+                    
+                    const client = Client.init({
+                        authProvider: (done: any) => {
+                            done(null, accessToken);
+                        },
+                    });
+                    
+                    // Search for the email we just sent in Sent Items folder
+                    // The email will be in Sent Items since we used sendMail endpoint
+                    console.log(`[createTicket] Searching for email with subject: "${title}"`);
+                    const response = await client
+                        .api(`/users/${settings.userId}/mailFolders/SentItems/messages`)
+                        .filter(`sentDateTime ge ${new Date(Date.now() - 15000).toISOString()}`)
+                        .top(10)
+                        .select('id,conversationId,subject,toRecipients,sentDateTime')
+                        .orderby('sentDateTime desc')
+                        .get();
+                    
+                    console.log(`[createTicket] Found ${response.value?.length || 0} recent emails in Sent Items`);
+                    if (response.value && response.value.length > 0) {
+                        console.log(`[createTicket] Recent email subjects:`, response.value.map((m: any) => m.subject));
+                    }
+                    
+                    // Find the matching email (most recent one with matching subject and recipient)
+                    const matchingEmail = response.value?.find((msg: any) => 
+                        msg.subject === title && 
+                        msg.toRecipients?.some((recipient: any) => 
+                            recipient.emailAddress?.address?.toLowerCase() === adminEmail.toLowerCase()
+                        )
+                    );
+                    
+                    if (matchingEmail) {
+                        const realMessageId = matchingEmail.id;
+                        const realConversationId = matchingEmail.conversationId;
+                        
+                        console.log(`[createTicket] Found email in inbox - Message ID: ${realMessageId}, Conversation ID: ${realConversationId}`);
+                        
+                        // Fetch full message details including attachments
+                        const fullMessage = await client
+                            .api(`/users/${settings.userId}/messages/${realMessageId}`)
+                            .select('id,conversationId,subject,from,toRecipients,ccRecipients,body,hasAttachments,receivedDateTime')
+                            .expand('attachments')
+                            .get();
+                        
+                        console.log(`[createTicket] Fetched full message with ${fullMessage.attachments?.length || 0} attachments`);
+                        
+                        // Get the old conversation data
+                        const oldConversation = await prisma.conversation.findUnique({
+                            where: { id: conversationId },
+                        });
+                        
+                        if (oldConversation) {
+                            const messages = (oldConversation.messages as any[]) || [];
+                            
+                            // Update the first message with real message ID and attachment IDs
+                            if (messages.length > 0) {
+                                console.log(`[createTicket] Old message ID: ${messages[0].id}, New message ID: ${realMessageId}`);
+                                messages[0].id = realMessageId;
+                                
+                                // Completely override attachments with real Microsoft Graph attachment IDs
+                                if (fullMessage.attachments && fullMessage.attachments.length > 0) {
+                                    console.log(`[createTicket] Overriding ${messages[0].attachments?.length || 0} temp attachments with ${fullMessage.attachments.length} real attachments`);
+                                    
+                                    // Map real attachments from Microsoft Graph
+                                    const realAttachments = fullMessage.attachments.map((att: any) => {
+                                        console.log(`[createTicket] Real attachment - ID: ${att.id}, Name: ${att.name}`);
+                                        return {
+                                            id: att.id,
+                                            name: att.name,
+                                            contentType: att.contentType,
+                                            size: att.size,
+                                            isInline: att.isInline || false,
+                                            contentId: att.contentId || null,
+                                        };
+                                    });
+                                    
+                                    // Completely replace attachments array
+                                    messages[0].attachments = realAttachments;
+                                    messages[0].hasAttachments = realAttachments.length > 0;
+                                    
+                                    // Delete old attachment records from database
+                                    await prisma.attachment.deleteMany({
+                                        where: { ticketId: newTicket.id },
+                                    });
+                                    
+                                    // Create new attachment records with real IDs
+                                    await prisma.attachment.createMany({
+                                        data: fullMessage.attachments.map((att: any) => ({
+                                            ticketId: newTicket.id,
+                                            name: att.name,
+                                            contentType: att.contentType,
+                                            size: att.size,
+                                            isInline: att.isInline || false,
+                                            contentId: att.contentId || null,
+                                        })),
+                                    });
+                                    
+                                    console.log(`[createTicket] ✓ Successfully updated ${fullMessage.attachments.length} attachments with real Microsoft Graph IDs`);
+                                } else if (messages[0].attachments && messages[0].attachments.length > 0) {
+                                    // No attachments found in Microsoft Graph but we had temp ones - clear them
+                                    console.warn(`[createTicket] No attachments found in Microsoft Graph, clearing temp attachments`);
+                                    messages[0].attachments = [];
+                                    messages[0].hasAttachments = false;
+                                }
+                            }
+                            
+                            // Delete the old conversation with manual ID
+                            await prisma.conversation.delete({
+                                where: { id: conversationId },
+                            });
+                            
+                            // Create new conversation with real Microsoft Graph conversation ID
+                            await prisma.conversation.create({
+                                data: {
+                                    id: realConversationId,
+                                    organizationId,
+                                    messages: messages as any,
+                                },
+                            });
+                            
+                            // Update the ticket with real conversation ID
+                            await prisma.ticket.update({
+                                where: { id: newTicket.id },
+                                data: {
+                                    conversationId: realConversationId,
+                                },
+                            });
+                        }
+                        
+                        console.log(`[createTicket] Updated ticket #${ticketNumber} with real Microsoft Graph IDs and attachments`);
+                    } else {
+                        console.warn(`[createTicket] Could not find email in inbox for ticket #${ticketNumber}`);
+                    }
+                } catch (fetchError) {
+                    console.error(`[createTicket] Failed to fetch email from inbox:`, fetchError);
+                    // Don't fail the ticket creation if fetching fails
+                }
+            } catch (emailError) {
+                console.error(`[createTicket] Failed to send ticket to inbox:`, emailError);
+                // Don't fail the ticket creation if email sending fails
+            }
+        }
 
         // Send ticket creation notification to client
         if (isClient) {
@@ -1060,6 +1337,7 @@ export async function getTicketsFromDB(
             companyId: true,
             assigneeId: true,
             archivedAt: true,
+            creatorId: true,
             company: {
                 select: {
                     name: true,
@@ -1119,6 +1397,7 @@ export async function getTicketsFromDB(
         companyName: ticket.company?.name,
         assignee: ticket.assigneeId || undefined,
         assigneeName: ticket.assignee?.name || 'Unassigned',
+        creator: ticket.creatorId ? { name: ticket.sender, email: ticket.senderEmail } : undefined,
     }));
 
     return formattedTickets;

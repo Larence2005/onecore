@@ -47,8 +47,26 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof signUpSchema>) {
     setIsSubmitting(true);
     try {
-      await signup(values);
-      router.push("/dashboard");
+      // Send OTP instead of directly creating account
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send OTP");
+      }
+
+      toast({
+        title: "OTP Sent",
+        description: "Please check your email for the verification code",
+      });
+
+      // Redirect to OTP verification page with email and password
+      router.push(`/verify-otp?email=${encodeURIComponent(values.email)}&password=${encodeURIComponent(values.password)}`);
     } catch (error: any) {
       toast({
         variant: "destructive",
