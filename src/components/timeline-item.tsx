@@ -42,10 +42,10 @@ const getIcon = (type: TimelineItemProps['type']) => {
 }
 
 export function TimelineItem({ type, date, children, user }: TimelineItemProps) {
-    const isSystemUser = user === 'System' || (typeof user === 'string' && !user.includes('@'));
+    const isSystemUser = user === 'System' || !user || user === '';
     
-    // Handle cases where `user` might be null or undefined, or not a string
-    const displayUser = typeof user === 'string' ? (isSystemUser ? 'System' : user) : 'Unknown';
+    // Only display user if it's not "System"
+    const displayUser = !isSystemUser && typeof user === 'string' ? user : null;
 
     return (
         <div className="flex items-start gap-4">
@@ -56,8 +56,15 @@ export function TimelineItem({ type, date, children, user }: TimelineItemProps) 
             </div>
             <div className="flex-1 space-y-1 min-w-0">
                 <div className="text-sm text-foreground break-words">
-                    <span className="font-semibold">{displayUser}</span>
-                    <span className="text-muted-foreground"> {type === "Create" ? 'created a ticket' : 'updated the ticket'}</span>
+                    {displayUser && (
+                        <>
+                            <span className="font-semibold">{displayUser}</span>
+                            <span className="text-muted-foreground"> {type === "Create" ? 'created a ticket' : 'updated the ticket'}</span>
+                        </>
+                    )}
+                    {!displayUser && (
+                        <span className="text-muted-foreground">{type === "Create" ? 'Ticket created' : 'Ticket updated'}</span>
+                    )}
                 </div>
                 <div className="text-sm text-foreground break-words">{children}</div>
                 <time className="text-xs text-muted-foreground">

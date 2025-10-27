@@ -401,7 +401,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const result = await updateTicket(
             userProfile.organizationId,
             ticketIdToUpdate,
-            { [field]: value }
+            { [field]: value },
+            user.uid
         );
     
         if (!result.success) {
@@ -471,7 +472,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                     { 
                         priority: value,
                         deadline: null
-                    }
+                    },
+                    user.uid
                 );
                 
                 console.log('[Priority None] Update result:', result);
@@ -520,7 +522,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
                         { 
                             priority: value,
                             deadline: newDeadline.toISOString()
-                        }
+                        },
+                        user.uid
                     );
                     
                     console.log('[Priority with Deadline] Update result:', result);
@@ -557,7 +560,8 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const result = await updateTicket(
                 userProfile.organizationId,
                 email.id,
-                { priority: value }
+                { priority: value },
+                user.uid
             );
             
             console.log('[Priority without Deadline] Update result:', result);

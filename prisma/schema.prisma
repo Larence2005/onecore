@@ -32,15 +32,6 @@ model User {
   @@index([email])
 }
 
-// Verification Token for email verification
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
 // OTP model for signup verification
 model Otp {
   id             String   @id @default(cuid())

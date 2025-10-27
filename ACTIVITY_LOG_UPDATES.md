@@ -60,7 +60,7 @@ All ticket field updates now automatically create activity log entries that appe
 2. **Activity Log Creation**: Automatically creates log entry
 3. **Display**: Log appears in ticket detail page activity section
 4. **Timestamp**: Uses current date/time
-5. **User**: Currently logs as "System" (can be enhanced to track actual user)
+5. **User**: Automatically tracks the authenticated user from session (admin/agent name)
 
 ### Code Structure
 
@@ -85,7 +85,6 @@ try {
             type: log.type,
             details: log.details,
             date: new Date().toISOString(),
-            user: 'System',
             ticketSubject: updatedTicket.subject
         });
     }
@@ -101,7 +100,7 @@ Each log entry contains:
 - **Type**: "Update" (for field changes)
 - **Details**: Human-readable description of the change
 - **Date**: ISO timestamp of when change occurred
-- **User**: Who made the change (currently "System")
+- **User**: Name/email of the authenticated user who made the change
 - **Ticket Subject**: Subject of the ticket being updated
 
 ## User Experience
@@ -184,10 +183,9 @@ Both changes are logged separately for complete audit trail.
 
 ### Planned Improvements
 
-1. **User Tracking**: Replace "System" with actual user who made change
-   ```typescript
-   user: currentUser.email // Instead of 'System'
-   ```
+1. ✅ **User Tracking**: ~~Replace "System" with actual user who made change~~ **COMPLETED**
+   - Activity logs now automatically track the authenticated user from session
+   - Shows user's name or email in activity timeline
 
 2. **Old vs New Values**: Show what changed from/to
    ```

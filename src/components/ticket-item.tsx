@@ -109,7 +109,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 const result = await updateTicket(userProfile.organizationId, email.id, { 
                     priority: value,
                     deadline: null
-                });
+                }, user.uid);
                 
                 if (result.success) {
                     toast({
@@ -144,7 +144,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
                 const result = await updateTicket(userProfile.organizationId, email.id, { 
                     priority: value,
                     deadline: newDeadline.toISOString()
-                });
+                }, user.uid);
                 
                 if (result.success) {
                     toast({
@@ -170,7 +170,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
             }
         }
 
-        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue });
+        const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue }, user.uid);
         
         if (result.success) {
             toast({

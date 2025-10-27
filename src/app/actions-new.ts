@@ -10,6 +10,8 @@ import { prisma } from '@/lib/prisma';
 import { isPast, parseISO, isWithinInterval, addHours, differenceInSeconds, addDays, format, add, isAfter } from 'date-fns';
 import { formatInTimeZone, toDate } from 'date-fns-tz';
 import { headers } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import axios from 'axios';
 import dns from "dns";
 import { Client } from "@microsoft/microsoft-graph-client";
@@ -1130,7 +1132,6 @@ export async function createTicket(
             type: 'Create',
             details: 'Ticket created from portal',
             date: newTicket.receivedDateTime.toISOString(),
-            user: author.email,
         });
 
         // Send email to admin inbox (so portal tickets appear in inbox like email-based tickets)
@@ -1674,7 +1675,8 @@ export async function updateTicket(
         deadline?: string | null;
         tags?: string[];
         companyId?: string | null;
-    }
+    },
+    currentUserId?: string
 ): Promise<{ success: boolean; error?: string }> {
     if (!organizationId || !id) {
         return { success: false, error: 'Organization ID and Ticket ID are required.' };
@@ -1900,17 +1902,15 @@ export async function updateTicket(
 
             // Create all activity logs
             console.log('[Activity Log] Total logs to create:', activityLogs.length);
+            console.log('[Activity Log] Current user ID:', currentUserId);
             for (const log of activityLogs) {
                 console.log('[Activity Log] Creating log:', log);
                 const result = await addActivityLog(organizationId, id, {
                     type: log.type,
                     details: log.details,
                     date: new Date().toISOString(),
-                    userName: 'System',
-                    userEmail: 'system@auto',
-                    user: 'System',
                     ticketSubject: updatedTicket.subject
-                });
+                }, currentUserId);
                 console.log('[Activity Log] Result:', result);
             }
         } catch (logError) {
@@ -1995,15 +1995,27 @@ export async function unarchiveTickets(organizationId: string, ticketIds: string
 export async function addActivityLog(
     organizationId: string,
     ticketId: string,
-    logEntry: Omit<ActivityLog, 'id'>
+    logEntry: Omit<ActivityLog, 'id' | 'userName' | 'userEmail' | 'user'>,
+    currentUserId?: string | null
 ): Promise<{ success: boolean; error?: string }> {
     if (!organizationId || !ticketId) {
         throw new Error('Organization ID and Ticket ID are required.');
     }
 
     try {
-        console.log('[addActivityLog] Creating activity log:', { organizationId, ticketId, logEntry });
+        console.log('[addActivityLog] Creating activity log:', { organizationId, ticketId, logEntry, providedUserId: currentUserId });
         
+        // Try to get userId from parameter first, then from session
+        let userId = currentUserId || null;
+        
+        if (!userId) {
+            const session = await getServerSession(authOptions);
+            userId = session?.user?.id || null;
+            console.log('[addActivityLog] No userId provided, got from session:', userId);
+        } else {
+            console.log('[addActivityLog] Using provided userId:', userId);
+        }
+
         const result = await prisma.activityLog.create({
             data: {
                 organizationId,
@@ -2011,12 +2023,12 @@ export async function addActivityLog(
                 ticketSubject: logEntry.ticketSubject,
                 type: logEntry.type,
                 details: logEntry.details,
-                userId: null, // System updates don't have a userId
+                userId: userId,
                 createdAt: new Date(logEntry.date),
             },
         });
 
-        console.log('[addActivityLog] Activity log created successfully:', result.id);
+        console.log('[addActivityLog] Activity log created successfully:', result.id, 'with userId:', userId);
         return { success: true };
     } catch (error) {
         console.error('[addActivityLog] Error adding activity log:', error);
@@ -2039,23 +2051,42 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
             orderBy: {
                 createdAt: 'desc',
             },
+            include: {
+                user: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
         });
 
         console.log('[getActivityLog] Found', logs.length, 'activity logs for ticket', ticketId);
+        
+        // Debug: Log raw data from first log entry
+        if (logs.length > 0) {
+            console.log('[getActivityLog] Sample raw log:', {
+                id: logs[0].id,
+                userId: logs[0].userId,
+                hasUser: !!logs[0].user,
+                userName: logs[0].user?.name,
+                userEmail: logs[0].user?.email
+            });
+        }
 
         const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
             id: log.id,
             type: log.type,
             details: log.details,
             date: log.createdAt.toISOString(),
-            user: log.userId || 'System',
-            userName: log.userName || 'System',
-            userEmail: log.userEmail || '',
+            user: (log.user?.name || log.user?.email || 'System'),
+            userName: (log.user?.name || log.user?.email || 'System'),
+            userEmail: (log.user?.email || ''),
             ticketId: log.ticketId || undefined,
             ticketSubject: log.ticketSubject || undefined,
         }));
 
-        console.log('[getActivityLog] Formatted logs:', formattedLogs);
+        console.log('[getActivityLog] Formatted logs sample:', formattedLogs.length > 0 ? formattedLogs[0] : 'none');
         return formattedLogs;
     } catch (error) {
         console.error('Error fetching activity log:', error);
@@ -2075,6 +2106,14 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
                 createdAt: 'desc',
             },
             take: 100, // Limit to last 100 activities
+            include: {
+                user: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
         });
 
         const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
@@ -2082,9 +2121,9 @@ export async function getAllActivityLogs(organizationId: string): Promise<Activi
             type: log.type,
             details: log.details,
             date: log.createdAt.toISOString(),
-            user: log.userId || 'System',
-            userName: log.userName || 'System',
-            userEmail: log.userEmail || '',
+            user: (log.user?.name || log.user?.email || 'System'),
+            userName: (log.user?.name || log.user?.email || 'System'),
+            userEmail: (log.user?.email || ''),
             ticketId: log.ticketId || undefined,
             ticketSubject: log.ticketSubject || undefined,
         }));
@@ -2127,6 +2166,14 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
                 createdAt: 'desc',
             },
             take: 100,
+            include: {
+                user: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
         });
 
         const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
@@ -2134,9 +2181,9 @@ export async function getCompanyActivityLogs(organizationId: string, companyId: 
             type: log.type,
             details: log.details,
             date: log.createdAt.toISOString(),
-            user: log.userId || 'System',
-            userName: log.userName || 'System',
-            userEmail: log.userEmail || '',
+            user: (log.user?.name || log.user?.email || 'System'),
+            userName: (log.user?.name || log.user?.email || 'System'),
+            userEmail: (log.user?.email || ''),
             ticketId: log.ticketId || undefined,
             ticketSubject: log.ticketSubject || undefined,
         }));
@@ -2176,7 +2223,6 @@ export async function addNoteToTicket(
             type: 'Note',
             details: 'created a note',
             date: noteData.date,
-            user: noteData.user,
         });
 
         return { success: true };
@@ -2421,7 +2467,6 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
                 type: 'Create',
                 details: 'Ticket created from email',
                 date: firstMessage.receivedDateTime,
-                user: firstMessage.senderEmail || 'System',
             });
 
             // Send ticket creation notification to client

@@ -13,5 +13,4 @@ npm run prisma:push
 npm run dev
 
 # Kill Port
-eval 'lsof -ti:9002 | xargs kill -9 2>/dev/null || true'
-pkill -f "next dev" || true
+sudo fuser -k 9002/tcp
