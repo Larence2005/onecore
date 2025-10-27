@@ -29,56 +29,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if 5 minutes have passed since first OTP
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    if (otpRecord.firstSentAt < fiveMinutesAgo) {
-      // Delete expired OTP data
-      await prisma.otp.deleteMany({
-        where: { email: email.toLowerCase() },
-      });
-      return NextResponse.json(
-        { message: 'OTP session expired. Please start the signup process again.' },
-        { status: 400 }
-      );
-    }
-
-    // Check if maximum verification attempts exceeded
-    if (otpRecord.verifyAttempts >= 3) {
-      // Delete OTP data after 3 failed attempts
-      await prisma.otp.deleteMany({
-        where: { email: email.toLowerCase() },
-      });
-      return NextResponse.json(
-        { message: 'Maximum verification attempts exceeded. Please wait 5 minutes and start the signup process again.' },
-        { status: 400 }
-      );
-    }
-
     // Check if OTP matches
     if (otpRecord.otp !== otp.trim()) {
-      // Increment verification attempts
-      await prisma.otp.update({
-        where: { id: otpRecord.id },
-        data: {
-          verifyAttempts: otpRecord.verifyAttempts + 1,
-        },
-      });
-
-      const remainingAttempts = 3 - (otpRecord.verifyAttempts + 1);
-      
-      if (remainingAttempts <= 0) {
-        // Delete OTP data after 3 failed attempts
-        await prisma.otp.deleteMany({
-          where: { email: email.toLowerCase() },
-        });
-        return NextResponse.json(
-          { message: 'Maximum verification attempts exceeded. Please wait 5 minutes and start the signup process again.' },
-          { status: 400 }
-        );
-      }
-
       return NextResponse.json(
-        { message: `Invalid OTP. ${remainingAttempts} attempt${remainingAttempts > 1 ? 's' : ''} remaining.` },
+        { message: 'Invalid OTP. Please try again.' },
         { status: 400 }
       );
     }

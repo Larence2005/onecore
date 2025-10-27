@@ -129,24 +129,22 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Check if 5 minutes have passed since first OTP was sent
-    if (existingOTP) {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      if (existingOTP.firstSentAt < fiveMinutesAgo) {
-        // More than 5 minutes passed, delete old OTP data
-        await prisma.otp.deleteMany({
-          where: { email: validatedData.email.toLowerCase() },
-        });
-      } else if (existingOTP.resendCount >= 3) {
-        // Exceeded resend limit within 5 minutes
-        await prisma.otp.deleteMany({
-          where: { email: validatedData.email.toLowerCase() },
-        });
-        return NextResponse.json(
-          { message: 'Maximum OTP resend limit exceeded. Please start the signup process again.' },
-          { status: 400 }
-        );
-      }
+    // If there's a valid existing OTP (not expired), don't send a new one
+    if (existingOTP && new Date() < existingOTP.expiresAt) {
+      return NextResponse.json({
+        success: true,
+        message: 'An OTP has already been sent to your email. Please check your inbox or wait for it to expire.',
+        email: validatedData.email,
+        alreadySent: true,
+      });
+    }
+
+    // Check if resend limit exceeded
+    if (existingOTP && existingOTP.resendCount >= 3) {
+      // Delete old OTP data if limit exceeded
+      await prisma.otp.deleteMany({
+        where: { email: validatedData.email.toLowerCase() },
+      });
     }
 
     // Generate new OTP
@@ -157,8 +155,8 @@ export async function POST(req: NextRequest) {
     await sendOTPEmail(validatedData.email, otp);
 
     // Store or update OTP in database
-    if (existingOTP && existingOTP.firstSentAt > new Date(Date.now() - 5 * 60 * 1000)) {
-      // Update existing OTP (within 5 minutes window)
+    if (existingOTP && existingOTP.resendCount < 3) {
+      // Update existing OTP only if under limit
       await prisma.otp.update({
         where: { id: existingOTP.id },
         data: {
@@ -169,13 +167,13 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // Create new OTP record
+      // Create new OTP record - starts at 1 since this is the first send
       await prisma.otp.create({
         data: {
           email: validatedData.email.toLowerCase(),
           otp,
           expiresAt,
-          resendCount: 0,
+          resendCount: 1,
           signupData: validatedData as any,
         },
       });

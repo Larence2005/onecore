@@ -6,7 +6,7 @@ import { Tag, CalendarClock, UserCheck, Shield, CheckCircle, FileType, Pencil, B
 import { cn } from '@/lib/utils';
 
 interface TimelineItemProps {
-    type: 'Tags' | 'Deadline' | 'Assignee' | 'Priority' | 'Status' | 'Type' | 'Create' | 'Company' | 'Forward' | 'Note' | string;
+    type: 'Tags' | 'Deadline' | 'Assignee' | 'Priority' | 'Status' | 'Type' | 'Create' | 'Company' | 'Forward' | 'Note' | 'Update' | string;
     date: string;
     user: string;
     children: React.ReactNode;
@@ -34,6 +34,8 @@ const getIcon = (type: TimelineItemProps['type']) => {
             return <Forward className="h-4 w-4 text-teal-500" />;
         case 'Note':
             return <MessageSquare className="h-4 w-4 text-yellow-500" />;
+        case 'Update':
+            return <Pencil className="h-4 w-4 text-blue-500" />;
         default:
             return <Pencil className="h-4 w-4 text-gray-500" />;
     }

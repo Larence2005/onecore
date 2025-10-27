@@ -22,8 +22,9 @@ export default function VerifyOTPPage() {
   const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
   const [canResend, setCanResend] = useState(false);
   const [resendCount, setResendCount] = useState(0);
-  const [verifyAttempts, setVerifyAttempts] = useState(0);
   const [email, setEmail] = useState("");
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -32,20 +33,72 @@ export default function VerifyOTPPage() {
       return;
     }
     setEmail(emailParam);
-  }, [searchParams, router]);
+    
+    // Fetch OTP expiration time from server
+    const fetchOTPExpiration = async () => {
+      try {
+        const response = await fetch(`/api/auth/get-otp-expiration?email=${encodeURIComponent(emailParam)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.expiresAt) {
+            setExpiresAt(new Date(data.expiresAt));
+            setResendCount(data.resendCount || 0);
+          }
+        } else if (response.status === 404) {
+          // No OTP found, redirect to signup
+          toast({
+            variant: "destructive",
+            title: "No OTP Found",
+            description: "Please start the signup process again.",
+          });
+          router.push("/signup");
+        }
+      } catch (error) {
+        console.error('Failed to fetch OTP expiration:', error);
+      }
+    };
+    
+    fetchOTPExpiration();
+  }, [searchParams, router, toast]);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
-      setCanResend(true);
-      return;
-    }
+    if (!expiresAt) return;
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    const updateTimer = async () => {
+      const now = new Date().getTime();
+      const expiry = expiresAt.getTime();
+      const secondsLeft = Math.max(0, Math.floor((expiry - now) / 1000));
+      
+      setTimeLeft(secondsLeft);
+      
+      if (secondsLeft <= 0) {
+        // Check if this is the last attempt (resendCount >= 3)
+        if (resendCount >= 3 && !isExpired) {
+          // Delete OTP record and show expiration message
+          setIsExpired(true);
+          try {
+            await fetch('/api/auth/delete-expired-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+            });
+          } catch (error) {
+            console.error('Failed to delete expired OTP:', error);
+          }
+        } else if (resendCount < 3) {
+          setCanResend(true);
+        }
+      }
+    };
+
+    // Update immediately
+    updateTimer();
+
+    // Then update every second
+    const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [expiresAt, resendCount, email, toast, router]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -100,27 +153,11 @@ export default function VerifyOTPPage() {
         }, 1500);
       }
     } catch (error: any) {
-      // Check if max attempts exceeded
-      if (error.message.includes("Maximum verification attempts exceeded")) {
-        toast({
-          variant: "destructive",
-          title: "Too Many Failed Attempts",
-          description: "Redirecting to signup page...",
-        });
-        
-        setTimeout(() => {
-          router.push("/signup");
-        }, 2000);
-      } else {
-        // Increment local attempt counter
-        setVerifyAttempts((prev) => prev + 1);
-        
-        toast({
-          variant: "destructive",
-          title: "Verification Failed",
-          description: error.message,
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Verification Failed",
+        description: error.message,
+      });
     } finally {
       setIsVerifying(false);
     }
@@ -158,7 +195,10 @@ export default function VerifyOTPPage() {
         description: "A new OTP has been sent to your email",
       });
 
-      setTimeLeft(180); // Reset timer to 3 minutes
+      // Update expiration time from server response
+      if (data.expiresAt) {
+        setExpiresAt(new Date(data.expiresAt));
+      }
       setCanResend(false);
       setResendCount((prev) => prev + 1);
       setOtp(""); // Clear OTP input
@@ -201,24 +241,43 @@ export default function VerifyOTPPage() {
             />
           </div>
 
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-              <Mail className="h-8 w-8 text-primary" />
+          {isExpired ? (
+            <div className="text-center space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-destructive mb-4">
+                  Verification Expired
+                </h2>
+                <p className="text-muted-foreground mb-2">
+                  Verification reaches its limits.
+                </p>
+                <p className="text-muted-foreground">
+                  All the data you filled out were deleted in database.
+                </p>
+              </div>
+              
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => router.push('/signup')}
+                  className="w-48 font-bold py-3"
+                >
+                  Signup Again
+                </Button>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Verify Your Email
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              We've sent a 6-digit OTP to
-            </p>
-            <p className="text-foreground font-medium">{email}</p>
-          </div>
+          ) : (
+            <>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  Verify Your Email
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  We've sent a 6-digit OTP to
+                </p>
+                <p className="text-foreground font-medium">{email}</p>
+              </div>
 
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Enter OTP
-              </label>
               <Input
                 type="text"
                 inputMode="numeric"
@@ -242,64 +301,63 @@ export default function VerifyOTPPage() {
                 </p>
               ) : (
                 <p className="text-sm text-destructive font-medium">
-                  OTP has expired
+                  {resendCount >= 3 ? 'Verification expired. Redirecting...' : 'OTP has expired'}
                 </p>
               )}
               <div className="flex justify-center gap-4 mt-1">
-                {verifyAttempts < 3 && (
-                  <p className="text-xs text-muted-foreground">
-                    Verification attempts: {verifyAttempts}/3
-                  </p>
-                )}
-                {resendCount < 3 && (
-                  <p className="text-xs text-muted-foreground">
-                    Resends: {resendCount}/3
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Attemps: {resendCount}/3
+                </p>
               </div>
             </div>
 
-            <Button
-              onClick={handleVerifyOTP}
-              className="w-full font-bold py-3"
-              disabled={isVerifying || otp.length !== 6}
-            >
-              {isVerifying ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
+            <div className="flex justify-center">
+              {timeLeft > 0 ? (
+                <Button
+                  onClick={handleVerifyOTP}
+                  className="w-48 font-bold py-3"
+                  disabled={isVerifying || otp.length !== 6}
+                >
+                {isVerifying ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify"
+                )}
+                </Button>
               ) : (
-                "Verify OTP"
+                <Button
+                  onClick={handleResendOTP}
+                  variant="outline"
+                  className="w-48"
+                  disabled={isResending || resendCount >= 3}
+                >
+                {isResending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : (
+                  "Resend OTP"
+                )}
+                </Button>
               )}
-            </Button>
-
-            <Button
-              onClick={handleResendOTP}
-              variant="outline"
-              className="w-full"
-              disabled={!canResend || isResending || resendCount >= 3}
-            >
-              {isResending ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Resending...
-                </>
-              ) : (
-                "Resend OTP"
-              )}
-            </Button>
-
-            <div className="text-center">
-              <Link
-                href="/signup"
-                className="inline-flex items-center text-sm text-primary hover:underline"
-              >
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                Back to Signup
-              </Link>
             </div>
-          </div>
+
+              <div className="text-center">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center text-sm text-primary hover:underline"
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Back to Signup
+                </Link>
+              </div>
+            </div>
+            </>
+          )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">

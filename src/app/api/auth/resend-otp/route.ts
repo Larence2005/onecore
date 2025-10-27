@@ -103,19 +103,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if 5 minutes have passed since first OTP
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    if (existingOTP.firstSentAt < fiveMinutesAgo) {
-      // Delete expired OTP data
-      await prisma.otp.deleteMany({
-        where: { email: email.toLowerCase() },
-      });
-      return NextResponse.json(
-        { message: 'OTP session expired. Please start the signup process again.' },
-        { status: 400 }
-      );
-    }
-
     // Check resend limit
     if (existingOTP.resendCount >= 3) {
       // Delete OTP data
@@ -149,6 +136,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: 'OTP resent successfully',
       resendCount: existingOTP.resendCount + 1,
+      expiresAt: expiresAt,
     });
   } catch (error: any) {
     console.error('Resend OTP error:', error);

@@ -278,13 +278,20 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         }
         
         try {
-            const detailedEmail = await getEmail(userProfile.organizationId, id);
+            const [detailedEmail, logs, ticketNotes] = await Promise.all([
+                getEmail(userProfile.organizationId, id),
+                getActivityLog(userProfile.organizationId, id),
+                getTicketNotes(userProfile.organizationId, id),
+            ]);
             
             if (!detailedEmail) {
                 throw new Error("Ticket not found in the database.");
             }
 
             setEmail(detailedEmail);
+            console.log('[Ticket Detail] Activity logs fetched:', logs.length, logs);
+            setActivityLog(logs);
+            setNotes(ticketNotes);
             setCurrentPriority(detailedEmail.priority);
             setCurrentStatus(detailedEmail.status);
             setCurrentType(detailedEmail.type || 'Incident');
@@ -434,7 +441,7 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         setPendingUpdate(null);
     };
 
-    const handleSelectChange = (field: 'priority' | 'status' | 'type' | 'assignee' | 'companyId', value: any) => {
+    const handleSelectChange = async (field: 'priority' | 'status' | 'type' | 'assignee' | 'companyId', value: any) => {
         let label = '';
         if (field === 'assignee') {
             label = value === 'unassigned' ? 'Unassigned' : members.find(m => m.uid === value)?.name || '';
@@ -444,6 +451,139 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
             const options = { priority: priorities, status: statuses, type: types }[field];
             label = options.find(o => o.value === value)?.label || '';
         }
+        
+        // Auto-set or clear deadline when priority changes
+        if (field === 'priority') {
+            if (!email || !userProfile?.organizationId) return;
+            
+            console.log('[Priority Change] Value:', value, 'Label:', label);
+            
+            // If priority is "None", clear the deadline
+            if (value === 'None') {
+                setCurrentPriority(value); // Update UI immediately
+                setCurrentDeadline(undefined);
+                
+                console.log('[Priority None] Updating ticket with priority:', value);
+                
+                const result = await updateTicket(
+                    userProfile.organizationId,
+                    email.id,
+                    { 
+                        priority: value,
+                        deadline: null
+                    }
+                );
+                
+                console.log('[Priority None] Update result:', result);
+                
+                if (!result.success) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Update Failed',
+                        description: result.error,
+                    });
+                    // Revert UI on error
+                    if (email) {
+                        setCurrentPriority(email.priority);
+                        setCurrentDeadline(email.deadline ? parseISO(email.deadline) : undefined);
+                    }
+                } else {
+                    toast({
+                        title: 'Ticket Updated',
+                        description: `Priority changed to ${label} and deadline cleared`,
+                    });
+                    
+                    // Refresh ticket data including activity log
+                    console.log('[Priority None] Refreshing ticket data...');
+                    await fetchEmailData(false);
+                    console.log('[Priority None] Ticket data refreshed');
+                }
+                return; // Don't set pending update since we already updated
+            }
+            
+            // If priority has deadline settings, auto-set the deadline
+            if (userProfile?.deadlineSettings) {
+                const deadlineSettings = userProfile.deadlineSettings as DeadlineSettings;
+                const daysToAdd = deadlineSettings[value as keyof DeadlineSettings];
+                
+                if (daysToAdd !== undefined && daysToAdd > 0) {
+                    const newDeadline = new Date();
+                    newDeadline.setDate(newDeadline.getDate() + daysToAdd);
+                    setCurrentPriority(value); // Update UI immediately
+                    setCurrentDeadline(newDeadline);
+                    
+                    console.log('[Priority with Deadline] Updating ticket with priority:', value, 'deadline:', newDeadline);
+                    
+                    const result = await updateTicket(
+                        userProfile.organizationId,
+                        email.id,
+                        { 
+                            priority: value,
+                            deadline: newDeadline.toISOString()
+                        }
+                    );
+                    
+                    console.log('[Priority with Deadline] Update result:', result);
+                    
+                    if (!result.success) {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Update Failed',
+                            description: result.error,
+                        });
+                        // Revert UI on error
+                        if (email) {
+                            setCurrentPriority(email.priority);
+                            setCurrentDeadline(email.deadline ? parseISO(email.deadline) : undefined);
+                        }
+                    } else {
+                        toast({
+                            title: 'Ticket Updated',
+                            description: `Priority changed to ${label} and deadline set to ${format(newDeadline, 'PPP')}`,
+                        });
+                        
+                        // Refresh ticket data including activity log
+                        await fetchEmailData(false);
+                    }
+                    return; // Don't set pending update since we already updated
+                }
+            }
+            
+            // If no deadline settings or daysToAdd is 0, just update priority without deadline
+            setCurrentPriority(value);
+            
+            console.log('[Priority without Deadline] Updating ticket with priority:', value);
+            
+            const result = await updateTicket(
+                userProfile.organizationId,
+                email.id,
+                { priority: value }
+            );
+            
+            console.log('[Priority without Deadline] Update result:', result);
+            
+            if (!result.success) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Update Failed',
+                    description: result.error,
+                });
+                // Revert UI on error
+                if (email) {
+                    setCurrentPriority(email.priority);
+                }
+            } else {
+                toast({
+                    title: 'Ticket Updated',
+                    description: `Priority changed to ${label}`,
+                });
+                
+                // Refresh ticket data including activity log
+                await fetchEmailData(false);
+            }
+            return; // Don't set pending update since we already updated
+        }
+        
         setPendingUpdate({ field, value: value === 'unassigned' || value === 'none' ? null : value, label });
     }
     
@@ -1615,11 +1755,18 @@ return (
                                             <h2 className="text-lg font-bold flex items-center gap-2"><Activity /> Activity</h2>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
-                                            {activityLog.filter(log => log.type !== 'Note').map((log) => (
-                                                <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
-                                                    {log.details}
-                                                </TimelineItem>
-                                            ))}
+                                            {activityLog.filter(log => log.type !== 'Note').length === 0 ? (
+                                                <p className="text-sm text-muted-foreground">No activity logs yet</p>
+                                            ) : (
+                                                activityLog.filter(log => log.type !== 'Note').map((log) => {
+                                                    console.log('[Activity Card] Rendering log:', log);
+                                                    return (
+                                                        <TimelineItem key={log.id} type={log.type} date={log.date} user={log.user}>
+                                                            {log.details}
+                                                        </TimelineItem>
+                                                    );
+                                                })
+                                            )}
                                         </CardContent>
                                     </Card>
                                 )}

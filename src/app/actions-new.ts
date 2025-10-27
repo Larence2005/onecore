@@ -939,6 +939,38 @@ function mapTypeToEnum(type: string): 'QUESTION' | 'INCIDENT' | 'PROBLEM' | 'TAS
     return map[type] || 'QUESTION';
 }
 
+// Helper function to map enum back to display strings
+function mapEnumToPriority(priority: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'): string {
+    const map: Record<string, string> = {
+        'NONE': 'None',
+        'LOW': 'Low',
+        'MEDIUM': 'Medium',
+        'HIGH': 'High',
+        'URGENT': 'Urgent',
+    };
+    return map[priority] || 'None';
+}
+
+function mapEnumToStatus(status: 'OPEN' | 'PENDING' | 'CLOSED' | 'ARCHIVED'): string {
+    const map: Record<string, string> = {
+        'OPEN': 'Open',
+        'PENDING': 'Pending',
+        'CLOSED': 'Resolved',
+        'ARCHIVED': 'Archived',
+    };
+    return map[status] || 'Open';
+}
+
+function mapEnumToType(type: 'QUESTION' | 'INCIDENT' | 'PROBLEM' | 'TASK'): string {
+    const map: Record<string, string> = {
+        'QUESTION': 'Questions',
+        'INCIDENT': 'Incident',
+        'PROBLEM': 'Problem',
+        'TASK': 'Task',
+    };
+    return map[type] || 'Questions';
+}
+
 export async function createTicket(
     organizationId: string,
     author: { uid: string; name: string; email: string },
@@ -1440,7 +1472,11 @@ async function sendTicketCreationNotification(
                     <p><strong>Status:</strong> ${ticket.status}</p>
                     <p><strong>Created:</strong> ${new Date(ticket.receivedDateTime).toLocaleString()}</p>
                 </div>
-                <p>${ticketUrl}</p>
+                <p>
+                    <a href="${ticketUrl}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        View Ticket
+                    </a>
+                </p>
                 <p>You can track the status of your ticket using the link above.</p>
                 <p style="margin-top: 30px; color: #666; font-size: 12px;">
                     This is an automated notification from your ticketing system.
@@ -1511,7 +1547,11 @@ async function sendAssignmentNotification(
                     <p><strong>Type:</strong> ${ticket.type}</p>
                     ${ticket.deadline ? `<p><strong>Deadline:</strong> ${new Date(ticket.deadline).toLocaleDateString()}</p>` : ''}
                 </div>
-                <p>${ticketUrl}</p>
+                <p>
+                    <a href="${ticketUrl}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        View Ticket
+                    </a>
+                </p>
                 <p>Please review and respond to this ticket at your earliest convenience.</p>
                 <p style="margin-top: 30px; color: #666; font-size: 12px;">
                     This is an automated notification from your ticketing system.
@@ -1543,6 +1583,86 @@ async function sendAssignmentNotification(
     }
 }
 
+async function sendPriorityChangeNotification(
+    organizationId: string,
+    ticket: any,
+    assigneeEmail: string,
+    assigneeName: string,
+    newPriority: string
+): Promise<void> {
+    try {
+        const settings = await getAPISettings(organizationId);
+        if (!settings) {
+            console.error('Cannot send priority change notification: API settings not configured');
+            return;
+        }
+
+        const accessToken = await getAccessToken(settings);
+        const client = Client.init({
+            authProvider: (done: any) => {
+                done(null, accessToken);
+            },
+        });
+
+        // Get the base URL from environment
+        const baseUrl = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+        const ticketUrl = `https://${baseUrl}/tickets/${ticket.id}`;
+
+        // Format deadline
+        const deadlineText = ticket.deadline 
+            ? `<p><strong>New Deadline:</strong> <span style="color: #DC2626; font-size: 16px;">${new Date(ticket.deadline).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span></p>`
+            : '<p><strong>Deadline:</strong> Not set</p>';
+
+        const subject = `Deadline Updated: Ticket #${ticket.ticketNumber} - ${ticket.subject}`;
+        const body = `
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #4F46E5;">Ticket Deadline Changed</h2>
+                <p>Hello ${assigneeName},</p>
+                <p>The priority of a ticket assigned to you has been updated:</p>
+                <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p><strong>Ticket #:</strong> ${ticket.ticketNumber}</p>
+                    <p><strong>Subject:</strong> ${ticket.subject}</p>
+                    <p><strong>New Priority:</strong> <span style="color: #DC2626; font-size: 16px; font-weight: bold;">${newPriority}</span></p>
+                    ${deadlineText}
+                    <p><strong>Status:</strong> ${mapEnumToStatus(ticket.status)}</p>
+                </div>
+                <p>
+                    <a href="${ticketUrl}" style="display: inline-block; background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        View Ticket
+                    </a>
+                </p>
+                <p>Please review this ticket and take appropriate action based on the new priority level.</p>
+                <p style="margin-top: 30px; color: #666; font-size: 12px;">
+                    This is an automated notification from your ticketing system.
+                </p>
+            </body>
+            </html>
+        `;
+
+        const message = {
+            subject,
+            body: {
+                contentType: 'HTML',
+                content: body,
+            },
+            toRecipients: [
+                {
+                    emailAddress: {
+                        address: assigneeEmail,
+                    },
+                },
+            ],
+        };
+
+        await client.api(`/users/${settings.userId}/sendMail`).post({ message });
+        console.log(`Priority change notification sent to ${assigneeEmail} for ticket #${ticket.ticketNumber}`);
+    } catch (error) {
+        console.error('Error sending priority change notification:', error);
+        throw error;
+    }
+}
+
 export async function updateTicket(
     organizationId: string,
     id: string,
@@ -1563,7 +1683,7 @@ export async function updateTicket(
     try {
         const updateData: Prisma.TicketUpdateInput = {};
 
-        if (data.priority) {
+        if (data.priority !== undefined) {
             updateData.priority = mapPriorityToEnum(data.priority);
         }
 
@@ -1655,6 +1775,149 @@ export async function updateTicket(
             }
         }
 
+        // Send email notification if priority was changed and ticket has an assignee
+        if (data.priority !== undefined && updatedTicket.assigneeId) {
+            try {
+                const assignee = await prisma.user.findUnique({
+                    where: { id: updatedTicket.assigneeId },
+                    include: {
+                        memberships: {
+                            where: { organizationId },
+                        },
+                    },
+                });
+
+                if (assignee && assignee.memberships.length > 0) {
+                    const assigneeEmail = assignee.memberships[0].email;
+                    const assigneeName = assignee.name || assigneeEmail;
+                    
+                    // Get API settings to send email
+                    const settings = await getAPISettings(organizationId);
+                    if (settings) {
+                        await sendPriorityChangeNotification(
+                            organizationId,
+                            updatedTicket,
+                            assigneeEmail,
+                            assigneeName,
+                            data.priority
+                        );
+                    }
+                }
+            } catch (emailError) {
+                console.error('Error sending priority change notification:', emailError);
+                // Don't fail the update if email fails
+            }
+        }
+
+        // Add activity logs for all changes
+        try {
+            const activityLogs: Array<{ type: string; details: string }> = [];
+
+            if (data.priority !== undefined) {
+                console.log('[Activity Log] Adding priority change log:', data.priority);
+                activityLogs.push({
+                    type: 'Update',
+                    details: `Priority changed to ${data.priority}`
+                });
+            }
+
+            if (data.status) {
+                activityLogs.push({
+                    type: 'Update',
+                    details: `Status changed to ${data.status}`
+                });
+            }
+
+            if (data.type) {
+                activityLogs.push({
+                    type: 'Update',
+                    details: `Type changed to ${data.type}`
+                });
+            }
+
+            if (data.assignee !== undefined) {
+                if (data.assignee) {
+                    const assignee = await prisma.user.findUnique({
+                        where: { id: data.assignee },
+                    });
+                    const assigneeName = assignee?.name || 'Unknown';
+                    activityLogs.push({
+                        type: 'Update',
+                        details: `Assigned to ${assigneeName}`
+                    });
+                } else {
+                    activityLogs.push({
+                        type: 'Update',
+                        details: 'Unassigned'
+                    });
+                }
+            }
+
+            if (data.deadline !== undefined) {
+                if (data.deadline) {
+                    const deadlineDate = new Date(data.deadline).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                    activityLogs.push({
+                        type: 'Update',
+                        details: `Deadline set to ${deadlineDate}`
+                    });
+                } else {
+                    activityLogs.push({
+                        type: 'Update',
+                        details: 'Deadline cleared'
+                    });
+                }
+            }
+
+            if (data.companyId !== undefined) {
+                if (data.companyId) {
+                    const company = await prisma.company.findUnique({
+                        where: { id: data.companyId },
+                    });
+                    const companyName = company?.name || 'Unknown';
+                    activityLogs.push({
+                        type: 'Update',
+                        details: `Company set to ${companyName}`
+                    });
+                } else {
+                    activityLogs.push({
+                        type: 'Update',
+                        details: 'Company removed'
+                    });
+                }
+            }
+
+            if (data.tags) {
+                activityLogs.push({
+                    type: 'Update',
+                    details: `Tags updated: ${data.tags.join(', ')}`
+                });
+            }
+
+            // Create all activity logs
+            console.log('[Activity Log] Total logs to create:', activityLogs.length);
+            for (const log of activityLogs) {
+                console.log('[Activity Log] Creating log:', log);
+                const result = await addActivityLog(organizationId, id, {
+                    type: log.type,
+                    details: log.details,
+                    date: new Date().toISOString(),
+                    userName: 'System',
+                    userEmail: 'system@auto',
+                    user: 'System',
+                    ticketSubject: updatedTicket.subject
+                });
+                console.log('[Activity Log] Result:', result);
+            }
+        } catch (logError) {
+            console.error('[Activity Log] Error adding activity logs:', logError);
+            // Don't fail the update if logging fails
+        }
+
         return { success: true };
     } catch (error) {
         console.error('Error updating ticket:', error);
@@ -1739,21 +2002,24 @@ export async function addActivityLog(
     }
 
     try {
-        await prisma.activityLog.create({
+        console.log('[addActivityLog] Creating activity log:', { organizationId, ticketId, logEntry });
+        
+        const result = await prisma.activityLog.create({
             data: {
                 organizationId,
                 ticketId,
                 ticketSubject: logEntry.ticketSubject,
                 type: logEntry.type,
                 details: logEntry.details,
-                userId: logEntry.user, // Assuming 'user' is userId
+                userId: null, // System updates don't have a userId
                 createdAt: new Date(logEntry.date),
             },
         });
 
+        console.log('[addActivityLog] Activity log created successfully:', result.id);
         return { success: true };
     } catch (error) {
-        console.error('Error adding activity log:', error);
+        console.error('[addActivityLog] Error adding activity log:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
         return { success: false, error: errorMessage };
     }
@@ -1775,6 +2041,8 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
             },
         });
 
+        console.log('[getActivityLog] Found', logs.length, 'activity logs for ticket', ticketId);
+
         const formattedLogs: ActivityLog[] = logs.map((log: any) => ({
             id: log.id,
             type: log.type,
@@ -1787,6 +2055,7 @@ export async function getActivityLog(organizationId: string, ticketId: string): 
             ticketSubject: log.ticketSubject || undefined,
         }));
 
+        console.log('[getActivityLog] Formatted logs:', formattedLogs);
         return formattedLogs;
     } catch (error) {
         console.error('Error fetching activity log:', error);
@@ -2077,7 +2346,7 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
 
             const firstMessage = fullConversation[0];
 
-            // Find company if sender is an employee
+            // Find company if sender is a VERIFIED employee
             let companyId: string | undefined = undefined;
             const employee = await prisma.employee.findFirst({
                 where: {
@@ -2088,14 +2357,21 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
                 },
                 select: {
                     companyId: true,
+                    status: true,
                 },
             });
 
+            // Only create ticket if employee is VERIFIED
             if (employee) {
+                if (employee.status !== 'VERIFIED') {
+                    console.log(`[${organizationId}] Skipping email from unverified employee ${senderEmailLower} (status: ${employee.status})`);
+                    continue;
+                }
                 companyId = employee.companyId;
-                console.log(`[${organizationId}] Found employee for ${senderEmailLower}, companyId: ${companyId}`);
+                console.log(`[${organizationId}] Found verified employee for ${senderEmailLower}, companyId: ${companyId}`);
             } else {
-                console.log(`[${organizationId}] No employee found for ${senderEmailLower}, creating ticket without company`);
+                console.log(`[${organizationId}] No employee found for ${senderEmailLower}, skipping ticket creation`);
+                continue;
             }
 
             // Get next ticket number
@@ -2767,9 +3043,9 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
             senderEmail: ticket.senderEmail || 'Unknown Email',
             bodyPreview: ticket.bodyPreview || '',
             receivedDateTime: ticket.receivedDateTime.toISOString(),
-            priority: ticket.priority,
-            status: ticket.status,
-            type: ticket.type,
+            priority: mapEnumToPriority(ticket.priority),
+            status: mapEnumToStatus(ticket.status),
+            type: mapEnumToType(ticket.type),
             conversationId: ticket.conversationId || undefined,
             tags: ticket.tags.map(t => t.tag),
             deadline: ticket.deadline?.toISOString(),
@@ -2792,9 +3068,9 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
         senderEmail: ticket.senderEmail,
         bodyPreview: ticket.bodyPreview,
         receivedDateTime: ticket.receivedDateTime.toISOString(),
-        priority: ticket.priority,
-        status: ticket.status,
-        type: ticket.type,
+        priority: mapEnumToPriority(ticket.priority),
+        status: mapEnumToStatus(ticket.status),
+        type: mapEnumToType(ticket.type),
         conversationId: ticket.conversationId || undefined,
         tags: ticket.tags.map(t => t.tag),
         deadline: ticket.deadline?.toISOString(),

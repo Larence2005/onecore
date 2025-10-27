@@ -90,7 +90,7 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         if (!pendingUpdate || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
 
         setIsUpdating(true);
-        const { field, value } = pendingUpdate;
+        const { field, value, label } = pendingUpdate;
         
         // Optimistic UI update
         if (field === 'priority') setCurrentPriority(value);
@@ -99,6 +99,76 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
         if (field === 'assignee') setCurrentAssignee(value);
 
         const finalValue = field === 'assignee' && value === 'unassigned' ? null : value;
+
+        // Auto-set or clear deadline when priority changes
+        if (field === 'priority' && userProfile?.deadlineSettings) {
+            const deadlineSettings = userProfile.deadlineSettings as any;
+            
+            // If priority is "None", clear the deadline
+            if (value === 'None') {
+                const result = await updateTicket(userProfile.organizationId, email.id, { 
+                    priority: value,
+                    deadline: null
+                });
+                
+                if (result.success) {
+                    toast({
+                        title: 'Ticket Updated',
+                        description: `Priority changed to ${label} and deadline cleared`,
+                    });
+                    
+                    if (onRefresh) {
+                        onRefresh();
+                    }
+                } else {
+                    // Revert UI on failure
+                    setCurrentPriority(email.priority);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Update Failed',
+                        description: result.error,
+                    });
+                }
+                setIsUpdating(false);
+                setPendingUpdate(null);
+                return;
+            }
+            
+            // If priority has deadline settings, auto-set the deadline
+            const daysToAdd = deadlineSettings[value];
+            
+            if (daysToAdd !== undefined && daysToAdd > 0) {
+                const newDeadline = new Date();
+                newDeadline.setDate(newDeadline.getDate() + daysToAdd);
+                
+                const result = await updateTicket(userProfile.organizationId, email.id, { 
+                    priority: value,
+                    deadline: newDeadline.toISOString()
+                });
+                
+                if (result.success) {
+                    toast({
+                        title: 'Ticket Updated',
+                        description: `Priority changed to ${label} and deadline set to ${format(newDeadline, 'PPP')}`,
+                    });
+                    
+                    if (onRefresh) {
+                        onRefresh();
+                    }
+                } else {
+                    // Revert UI on failure
+                    setCurrentPriority(email.priority);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Update Failed',
+                        description: result.error,
+                    });
+                }
+                setIsUpdating(false);
+                setPendingUpdate(null);
+                return;
+            }
+        }
 
         const result = await updateTicket(userProfile.organizationId, email.id, { [field]: finalValue });
         
