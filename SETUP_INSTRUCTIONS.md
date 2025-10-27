@@ -37,7 +37,7 @@ For better security, create a dedicated user:
 
 ```bash
 # Create user with password
-sudo -u postgres psql -c "CREATE USER quickdesk_user WITH PASSWORD 'quickdesk_secure_password';"
+sudo -u postgres psql -c "CREATE USER quickdesk WITH PASSWORD 'n3K4nd3bg8sa6mNvs';"
 
 # Grant privileges
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE quickdesk TO quickdesk;"

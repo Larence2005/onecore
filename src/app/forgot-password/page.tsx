@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-new";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {

@@ -48,6 +48,18 @@ model Otp {
   @@map("Otp")
 }
 
+// Password Reset OTP model
+model PasswordResetOtp {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([otp])
+}
+
 // Organization model
 model Organization {
   id               String   @id @default(cuid())

@@ -12,7 +12,7 @@ echo ""
 # Configuration
 DB_NAME="quickdesk"
 DB_USER="quickdesk"
-DB_PASSWORD="pass12345$(openssl rand -hex 8)"
+DB_PASSWORD="n3K@4nd)3b#g8sa6mNvs$(openssl rand -hex 8)"
 
 echo "📋 Configuration:"
 echo "  Database: $DB_NAME"
