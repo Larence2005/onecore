@@ -81,7 +81,6 @@ model Organization {
   companies    Company[]
   tickets      Ticket[]
   activityLogs ActivityLog[]
-  subscription Subscription?
 
   @@index([ownerId])
   @@index([domain])
@@ -340,74 +339,4 @@ model LoginAttempt {
 
   @@index([email, createdAt])
   @@index([ipAddress])
-}
-
-// Subscription model for organization billing
-model Subscription {
-  id                    String             @id @default(cuid())
-  organizationId        String             @unique
-  paymongoCustomerId    String?            // PayMongo customer ID
-  paymongoSubscriptionId String?           // PayMongo subscription ID
-  status                SubscriptionStatus @default(TRIAL)
-  memberCount           Int                @default(0) // Number of paid members
-  pricePerMember        Float              @default(10.0) // $10 per member per month
-  currentPeriodStart    DateTime?
-  currentPeriodEnd      DateTime?
-  trialEndsAt           DateTime?
-  canceledAt            DateTime?
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-
-  // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  payments     Payment[]
-
-  @@index([organizationId])
-  @@index([status])
-}
-
-// Payment model for tracking transactions
-model Payment {
-  id                 String        @id @default(cuid())
-  subscriptionId     String
-  organizationId     String
-  paymongoPaymentId  String?       // PayMongo payment intent ID
-  amount             Float
-  currency           String        @default("USD")
-  status             PaymentStatus @default(PENDING)
-  paymentMethod      String?       // card, gcash, etc.
-  memberCount        Int           // Number of members paid for
-  billingPeriodStart DateTime
-  billingPeriodEnd   DateTime
-  paidAt             DateTime?
-  failedAt           DateTime?
-  failureReason      String?
-  metadata           Json?         // Additional payment metadata
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-
-  // Relations
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-  @@index([subscriptionId])
-  @@index([organizationId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-// Enums for subscription and payment
-enum SubscriptionStatus {
-  TRIAL
-  ACTIVE
-  PAST_DUE
-  CANCELED
-  INCOMPLETE
-}
-
-enum PaymentStatus {
-  PENDING
-  PROCESSING
-  SUCCEEDED
-  FAILED
-  REFUNDED
 }
