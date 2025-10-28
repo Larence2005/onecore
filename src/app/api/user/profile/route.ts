@@ -26,7 +26,14 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       console.error(`User not found with ID: ${userId}`);
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      console.error('This usually means:');
+      console.error('1. Database was reset/cleared');
+      console.error('2. User was deleted from database');
+      console.error('3. Session is stale - user should log out and log in again');
+      return NextResponse.json({ 
+        message: 'User not found. Please log out and log in again.',
+        shouldLogout: true 
+      }, { status: 404 });
     }
 
     console.log(`Fetching profile for user: ${userId}, email: ${user.email}`);

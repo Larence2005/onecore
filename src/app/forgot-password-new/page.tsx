@@ -78,12 +78,22 @@ export default function ForgotPasswordPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setEmail(values.email);
-        setStep('otp');
-        toast({
-          title: "OTP Sent",
-          description: "Please check your email for the verification code.",
-        });
+        // Check if OTP was actually sent
+        if (data.sent) {
+          setEmail(values.email);
+          setStep('otp');
+          toast({
+            title: "OTP Sent",
+            description: "Please check your email for the verification code.",
+          });
+        } else {
+          // Email not found in database, show error
+          toast({
+            variant: "destructive",
+            title: "Email Not Found",
+            description: "This email is not registered in our system. Please check your email or sign up for a new account.",
+          });
+        }
       } else {
         toast({
           variant: "destructive",
@@ -159,7 +169,6 @@ export default function ForgotPasswordPage() {
           title: "Password Reset Successful",
           description: "You can now login with your new password.",
         });
-        setTimeout(() => router.push('/login'), 3000);
       } else {
         toast({
           variant: "destructive",
@@ -199,9 +208,9 @@ export default function ForgotPasswordPage() {
             </h2>
             <p className="text-muted-foreground">
               {step === 'email' && 'Enter your email to receive a verification code'}
-              {step === 'otp' && 'Enter the 6-digit code sent to your email'}
+              {step === 'otp' && 'Please enter the 6-digit verification code sent to your email. If you don’t see it, check your spam/junk folder.'}
               {step === 'password' && 'Enter your new password'}
-              {step === 'success' && 'Your password has been reset successfully'}
+              {step === 'success'}
             </p>
           </div>
 
@@ -247,7 +256,6 @@ export default function ForgotPasswordPage() {
                   name="otp"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-semibold">Enter OTP</FormLabel>
                       <FormControl>
                         <div className="flex justify-center">
                           <InputOTP maxLength={6} {...field}>
@@ -332,10 +340,24 @@ export default function ForgotPasswordPage() {
           )}
 
           {step === 'success' && (
-            <div className="text-center space-y-4">
-              <div className="text-green-600 text-6xl">✓</div>
-              <p className="text-lg font-semibold">Password Reset Successfully!</p>
-              <p className="text-muted-foreground">Redirecting to login page...</p>
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-1">
+                    Password Successfully Changed!
+                  </h3>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    You can now use your new password to log in.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

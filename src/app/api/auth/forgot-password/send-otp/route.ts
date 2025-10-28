@@ -89,41 +89,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user exists
+    // Check if user exists in User table (this is the login email)
+    // Only accept emails from User table, not OrganizationMember emails
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
 
     if (!user) {
+      // User not found - return generic message for security
+      // (Don't reveal whether email exists or not)
       return NextResponse.json(
-        { message: 'If an account exists with this email, you will receive a password reset code.' },
+        { 
+          message: 'If an account exists with this email, you will receive a password reset code.',
+          sent: false // Flag to indicate OTP was not sent
+        },
         { status: 200 }
       );
     }
+
+    const userEmail = email.toLowerCase();
 
     // Generate OTP
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Delete any existing password reset OTP for this email
+    // Delete any existing password reset OTP for the login email
     await prisma.passwordResetOtp.deleteMany({
-      where: { email: email.toLowerCase() },
+      where: { email: userEmail },
     });
 
-    // Store OTP in database
+    // Store OTP in database with the login email (User table email)
+    // This is important because password reset needs to match the login email
     await prisma.passwordResetOtp.create({
       data: {
-        email: email.toLowerCase(),
+        email: userEmail, // Store with login email
         otp,
         expiresAt,
       },
     });
 
-    // Send OTP email
+    // Send OTP email to the email address they entered
     await sendPasswordResetOTP(email, otp);
 
     return NextResponse.json(
-      { message: 'If an account exists with this email, you will receive a password reset code.' },
+      { 
+        message: 'If an account exists with this email, you will receive a password reset code.',
+        sent: true // Flag to indicate OTP was sent
+      },
       { status: 200 }
     );
   } catch (error: any) {

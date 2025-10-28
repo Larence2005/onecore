@@ -3,12 +3,16 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/providers/auth-provider-new";
 import { RefreshCw, Mail, ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 function VerifyOTPContent() {
   const router = useRouter();
@@ -220,13 +224,6 @@ function VerifyOTPContent() {
     }
   };
 
-  const handleOTPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, ""); // Only allow digits
-    if (value.length <= 6) {
-      setOtp(value);
-    }
-  };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <div className="w-full max-w-md">
@@ -277,18 +274,22 @@ function VerifyOTPContent() {
               </div>
 
           <div className="space-y-6">
-            <div>
-              <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
+            <div className="flex justify-center">
+              <InputOTP 
+                maxLength={6} 
                 value={otp}
-                onChange={handleOTPChange}
-                placeholder="000000"
-                className="text-center text-2xl tracking-widest font-bold"
+                onChange={(value) => setOtp(value)}
                 disabled={isVerifying}
-              />
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
 
             <div className="text-center">

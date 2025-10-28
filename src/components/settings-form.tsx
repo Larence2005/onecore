@@ -159,7 +159,7 @@ function VerificationArea() {
         resolver: zodResolver(verificationFormSchema),
         mode: 'onChange',
         defaultValues: {
-            username: "",
+            username: "support",
             displayName: userProfile?.name || "",
             password: "",
             confirmPassword: "",
@@ -450,31 +450,73 @@ export function SettingsForm() {
 
   
   return (
-    <div className="w-full max-w-2xl space-y-6">
-        {isOwner && userProfile?.status === 'VERIFIED' && (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <ShieldCheck className="text-green-500" />
-                        Account Verified
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="default" className="border-green-500">
-                        <ShieldCheck className="h-4 w-4 text-green-500" />
-                        <AlertTitle>Your account is verified.</AlertTitle>
-                        <AlertDescription>
-                        Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        )}
-        
-        {isOwner && <VerificationArea />}
-        
+    <div className="w-full max-w-7xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {isOwner && userProfile?.status === 'VERIFIED' && (
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                          <ShieldCheck className="text-green-500" />
+                          Account Verified
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <Alert variant="default" className="border-green-500">
+                          <ShieldCheck className="h-4 w-4 text-green-500" />
+                          <AlertTitle>Your account is verified.</AlertTitle>
+                          <AlertDescription>
+                          Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
+                          </AlertDescription>
+                      </Alert>
+                  </CardContent>
+              </Card>
+          )}
+          
+          {isOwner && <VerificationArea />}
+
+          <Card className="border-destructive">
+               <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                          <AlertTriangle className="text-destructive" />
+                          Delete Account
+                      </CardTitle>
+                      <CardDescription>
+                          Permanently delete your account and all associated data.
+                      </CardDescription>
+               </CardHeader>
+               <CardFooter>
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" disabled={isDeleting}>
+                              {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                              Delete My Account
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteAccount} className={buttonVariants({ variant: 'destructive' })}>
+                                  Delete Account
+                              </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              </CardFooter>
+          </Card>
+        </div>
+
+        {/* Right Column - Deadline Configuration */}
         {isOwner && (
-             <Card>
+          <div className="space-y-6">
+            <Card>
                 <Form {...deadlineForm}>
                     <form onSubmit={deadlineForm.handleSubmit(onDeadlineSubmit)}>
                         <CardHeader>
@@ -582,45 +624,9 @@ export function SettingsForm() {
                     </form>
                 </Form>
             </Card>
+          </div>
         )}
-
-        <Card className="border-destructive">
-             <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <AlertTriangle className="text-destructive" />
-                        Delete Account
-                    </CardTitle>
-                    <CardDescription>
-                        Permanently delete your account and all associated data.
-                    </CardDescription>
-             </CardHeader>
-             <CardFooter>
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Delete Account</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete your account and remove all your data from our servers. If you are the organization owner, this will delete the entire organization.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                            onClick={handleDeleteAccount}
-                            disabled={isDeleting}
-                            className={buttonVariants({ variant: "destructive" })}
-                            >
-                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                            Continue
-                        </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </CardFooter>
-        </Card>
+      </div>
     </div>
   );
 }

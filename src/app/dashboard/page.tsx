@@ -65,9 +65,12 @@ function HomePageContent() {
 
     const fetchTickets = async (isInitialLoad = false) => {
       try {
-        // Sync emails to tickets first (converts new emails to tickets)
-        await syncEmailsToTickets(userProfile.organizationId!);
+        // Only sync emails on initial load or manual refresh, not on every poll
+        if (isInitialLoad) {
+          await syncEmailsToTickets(userProfile.organizationId!);
+        }
         
+        // Fetch all data - no caching
         const [fetchedTickets, fetchedCompanies, members] = await Promise.all([
           getTicketsFromDB(userProfile.organizationId!),
           getCompanies(userProfile.organizationId!),
@@ -111,11 +114,11 @@ function HomePageContent() {
     // Smart polling with activity detection
     let pollInterval: NodeJS.Timeout | null = null;
     let lastActivityTime = Date.now();
-    let currentInterval = 10000; // Start with 5 seconds
+    let currentInterval = 30000; // Start with 30 seconds
 
-    const ACTIVE_INTERVAL = 10000;    // 5 seconds when active
-    const IDLE_INTERVAL = 30000;     // 30 seconds when idle (no activity for 2 minutes)
-    const IDLE_THRESHOLD = 120000;   // 2 minutes of inactivity
+    const ACTIVE_INTERVAL = 30000;    // 30 seconds when active
+    const IDLE_INTERVAL = 60000;     // 60 seconds when idle (no activity for 3 minutes)
+    const IDLE_THRESHOLD = 180000;   // 3 minutes of inactivity
 
     const updatePollInterval = () => {
       const timeSinceActivity = Date.now() - lastActivityTime;

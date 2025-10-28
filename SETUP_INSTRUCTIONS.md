@@ -45,6 +45,14 @@ sudo -u postgres psql -d quickdesk -c "GRANT ALL ON SCHEMA public TO quickdesk;"
 sudo -u postgres psql -d quickdesk -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO quickdesk;"
 ```
 
+
+
+sudo nano /etc/postgresql/17/main/postgresql.conf
+sudo systemctl restart postgresql
+sudo ufw allow 5432/tcp
+sudo ufw reload
+
+
 Then update your `.env` file's DATABASE_URL to:
 ```
 DATABASE_URL="postgresql://quickdesk_user:quickdesk_secure_password@localhost:5432/quickdesk"

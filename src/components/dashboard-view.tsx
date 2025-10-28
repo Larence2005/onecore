@@ -65,7 +65,8 @@ export function DashboardView({ companies, selectedCompanyId, dateRangeOption, c
                     console.warn('Email sync skipped:', syncResult.error);
                     // Don't show error if it's just API credentials not configured
                     if (!syncResult.error?.includes('not configured') && !syncResult.error?.includes('invalid')) {
-                        console.error('Email sync failed:', syncResult.error);
+                        console.error('Email sync failed with error:', syncResult.error);
+                        console.error('Full sync result:', syncResult);
                     }
                 }
                 

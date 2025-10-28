@@ -34,14 +34,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid email or password');
         }
 
-        // Log successful login
-        await prisma.loginAttempt.create({
-          data: {
-            email: credentials.email.toLowerCase(),
-            success: true,
-          },
-        });
-
         return {
           id: user.id,
           email: user.email,

@@ -421,6 +421,15 @@ export async function addMemberToOrganization(
         },
     });
 
+    // Update subscription agent count and price
+    try {
+        const { updateSubscriptionAgentCount } = await import('./actions-subscription');
+        await updateSubscriptionAgentCount(organizationId);
+    } catch (error) {
+        console.error('Failed to update subscription agent count:', error);
+        // Don't fail the member creation if subscription update fails
+    }
+
     return { success: true };
 }
 
@@ -512,6 +521,15 @@ export async function deleteMemberFromOrganization(organizationId: string, email
         } catch (error) {
             console.error(`Failed to delete user with ID: ${memberToDelete.userId}. They may have other associations.`, error);
         }
+    }
+
+    // Update subscription agent count and price
+    try {
+        const { updateSubscriptionAgentCount } = await import('./actions-subscription');
+        await updateSubscriptionAgentCount(organizationId);
+    } catch (error) {
+        console.error('Failed to update subscription agent count:', error);
+        // Don't fail the member deletion if subscription update fails
     }
 
     return { success: true };
@@ -2484,12 +2502,29 @@ export async function syncEmailsToTickets(organizationId: string, since?: string
         return { success: true, ticketsCreated };
     } catch (error: any) {
         console.error(`[${organizationId}] Error syncing emails:`, error);
+        console.error(`[${organizationId}] Error type:`, typeof error);
         console.error(`[${organizationId}] Error message:`, error?.message);
         console.error(`[${organizationId}] Error stack:`, error?.stack);
+        
         if (error?.response) {
             console.error(`[${organizationId}] API Response:`, error.response);
         }
-        return { success: false, error: error?.message || 'Unknown error' };
+        
+        // Better error message extraction
+        let errorMessage = 'Unknown error';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (error?.message) {
+            errorMessage = error.message;
+        } else if (error?.error) {
+            errorMessage = error.error;
+        } else if (error?.toString) {
+            errorMessage = error.toString();
+        }
+        
+        return { success: false, error: errorMessage };
     }
 }
 

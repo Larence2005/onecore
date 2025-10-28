@@ -76,11 +76,13 @@ model Organization {
   deadlineSettings Json?    // Store deadline settings as JSON
 
   // Relations
-  owner        User                 @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members      OrganizationMember[]
-  companies    Company[]
-  tickets      Ticket[]
-  activityLogs ActivityLog[]
+  owner         User                 @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members       OrganizationMember[]
+  companies     Company[]
+  tickets       Ticket[]
+  activityLogs  ActivityLog[]
+  subscription  Subscription?
+  payments      Payment[]
 
   @@index([ownerId])
   @@index([domain])
@@ -328,15 +330,73 @@ model Conversation {
   @@index([organizationId])
 }
 
-// Login Attempts tracking (for security)
-model LoginAttempt {
-  id        String   @id @default(cuid())
-  email     String
-  ipAddress String?
-  userAgent String?
-  success   Boolean
-  createdAt DateTime @default(now())
+// Subscription model - Monthly billing per agent
+model Subscription {
+  id                String   @id @default(cuid())
+  organizationId    String   @unique
+  status            SubscriptionStatus @default(TRIAL)
+  agentCount        Int      @default(1) // Number of agents (OrganizationMembers)
+  pricePerAgent     Float    @default(500.00) // ₱500 per agent per month
+  totalAmount       Float    // Calculated: agentCount * pricePerAgent
+  billingCycle      BillingCycle @default(MONTHLY)
+  currentPeriodStart DateTime @default(now())
+  currentPeriodEnd   DateTime
+  trialEndsAt       DateTime? // 14-day trial
+  canceledAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  @@index([email, createdAt])
-  @@index([ipAddress])
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+// Payment model - Track all payments
+model Payment {
+  id                String   @id @default(cuid())
+  organizationId    String
+  paymongoPaymentId String?  @unique // PayMongo payment ID
+  paymongoLinkId    String?  // PayMongo payment link ID
+  amount            Float
+  currency          String   @default("PHP")
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String?  // gcash, card, etc.
+  description       String?
+  billingPeriod     String?  // e.g., "January 2025"
+  agentCount        Int?     // Number of agents for this billing period
+  paidAt            DateTime?
+  failedAt          DateTime?
+  metadata          Json?    // Store additional PayMongo data
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([paymongoPaymentId])
+}
+
+// Enums
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
 }

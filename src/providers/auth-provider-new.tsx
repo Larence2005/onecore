@@ -86,7 +86,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`/api/user/profile?userId=${userId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Failed to fetch user profile:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        // If user not found in database, log them out
+        if (errorData.shouldLogout) {
+          console.warn('User not found in database, logging out...');
+          await signOut({ redirect: false });
+          window.location.href = '/login';
+          return;
+        }
+        
+        throw new Error(`Failed to fetch user profile: ${errorData.message || response.statusText}`);
       }
       const profile = await response.json();
       setUserProfile(profile);

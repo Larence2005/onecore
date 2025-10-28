@@ -12,7 +12,7 @@ import { Card } from "./ui/card";
 import Link from 'next/link';
 import { updateTicket, getOrganizationMembers } from "@/app/actions-new";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { HelpCircle, ShieldAlert, Bug, Lightbulb, CircleDot, Clock, CheckCircle, CheckCircle2, User, Building, FileType, RefreshCw } from 'lucide-react';
 import { useAuth } from "@/providers/auth-provider-new";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
@@ -55,7 +55,7 @@ const types = [
     { value: 'Feature Request', label: 'Feature Request', icon: Lightbulb, color: 'text-purple-500' },
 ];
 
-export function TicketItem({ email, isSelected, onSelect, isArchivedView = false, onRefresh }: TicketItemProps) {
+export const TicketItem = memo(function TicketItem({ email, isSelected, onSelect, isArchivedView = false, onRefresh }: TicketItemProps) {
     const { user, userProfile } = useAuth();
     const [currentPriority, setCurrentPriority] = useState(email.priority);
     const [currentStatus, setCurrentStatus] = useState(email.status);
@@ -365,4 +365,4 @@ export function TicketItem({ email, isSelected, onSelect, isArchivedView = false
             </AlertDialog>
         </li>
     );
-}
+});
