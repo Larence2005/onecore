@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, X, Check } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 const pricingTiers = [
   {
     name: "All-in-One Plan",
-    price: "$10",
+    price: 10,
     period: "/agent/month",
     description: "",
     features: [
@@ -37,6 +37,28 @@ const pricingTiers = [
 
 export default function PricingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(59.14); // Default fallback rate
+  const [isLoadingRate, setIsLoadingRate] = useState(true);
+
+  useEffect(() => {
+    // Fetch real-time exchange rate
+    const fetchExchangeRate = async () => {
+      try {
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        if (data.rates && data.rates.PHP) {
+          setExchangeRate(data.rates.PHP);
+        }
+      } catch (error) {
+        console.error('Failed to fetch exchange rate:', error);
+        // Keep default rate on error
+      } finally {
+        setIsLoadingRate(false);
+      }
+    };
+
+    fetchExchangeRate();
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -120,9 +142,16 @@ export default function PricingPage() {
                       <div>
                           <CardTitle className="text-3xl">{tier.name}</CardTitle>
                           <CardDescription className="mt-2">{tier.description}</CardDescription>
-                          <div className="flex items-baseline mt-6">
-                              <span className="text-5xl font-bold">{tier.price}</span>
-                              {tier.period && <span className="text-muted-foreground ml-2 text-lg">{tier.period}</span>}
+                          <div className="space-y-2 mt-6">
+                              <div className="flex items-baseline">
+                                  <span className="text-5xl font-bold">${tier.price}</span>
+                                  {tier.period && <span className="text-muted-foreground ml-2 text-lg">{tier.period}</span>}
+                              </div>
+                              <div className="flex items-baseline justify-center">
+                                  <span className="text-sm text-muted-foreground">
+                                      {isLoadingRate ? '...' : `₱${Math.round(tier.price * exchangeRate)}`}{tier.period} (VAT not included)
+                                  </span>
+                              </div>
                           </div>
                       </div>
                       {(tier as any).buttonText && (

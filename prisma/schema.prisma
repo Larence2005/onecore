@@ -100,6 +100,7 @@ model OrganizationMember {
   landline       String?
   status         MemberStatus @default(UNINVITED)
   isClient       Boolean  @default(false)
+  hasLicense     Boolean  @default(false)  // License status for agents
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -335,8 +336,9 @@ model Subscription {
   id                String   @id @default(cuid())
   organizationId    String   @unique
   status            SubscriptionStatus @default(TRIAL)
-  agentCount        Int      @default(1) // Number of agents (OrganizationMembers)
-  pricePerAgent     Float    @default(500.00) // ₱500 per agent per month
+  agentCount        Int      @default(0) // Current number of agents (starts at 0)
+  agentSlots        Int      @default(0) // Total agent slots purchased (starts at 0)
+  pricePerAgent     Float    @default(10.00) // $10 USD per agent per month
   totalAmount       Float    // Calculated: agentCount * pricePerAgent
   billingCycle      BillingCycle @default(MONTHLY)
   currentPeriodStart DateTime @default(now())

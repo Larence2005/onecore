@@ -777,46 +777,6 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                 <TableCell>{renderEmployeeStatusBadge(employee.status)}</TableCell>
                                                                 {isOwner && (
                                                                     <TableCell className="flex items-center justify-end gap-2">
-                                                                        {employee.status !== 'VERIFIED' && (
-                                                                            <TooltipProvider>
-                                                                                <Tooltip>
-                                                                                    <AlertDialog>
-                                                                                        <AlertDialogTrigger asChild>
-                                                                                            <TooltipTrigger asChild>
-                                                                                                <Button 
-                                                                                                    variant="ghost" 
-                                                                                                    size="icon" 
-                                                                                                    className="h-8 w-8"
-                                                                                                    onClick={() => setVerifyingEmployee(employee)}
-                                                                                                    disabled={isSendingVerification === employee.email}
-                                                                                                >
-                                                                                                    {isSendingVerification === employee.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                                                </Button>
-                                                                                            </TooltipTrigger>
-                                                                                        </AlertDialogTrigger>
-                                                                                        <TooltipContent>
-                                                                                            <p>{employee.status === 'UNINVITED' ? 'Send Invite' : 'Resend Invite'}</p>
-                                                                                        </TooltipContent>
-                                                                                        <AlertDialogContent>
-                                                                                            <AlertDialogHeader>
-                                                                                                <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
-                                                                                                <AlertDialogDescription>
-                                                                                                    This will send an invitation to {verifyingEmployee?.name} at {verifyingEmployee?.email}. They will be able to register and start using the ticketing system.
-                                                                                                </AlertDialogDescription>
-                                                                                            </AlertDialogHeader>
-                                                                                            <AlertDialogFooter>
-                                                                                                <AlertDialogCancel onClick={() => setVerifyingEmployee(null)}>Cancel</AlertDialogCancel>
-                                                                                                <AlertDialogAction onClick={() => handleSendVerification(verifyingEmployee)} disabled={isSendingVerification === verifyingEmployee?.email}>
-                                                                                                    {isSendingVerification === verifyingEmployee?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                                                    Send Invite
-                                                                                                </AlertDialogAction>
-                                                                                            </AlertDialogFooter>
-                                                                                        </AlertDialogContent>
-                                                                                    </AlertDialog>
-                                                                                </Tooltip>
-                                                                            </TooltipProvider>
-                                                                        )}
-
                                                                         <AlertDialog>
                                                                             <DropdownMenu>
                                                                                 <DropdownMenuTrigger asChild>
@@ -829,6 +789,21 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                                         <Pencil className="mr-2 h-4 w-4" />
                                                                                         Edit
                                                                                     </DropdownMenuItem>
+                                                                                    {employee.status !== 'VERIFIED' && (
+                                                                                        <AlertDialogTrigger asChild>
+                                                                                            <DropdownMenuItem 
+                                                                                                onSelect={(e) => { e.preventDefault(); setVerifyingEmployee(employee); }}
+                                                                                                disabled={isSendingVerification === employee.email}
+                                                                                            >
+                                                                                                {isSendingVerification === employee.email ? (
+                                                                                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                                                ) : (
+                                                                                                    <Mail className="mr-2 h-4 w-4" />
+                                                                                                )}
+                                                                                                {employee.status === 'UNINVITED' ? 'Send Verification' : 'Resend Verification'}
+                                                                                            </DropdownMenuItem>
+                                                                                        </AlertDialogTrigger>
+                                                                                    )}
                                                                                     <AlertDialogTrigger asChild>
                                                                                         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(employee); }} className="text-destructive focus:text-destructive">
                                                                                             <Trash2 className="mr-2 h-4 w-4" />
@@ -837,7 +812,27 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                                     </AlertDialogTrigger>
                                                                                 </DropdownMenuContent>
                                                                             </DropdownMenu>
-                                                                            <AlertDialogContent>
+                                                                            {/* Send Verification Dialog */}
+                                                                            {verifyingEmployee?.email === employee.email && (
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            This will send an invitation to {verifyingEmployee?.name} at {verifyingEmployee?.email}. They will be able to register and start using the ticketing system.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel onClick={() => setVerifyingEmployee(null)}>Cancel</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => handleSendVerification(verifyingEmployee)} disabled={isSendingVerification === verifyingEmployee?.email}>
+                                                                                            {isSendingVerification === verifyingEmployee?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                                            Send Verification
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            )}
+                                                                            {/* Delete Dialog */}
+                                                                            {deletingEmployee?.email === employee.email && (
+                                                                                <AlertDialogContent>
                                                                                 <AlertDialogHeader>
                                                                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                                                     <AlertDialogDescription>
@@ -852,6 +847,7 @@ export function CompanyTicketsView({ companyId }: { companyId: string }) {
                                                                                     </AlertDialogAction>
                                                                                 </AlertDialogFooter>
                                                                             </AlertDialogContent>
+                                                                            )}
                                                                         </AlertDialog>
                                                                     </TableCell>
                                                                 )}

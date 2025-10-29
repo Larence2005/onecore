@@ -32,6 +32,7 @@ export interface OrganizationMember {
     landline?: string;
     status: 'UNINVITED' | 'INVITED' | 'NOT_VERIFIED' | 'VERIFIED';
     isClient?: boolean;
+    hasLicense?: boolean;
 }
 
 export interface Company {
@@ -361,6 +362,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
             landline: true,
             status: true,
             isClient: true,
+            hasLicense: true,
             user: {
                 select: {
                     id: true,
@@ -379,6 +381,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
         landline: m.landline || undefined,
         status: m.status,
         isClient: m.isClient,
+        hasLicense: m.hasLicense,
     }));
 
     return formattedMembers;
@@ -3174,6 +3177,150 @@ export async function getEmail(organizationId: string, id: string): Promise<Deta
     };
 
     return mainEmailDetails;
+}
+
+// Check ticket deadlines and send notifications
+export async function checkTicketDeadlinesAndNotify(organizationId: string): Promise<{ success: boolean; notificationsSent?: number; error?: string }> {
+    console.log(`[${organizationId}] Checking ticket deadlines...`);
+    
+    try {
+        const now = new Date();
+        
+        // Find tickets with deadlines that are approaching or past due
+        // Only check OPEN, IN_PROGRESS, or PENDING tickets
+        const tickets = await prisma.ticket.findMany({
+            where: {
+                organizationId,
+                deadline: {
+                    not: null,
+                },
+                status: {
+                    in: ['OPEN', 'IN_PROGRESS', 'PENDING'],
+                },
+                assigneeId: {
+                    not: null,
+                },
+            },
+            include: {
+                assignee: true,
+            },
+        });
+
+        console.log(`[${organizationId}] Found ${tickets.length} tickets with deadlines to check`);
+
+        let notificationsSent = 0;
+
+        for (const ticket of tickets) {
+            const ticketWithAssignee = ticket as any;
+            if (!ticket.deadline || !ticketWithAssignee.assignee || !ticketWithAssignee.assignee.email) {
+                continue;
+            }
+
+            const deadline = ticket.deadline;
+            const hoursUntilDeadline = differenceInSeconds(deadline, now) / 3600;
+
+            // Send notification if:
+            // 1. Deadline is within 24 hours (and hasn't been notified in last 12 hours)
+            // 2. Deadline is within 1 hour (and hasn't been notified in last 30 minutes)
+            // 3. Deadline has passed (and hasn't been notified in last 6 hours)
+            
+            let shouldNotify = false;
+            let notificationType = '';
+
+            if (hoursUntilDeadline < 0) {
+                // Past due
+                shouldNotify = true;
+                notificationType = 'overdue';
+            } else if (hoursUntilDeadline <= 1) {
+                // Within 1 hour
+                shouldNotify = true;
+                notificationType = 'urgent';
+            } else if (hoursUntilDeadline <= 24) {
+                // Within 24 hours
+                shouldNotify = true;
+                notificationType = 'reminder';
+            }
+
+            if (shouldNotify) {
+                console.log(`[${organizationId}] Sending ${notificationType} notification for ticket #${ticket.ticketNumber}`);
+                
+                const baseUrl = process.env.NEXT_PUBLIC_PARENT_DOMAIN;
+                const ticketUrl = `https://${baseUrl}/tickets/${ticket.id}`;
+                
+                let subject = '';
+                let urgencyColor = '';
+                let urgencyText = '';
+                
+                if (notificationType === 'overdue') {
+                    subject = `⚠️ OVERDUE: Ticket #${ticket.ticketNumber} - ${ticket.subject}`;
+                    urgencyColor = '#DC2626';
+                    urgencyText = `This ticket is now <strong>OVERDUE</strong> by ${Math.abs(hoursUntilDeadline).toFixed(1)} hours`;
+                } else if (notificationType === 'urgent') {
+                    subject = `🔴 URGENT: Ticket #${ticket.ticketNumber} deadline in ${Math.floor(hoursUntilDeadline * 60)} minutes`;
+                    urgencyColor = '#EA580C';
+                    urgencyText = `This ticket is due in <strong>${Math.floor(hoursUntilDeadline * 60)} minutes</strong>`;
+                } else {
+                    subject = `⏰ Reminder: Ticket #${ticket.ticketNumber} deadline in ${Math.floor(hoursUntilDeadline)} hours`;
+                    urgencyColor = '#F59E0B';
+                    urgencyText = `This ticket is due in <strong>${Math.floor(hoursUntilDeadline)} hours</strong>`;
+                }
+
+                const body = `
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <h2 style="color: ${urgencyColor};">Ticket Deadline ${notificationType === 'overdue' ? 'Exceeded' : 'Approaching'}</h2>
+                        <p>Hello ${ticketWithAssignee.assignee.name},</p>
+                        <p>${urgencyText}:</p>
+                        <div style="background-color: #FEF3C7; border-left: 4px solid ${urgencyColor}; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p><strong>Ticket #:</strong> ${ticket.ticketNumber}</p>
+                            <p><strong>Subject:</strong> ${ticket.subject}</p>
+                            <p><strong>Priority:</strong> ${ticket.priority}</p>
+                            <p><strong>Deadline:</strong> <span style="color: ${urgencyColor}; font-size: 16px; font-weight: bold;">${format(deadline, 'PPpp')}</span></p>
+                            <p><strong>Status:</strong> ${ticket.status}</p>
+                        </div>
+                        <p>Please take immediate action on this ticket.</p>
+                        <p>
+                            <a href="${ticketUrl}" style="display: inline-block; background-color: ${urgencyColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                                View Ticket
+                            </a>
+                        </p>
+                        <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                            This is an automated notification from your ticketing system.
+                        </p>
+                    </body>
+                    </html>
+                `;
+
+                // Send email notification using actions-email
+                const { sendEmailAction } = await import('@/app/actions-email');
+                const result = await sendEmailAction(organizationId, {
+                    recipient: ticketWithAssignee.assignee.email,
+                    subject,
+                    body,
+                });
+
+                if (result.success) {
+                    console.log(`[${organizationId}] ✓ Sent ${notificationType} notification to ${ticketWithAssignee.assignee.email} for ticket #${ticket.ticketNumber}`);
+                    notificationsSent++;
+                    
+                    // Add activity log
+                    await addActivityLog(organizationId, ticket.id, {
+                        type: 'Notification',
+                        details: `Deadline ${notificationType} notification sent to ${ticketWithAssignee.assignee.name}`,
+                        date: now.toISOString(),
+                    });
+                } else {
+                    console.error(`[${organizationId}] Failed to send notification for ticket #${ticket.ticketNumber}:`, result.error);
+                }
+            }
+        }
+
+        console.log(`[${organizationId}] Deadline check completed. Notifications sent: ${notificationsSent}`);
+        return { success: true, notificationsSent };
+    } catch (error: any) {
+        console.error(`[${organizationId}] Error checking deadlines:`, error);
+        return { success: false, error: error.message || 'Unknown error' };
+    }
 }
 
 // Export all functions

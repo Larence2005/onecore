@@ -11,8 +11,9 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getOrganizationMembers, addMemberToOrganization, updateMemberInOrganization, deleteMemberFromOrganization, updateOrganization, createOrganization } from '@/app/actions-new';
 import { sendVerificationEmail } from '@/app/actions-email';
+import { canAddMembers, getAvailableSlots, activateLicense, revokeLicense, bulkActivateLicenses } from '@/app/actions-subscription';
 import type { OrganizationMember } from '@/app/actions-new';
-import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, Mail, Send } from 'lucide-react';
+import { RefreshCw, Users, Trash2, Pencil, UserPlus, AlertTriangle, Settings, MoreHorizontal, ChevronLeft, ChevronRight, Crown, User as UserIcon, Mail, Send, ShieldCheck, ShieldOff, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -49,6 +50,7 @@ import { Textarea } from './ui/textarea';
 import { PropertyItem } from './property-item';
 import { Building, MapPin, Phone, Link as LinkIcon } from 'lucide-react';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { Checkbox } from './ui/checkbox';
 
 
 export function OrganizationView() {
@@ -82,6 +84,11 @@ export function OrganizationView() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
     
+    const [availableLicenses, setAvailableLicenses] = useState<number>(0);
+    const [totalLicenses, setTotalLicenses] = useState<number>(0);
+    const [usedLicenses, setUsedLicenses] = useState<number>(0);
+    const [subscriptionStatus, setSubscriptionStatus] = useState<string>('TRIAL');
+    
     const [updatedOrganizationName, setUpdatedOrganizationName] = useState('');
     const [updatedOrgAddress, setUpdatedOrgAddress] = useState('');
     const [updatedOrgMobile, setUpdatedOrgMobile] = useState('');
@@ -91,6 +98,12 @@ export function OrganizationView() {
     
     const [currentPage, setCurrentPage] = useState(1);
     const [membersPerPage, setMembersPerPage] = useState(10);
+    
+    const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const [isActivatingLicense, setIsActivatingLicense] = useState<string | null>(null);
+    const [isRevokingLicense, setIsRevokingLicense] = useState<string | null>(null);
+    const [isBulkActivating, setIsBulkActivating] = useState(false);
+    const [isAssignLicensesDialogOpen, setIsAssignLicensesDialogOpen] = useState(false);
 
 
     const fetchMembers = async () => {
@@ -99,10 +112,23 @@ export function OrganizationView() {
             setMembers(orgMembers);
         }
     };
+
+    const fetchLicenseInfo = async () => {
+        if (userProfile?.organizationId) {
+            const result = await getAvailableSlots(userProfile.organizationId);
+            if (result.success) {
+                setTotalLicenses(result.totalSlots);
+                setUsedLicenses(result.usedSlots);
+                setAvailableLicenses(result.availableSlots);
+                setSubscriptionStatus(result.status || 'TRIAL');
+            }
+        }
+    };
     
     useEffect(() => {
         if (userProfile?.organizationId) {
             fetchMembers();
+            fetchLicenseInfo();
             setUpdatedOrganizationName(userProfile.organizationName || '');
             setUpdatedOrgAddress(userProfile.address || '');
             setUpdatedOrgMobile(userProfile.mobile || '');
@@ -140,6 +166,20 @@ export function OrganizationView() {
 
         setIsAddingMember(true);
         try {
+            // Check if organization can add members (subscription validation)
+            const canAddResult = await canAddMembers(userProfile.organizationId);
+            
+            if (!canAddResult.canAdd) {
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Cannot Add Agent', 
+                    description: canAddResult.reason || 'Please complete your payment first.',
+                    duration: 5000,
+                });
+                setIsAddingMember(false);
+                return;
+            }
+
             await addMemberToOrganization(userProfile.organizationId, newMemberName, newMemberEmail, newMemberAddress, newMemberMobile, newMemberLandline);
             toast({ title: 'Agent Added', description: `${newMemberName} has been invited to the organization.` });
             await fetchMembers();
@@ -197,6 +237,87 @@ export function OrganizationView() {
         } finally {
             setIsDeleting(false);
         }
+    };
+
+    const handleActivateLicense = async (memberEmail: string) => {
+        if (!userProfile?.organizationId) return;
+        
+        // Check if member is verified
+        const member = members.find(m => m.email === memberEmail);
+        if (member && member.status !== 'VERIFIED') {
+            toast({ 
+                variant: 'destructive', 
+                title: 'Cannot Assign License', 
+                description: 'The agent must be verified first before a license can be assigned to that agent.' 
+            });
+            return;
+        }
+        
+        setIsActivatingLicense(memberEmail);
+        try {
+            const result = await activateLicense(userProfile.organizationId, memberEmail);
+            if (result.success) {
+                toast({ title: 'License Activated', description: 'License has been activated for this agent.' });
+                await fetchMembers();
+                await fetchLicenseInfo();
+            } else {
+                toast({ variant: 'destructive', title: 'Activation Failed', description: result.error });
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Activation Failed', description: errorMessage });
+        } finally {
+            setIsActivatingLicense(null);
+        }
+    };
+
+    const handleRevokeLicense = async (memberEmail: string) => {
+        if (!userProfile?.organizationId) return;
+        setIsRevokingLicense(memberEmail);
+        try {
+            const result = await revokeLicense(userProfile.organizationId, memberEmail);
+            if (result.success) {
+                toast({ title: 'License Revoked', description: 'License has been revoked from this agent.' });
+                await fetchMembers();
+                await fetchLicenseInfo();
+            } else {
+                toast({ variant: 'destructive', title: 'Revoke Failed', description: result.error });
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Revoke Failed', description: errorMessage });
+        } finally {
+            setIsRevokingLicense(null);
+        }
+    };
+
+    const handleBulkActivateLicenses = async () => {
+        if (!userProfile?.organizationId || selectedMembers.length === 0) return;
+        setIsBulkActivating(true);
+        try {
+            const result = await bulkActivateLicenses(userProfile.organizationId, selectedMembers);
+            if (result.success) {
+                toast({ title: 'Licenses Activated', description: `${result.count} license(s) have been activated.` });
+                await fetchMembers();
+                await fetchLicenseInfo();
+                setSelectedMembers([]);
+            } else {
+                toast({ variant: 'destructive', title: 'Bulk Activation Failed', description: result.error });
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            toast({ variant: 'destructive', title: 'Bulk Activation Failed', description: errorMessage });
+        } finally {
+            setIsBulkActivating(false);
+        }
+    };
+
+    const handleToggleSelectMember = (memberEmail: string) => {
+        setSelectedMembers(prev => 
+            prev.includes(memberEmail) 
+                ? prev.filter(e => e !== memberEmail)
+                : [...prev, memberEmail]
+        );
     };
 
     const handleCreateOrganization = async () => {
@@ -313,6 +434,16 @@ export function OrganizationView() {
     
     const isOwner = user?.id === userProfile.organizationOwnerUid;
 
+    // Get verified agents without licenses (excluding owner)
+    const verifiedUnlicensedAgents = useMemo(() => {
+        return members.filter(m => 
+            m.status === 'VERIFIED' && 
+            !m.hasLicense && 
+            m.uid !== userProfile?.organizationOwnerUid &&
+            !m.isClient
+        );
+    }, [members, userProfile?.organizationOwnerUid]);
+
     const renderStatusBadge = (status: OrganizationMember['status']) => {
         switch (status) {
             case 'VERIFIED':
@@ -341,14 +472,17 @@ export function OrganizationView() {
                             </p>
                         </div>
                         {isOwner && (
-                            <div className="flex items-center gap-2">
-                                <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="default" size="sm">
-                                            <UserPlus className="mr-2 h-4 w-4" />
-                                            Add Agent
-                                        </Button>
-                                    </DialogTrigger>
+                            <div className="flex items-center gap-4">
+                                <div className="flex gap-2">
+                                    {availableLicenses > 0 && (
+                                        <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="default" size="sm">
+                                                    <UserPlus className="mr-2 h-4 w-4" />
+                                                    Add Agent
+                                                </Button>
+                                            </DialogTrigger>
+                                    
                                     <DialogContent className="sm:max-w-2xl">
                                         <DialogHeader>
                                             <DialogTitle>Add New Agent</DialogTitle>
@@ -388,7 +522,93 @@ export function OrganizationView() {
                                             </Button>
                                         </DialogFooter>
                                     </DialogContent>
-                                </Dialog>
+                                    </Dialog>
+                                    )}
+                                    
+                                    {/* Assign Licenses Button */}
+                                    {verifiedUnlicensedAgents.length > 0 && availableLicenses > 0 && (
+                                        <Dialog open={isAssignLicensesDialogOpen} onOpenChange={setIsAssignLicensesDialogOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" size="sm" className="relative">
+                                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                                    Bulk Assign
+                                                    <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">
+                                                        {verifiedUnlicensedAgents.length}
+                                                    </Badge>
+                                                </Button>
+                                            </DialogTrigger>
+                                            
+                                            <DialogContent className="sm:max-w-2xl">
+                                                <DialogHeader>
+                                                    <DialogTitle>Assign Licenses to Verified Agents</DialogTitle>
+                                                    <DialogDescription>
+                                                        Select verified agents to assign available licenses. You have {availableLicenses} license(s) available.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                
+                                                <div className="py-4 max-h-[60vh] overflow-y-auto">
+                                                    <div className="space-y-2">
+                                                        {verifiedUnlicensedAgents.map((member) => (
+                                                            <div key={member.email} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900">
+                                                                <div className="flex items-center gap-3">
+                                                                    <Checkbox
+                                                                        checked={selectedMembers.includes(member.email)}
+                                                                        onCheckedChange={() => handleToggleSelectMember(member.email)}
+                                                                    />
+                                                                    <Avatar className="h-8 w-8">
+                                                                        <AvatarFallback>{member.name}</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div>
+                                                                        <div className="font-medium">{member.name}</div>
+                                                                        <div className="text-sm text-muted-foreground">{member.email}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                                                    Verified
+                                                                </Badge>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                
+                                                <DialogFooter>
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {selectedMembers.length} selected • {availableLicenses} available
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    const unlicensedEmails = verifiedUnlicensedAgents.map(m => m.email);
+                                                                    const maxToSelect = Math.min(unlicensedEmails.length, availableLicenses);
+                                                                    setSelectedMembers(unlicensedEmails.slice(0, maxToSelect));
+                                                                }}
+                                                            >
+                                                                Select All
+                                                            </Button>
+                                                            <DialogClose asChild>
+                                                                <Button variant="secondary" onClick={() => setSelectedMembers([])}>
+                                                                    Cancel
+                                                                </Button>
+                                                            </DialogClose>
+                                                            <Button
+                                                                onClick={async () => {
+                                                                    await handleBulkActivateLicenses();
+                                                                    setIsAssignLicensesDialogOpen(false);
+                                                                }}
+                                                                disabled={isBulkActivating || selectedMembers.length === 0 || selectedMembers.length > availableLicenses}
+                                                            >
+                                                                {isBulkActivating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                Assign {selectedMembers.length} License(s)
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -402,6 +622,7 @@ export function OrganizationView() {
                                     <TableHead>Email</TableHead>
                                     <TableHead>Type</TableHead>
                                     <TableHead>Status</TableHead>
+                                    {isOwner && <TableHead>License</TableHead>}
                                     {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
@@ -438,46 +659,34 @@ export function OrganizationView() {
                                                 {renderStatusBadge(member.status)}
                                             </TableCell>
                                             {isOwner && (
-                                                <TableCell className="flex items-center gap-2">
-                                                    {(member.status === 'UNINVITED' || member.status === 'INVITED') && !memberIsOwner && (
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <TooltipTrigger asChild>
-                                                                            <Button 
-                                                                                variant="ghost" 
-                                                                                size="icon" 
-                                                                                className="h-8 w-8"
-                                                                                onClick={() => setVerifyingMember(member)}
-                                                                                disabled={isSendingVerification === member.email}
-                                                                            >
-                                                                                {isSendingVerification === member.email ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                                                                            </Button>
-                                                                        </TooltipTrigger>
-                                                                    </AlertDialogTrigger>
-                                                                    <TooltipContent>
-                                                                        <p>{member.status === 'UNINVITED' ? 'Send Invite' : 'Resend Invite'}</p>
-                                                                    </TooltipContent>
-                                                                    <AlertDialogContent>
-                                                                        <AlertDialogHeader>
-                                                                            <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
-                                                                            <AlertDialogDescription>
-                                                                                This will send an invitation to {verifyingMember?.name} at {verifyingMember?.email}. They will be able to register and start using the ticketing system.
-                                                                            </AlertDialogDescription>
-                                                                        </AlertDialogHeader>
-                                                                        <AlertDialogFooter>
-                                                                            <AlertDialogCancel onClick={() => setVerifyingMember(null)}>Cancel</AlertDialogCancel>
-                                                                            <AlertDialogAction onClick={() => handleSendVerification(verifyingMember)} disabled={isSendingVerification === verifyingMember?.email}>
-                                                                                {isSendingVerification === verifyingMember?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                                Send Invite
-                                                                            </AlertDialogAction>
-                                                                        </AlertDialogFooter>
-                                                                    </AlertDialogContent>
-                                                                </AlertDialog>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
+                                                <TableCell>
+                                                    {memberIsOwner ? (
+                                                        member.hasLicense ? (
+                                                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                                                Active
+                                                            </Badge>
+                                                        ) : subscriptionStatus === 'TRIAL' ? (
+                                                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 whitespace-nowrap">
+                                                                Free Trial
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                                                Unlicensed
+                                                            </Badge>
+                                                        )
+                                                    ) : member.hasLicense ? (
+                                                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                                            Active
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-red-600 border-red-300">
+                                                            Unlicensed
+                                                        </Badge>
                                                     )}
+                                                </TableCell>
+                                            )}
+                                            {isOwner && (
+                                                <TableCell className="flex items-center gap-2">
                                                     {!memberIsOwner && (
                                                         <AlertDialog>
                                                             <DropdownMenu>
@@ -491,6 +700,46 @@ export function OrganizationView() {
                                                                         <Pencil className="mr-2 h-4 w-4" />
                                                                         Edit
                                                                     </DropdownMenuItem>
+                                                                    {(member.status === 'UNINVITED' || member.status === 'INVITED') && (
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem 
+                                                                                onSelect={(e) => { e.preventDefault(); setVerifyingMember(member); }}
+                                                                                disabled={isSendingVerification === member.email}
+                                                                            >
+                                                                                {isSendingVerification === member.email ? (
+                                                                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                                ) : (
+                                                                                    <Mail className="mr-2 h-4 w-4" />
+                                                                                )}
+                                                                                {member.status === 'UNINVITED' ? 'Send Verification' : 'Resend Verification'}
+                                                                            </DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                    )}
+                                                                    {member.hasLicense ? (
+                                                                        <DropdownMenuItem 
+                                                                            onClick={() => handleRevokeLicense(member.email)}
+                                                                            disabled={isRevokingLicense === member.email}
+                                                                        >
+                                                                            {isRevokingLicense === member.email ? (
+                                                                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                            ) : (
+                                                                                <ShieldOff className="mr-2 h-4 w-4" />
+                                                                            )}
+                                                                            Revoke License
+                                                                        </DropdownMenuItem>
+                                                                    ) : (
+                                                                        <DropdownMenuItem 
+                                                                            onClick={() => handleActivateLicense(member.email)}
+                                                                            disabled={isActivatingLicense === member.email || availableLicenses <= 0}
+                                                                        >
+                                                                            {isActivatingLicense === member.email ? (
+                                                                                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                                                                            ) : (
+                                                                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                                                            )}
+                                                                            Activate License
+                                                                        </DropdownMenuItem>
+                                                                    )}
                                                                     <AlertDialogTrigger asChild>
                                                                         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDeleteClick(member); }} className="text-destructive focus:text-destructive">
                                                                             <Trash2 className="mr-2 h-4 w-4" />
@@ -499,21 +748,42 @@ export function OrganizationView() {
                                                                     </AlertDialogTrigger>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
-                                                            <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                                                    {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                                    Delete
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
+                                                            {/* Send Verification Dialog */}
+                                                            {verifyingMember?.email === member.email && (
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Send Verification Email?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            This will send an invitation to {verifyingMember?.name} at {verifyingMember?.email}. They will be able to register and start using the ticketing system.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel onClick={() => setVerifyingMember(null)}>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleSendVerification(verifyingMember)} disabled={isSendingVerification === verifyingMember?.email}>
+                                                                            {isSendingVerification === verifyingMember?.email && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                            Send Verification
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            )}
+                                                            {/* Delete Dialog */}
+                                                            {deletingMember?.email === member.email && (
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            This action will delete {deletingMember?.name} and cannot be undone. This does not delete their user account, only removes them from the organization.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel onClick={() => setDeletingMember(null)}>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={handleDeleteMember} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                                                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                                                            Delete
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            )}
                                                         </AlertDialog>
                                                     )}
                                                 </TableCell>
@@ -620,6 +890,13 @@ export function OrganizationView() {
                             <dl className="grid grid-cols-1 gap-y-4">
                                 <PropertyItem icon={Building} label="Organization Name" value={userProfile.organizationName} />
                                 <PropertyItem icon={Users} label="Total Agents" value={members.length.toString()} />
+                                {isOwner && (
+                                    <PropertyItem 
+                                        icon={ShieldCheck} 
+                                        label="Agent Licenses" 
+                                        value={`${usedLicenses}/${totalLicenses} (${availableLicenses} available)`} 
+                                    />
+                                )}
                                 <PropertyItem icon={MapPin} label="Address" value={userProfile.address} />
                                 <PropertyItem icon={Phone} label="Mobile" value={userProfile.mobile} />
                                 <PropertyItem icon={Phone} label="Landline" value={userProfile.landline} />

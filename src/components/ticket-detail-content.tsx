@@ -859,20 +859,24 @@ export function TicketDetailContent({ id, baseUrl }: { id: string, baseUrl?: str
         const adminEmailLower = adminEmail.toLowerCase();
 
         // Add original CC recipients (excluding admin email)
-        message.ccRecipients?.forEach(r => {
-            const recipientEmail = r.emailAddress.address.toLowerCase();
-            if (recipientEmail !== adminEmailLower) {
-                ccRecipients.add(recipientEmail);
-            }
-        });
+        if (Array.isArray(message.ccRecipients)) {
+            message.ccRecipients.forEach(r => {
+                const recipientEmail = r.emailAddress.address.toLowerCase();
+                if (recipientEmail !== adminEmailLower) {
+                    ccRecipients.add(recipientEmail);
+                }
+            });
+        }
         
         // Add original To recipients (excluding admin email)
-        message.toRecipients?.forEach(r => {
-            const recipientEmail = r.emailAddress.address.toLowerCase();
-            if (recipientEmail !== adminEmailLower) {
-                ccRecipients.add(recipientEmail);
-            }
-        });
+        if (Array.isArray(message.toRecipients)) {
+            message.toRecipients.forEach(r => {
+                const recipientEmail = r.emailAddress.address.toLowerCase();
+                if (recipientEmail !== adminEmailLower) {
+                    ccRecipients.add(recipientEmail);
+                }
+            });
+        }
         
         // Add sender (excluding admin email)
         if (message.senderEmail && message.senderEmail.toLowerCase() !== adminEmailLower) {
@@ -1600,7 +1604,7 @@ return (
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="unassigned">Unassigned</SelectItem>
-                                                            {members.filter(m => m.uid && !m.isClient).map(m => (
+                                                            {members.filter(m => m.uid && !m.isClient && (m as any).hasLicense).map(m => (
                                                                 <SelectItem key={m.uid} value={m.uid!}>
                                                                     {m.name}
                                                                 </SelectItem>

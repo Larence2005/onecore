@@ -4,12 +4,34 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Menu, X, ArrowDown } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(59.14); // Default fallback rate
+  const [isLoadingRate, setIsLoadingRate] = useState(true);
+
+  useEffect(() => {
+    // Fetch real-time exchange rate
+    const fetchExchangeRate = async () => {
+      try {
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        if (data.rates && data.rates.PHP) {
+          setExchangeRate(data.rates.PHP);
+        }
+      } catch (error) {
+        console.error('Failed to fetch exchange rate:', error);
+        // Keep default rate on error
+      } finally {
+        setIsLoadingRate(false);
+      }
+    };
+
+    fetchExchangeRate();
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -234,9 +256,16 @@ export default function LandingPage() {
                         <div className="space-y-2">
                             <CardTitle className="text-2xl font-bold">All-in-One Plan</CardTitle>
                         </div>
-                        <div className="flex justify-center md:justify-start items-baseline">
-                            <span className="text-4xl font-bold">$10</span>
-                            <span className="text-muted-foreground">/agent/month</span>
+                        <div className="space-y-2">
+                            <div className="flex justify-center md:justify-start items-baseline">
+                                <span className="text-4xl font-bold">$10</span>
+                                <span className="text-muted-foreground">/agent/month</span>
+                            </div>
+                            <div className="flex justify-center items-baseline">
+                                <span className="text-sm text-muted-foreground">
+                                    {isLoadingRate ? '...' : `₱${Math.round(10 * exchangeRate)}`}/agent/month (VAT not included)
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <div className="flex justify-center md:justify-end">

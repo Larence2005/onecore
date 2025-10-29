@@ -5,6 +5,8 @@
  * Webhooks can be added later for automatic payment confirmations.
  */
 
+import { convertUSDtoPHP } from './currency';
+
 const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY!;
 const PAYMONGO_PUBLIC_KEY = process.env.PAYMONGO_PUBLIC_KEY!;
 const PAYMONGO_API_URL = 'https://api.paymongo.com/v1';
@@ -87,6 +89,7 @@ export async function getPaymentLinkStatus(linkId: string) {
       status: attributes.status, // 'unpaid' or 'paid'
       payments: attributes.payments || [],
       referenceNumber: attributes.reference_number,
+      checkoutUrl: attributes.checkout_url, // The actual payment link URL
     };
   } catch (error: any) {
     console.error('PayMongo getPaymentLinkStatus error:', error);
@@ -141,18 +144,21 @@ export async function getPayment(paymentId: string) {
 
 /**
  * Calculate subscription amount based on agent count
+ * PayMongo only accepts PHP, so we convert USD to PHP using real-time exchange rates
  */
-export function calculateSubscriptionAmount(agentCount: number, pricePerAgent: number = 500.00): number {
-  // Convert to centavos (PayMongo uses centavos)
-  return Math.round(agentCount * pricePerAgent * 100);
+export async function calculateSubscriptionAmount(agentCount: number, pricePerAgent: number = 10.00): Promise<number> {
+  const amountInUSD = agentCount * pricePerAgent;
+  const amountInPHP = await convertUSDtoPHP(amountInUSD);
+  // Convert to centavos (PayMongo uses centavos for PHP)
+  return Math.round(amountInPHP * 100);
 }
 
 /**
- * Format amount from centavos to PHP
+ * Format amount from cents to USD
  */
-export function formatAmount(centavos: number): string {
-  const php = centavos / 100;
-  return `₱${php.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export function formatAmount(cents: number): string {
+  const usd = cents / 100;
+  return `$${usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**

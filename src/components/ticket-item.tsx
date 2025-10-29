@@ -85,6 +85,15 @@ export const TicketItem = memo(function TicketItem({ email, isSelected, onSelect
     const isResolvedLate = !!(email.tags?.includes('Resolved Late'));
     const isOverdue = !isResolvedLate && email.deadline && isPast(parseISO(email.deadline)) && email.status !== 'Resolved' && email.status !== 'Closed';
     const isCompleted = currentStatus === 'Resolved' || currentStatus === 'Closed';
+    
+    // Show blue strip for tickets that need attention:
+    // 1. New tickets (status is 'Open' and no replies yet)
+    // 2. Client has replied (lastReplier === 'client')
+    // 3. Current user hasn't replied yet (check if user email is not in the conversation)
+    const needsAttention = !isCompleted && (
+        (email as any).lastReplier === 'client' || 
+        currentStatus === 'Open'
+    );
 
     const handleConfirmUpdate = async () => {
         if (!pendingUpdate || !userProfile?.organizationId || !user || !userProfile.name || !user.email) return;
@@ -233,7 +242,7 @@ export const TicketItem = memo(function TicketItem({ email, isSelected, onSelect
                    isCompleted 
                     ? 'bg-muted/60 hover:shadow-md'
                     : 'hover:shadow-md',
-                   email.lastReplier === 'client' && !isCompleted && 'border-l-4 border-l-blue-500'
+                   needsAttention && 'border-l-4 border-l-blue-500'
                 )}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center p-4 gap-4">
                         <div className="flex items-center gap-4 flex-shrink-0 w-full sm:w-auto">
@@ -333,7 +342,7 @@ export const TicketItem = memo(function TicketItem({ email, isSelected, onSelect
                                      </SelectTrigger>
                                      <SelectContent>
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {members.filter(m => m.uid && !m.isClient).map(m => (
+                                        {members.filter(m => m.uid && !m.isClient && (m as any).hasLicense).map(m => (
                                             <SelectItem key={m.uid} value={m.uid!}>{m.name}</SelectItem>
                                         ))}
                                      </SelectContent>

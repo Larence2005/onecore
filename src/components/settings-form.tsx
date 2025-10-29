@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useAuth } from '@/providers/auth-provider-new';
 import { updateOrganization, deleteOrganization, deleteUserAccount, createAndVerifyDomain, configureEmailRecords, createLicensedUser, finalizeUserSetup } from "@/app/actions-new";
+import { checkMicrosoftLicenseAvailability } from "@/app/actions-subscription";
 import type { DeadlineSettings } from "@/app/actions-types";
 import { useRouter } from "next/navigation";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
@@ -144,6 +145,8 @@ function VerificationArea() {
     const [isVerifying, setIsVerifying] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [parentDomain, setParentDomain] = useState('');
+    const [isCheckingLicense, setIsCheckingLicense] = useState(true);
+    const [licenseAvailable, setLicenseAvailable] = useState(true);
     const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>({
         step: 'idle',
         message: 'Starting verification...',
@@ -154,6 +157,19 @@ function VerificationArea() {
         // This will only run on the client-side
         setParentDomain(process.env.NEXT_PUBLIC_PARENT_DOMAIN || '');
     }, []);
+
+    useEffect(() => {
+        // Check Microsoft license availability on mount
+        const checkLicense = async () => {
+            if (userProfile?.organizationId) {
+                setIsCheckingLicense(true);
+                const result = await checkMicrosoftLicenseAvailability(userProfile.organizationId);
+                setLicenseAvailable(result.available);
+                setIsCheckingLicense(false);
+            }
+        };
+        checkLicense();
+    }, [userProfile?.organizationId]);
 
     const form = useForm<z.infer<typeof verificationFormSchema>>({
         resolver: zodResolver(verificationFormSchema),
@@ -237,6 +253,44 @@ function VerificationArea() {
     }
 
     if(userProfile?.status === 'NOT_VERIFIED') {
+        
+        // Show license unavailable message if licenses are not available
+        if (!isCheckingLicense && !licenseAvailable) {
+            return (
+                <Card className="border-destructive">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="h-5 w-5" />
+                            Microsoft 365 License Unavailable
+                        </CardTitle>
+                        <CardDescription className="text-destructive/80">
+                            Account verification is temporarily unavailable
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            The application has run out of available Microsoft 365 licenses. This is a temporary issue that typically resolves within a few minutes as licenses are released.
+                        </p>
+                        <div className="rounded-lg border border-destructive/20 bg-background p-4">
+                            <p className="text-sm font-medium mb-2">What you can do:</p>
+                            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                                <li>Wait a few minutes and refresh this page</li>
+                                <li>Contact support if the issue persists</li>
+                            </ul>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">Need help?</span>
+                            <a 
+                                href="mailto:support@quickdesk-nti.com" 
+                                className="font-medium text-primary hover:underline"
+                            >
+                                support@quickdesk-nti.com
+                            </a>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
         
         return (
             <Card>
@@ -360,6 +414,7 @@ export function SettingsForm() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditingDeadlines, setIsEditingDeadlines] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   
   const isOwner = user?.id === userProfile?.organizationOwnerUid;
   const isAdmin = !userProfile?.isClient; // Admin if not a client
@@ -390,20 +445,18 @@ export function SettingsForm() {
         return;
     }
     
-    const password = prompt("For your security, please re-enter your password to delete your account:");
-    if (!password) {
+    // Check if confirmation text matches
+    if (deleteConfirmText !== 'DELETE MY ACCOUNT') {
         toast({
-            title: "Deletion Canceled",
-            description: "Password not provided.",
+            variant: "destructive",
+            title: "Incorrect Confirmation",
+            description: 'Please type "DELETE MY ACCOUNT" exactly to confirm.',
         });
         return;
     }
 
     setIsDeleting(true);
     try {
-        // Note: With NextAuth, password verification would need to be done server-side
-        // For now, we'll proceed with deletion after user confirms
-        
         // Delete user account - this will cascade delete all owned organizations and associated data
         const result = await deleteUserAccount(user.id);
         
@@ -450,182 +503,196 @@ export function SettingsForm() {
 
   
   return (
-    <div className="w-full max-w-7xl">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {isOwner && userProfile?.status === 'VERIFIED' && (
-              <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                          <ShieldCheck className="text-green-500" />
-                          Account Verified
-                      </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <Alert variant="default" className="border-green-500">
-                          <ShieldCheck className="h-4 w-4 text-green-500" />
-                          <AlertTitle>Your account is verified.</AlertTitle>
-                          <AlertDescription>
-                          Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
-                          </AlertDescription>
-                      </Alert>
-                  </CardContent>
-              </Card>
-          )}
-          
-          {isOwner && <VerificationArea />}
-
-          <Card className="border-destructive">
-               <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                          <AlertTriangle className="text-destructive" />
-                          Delete Account
-                      </CardTitle>
-                      <CardDescription>
-                          Permanently delete your account and all associated data.
-                      </CardDescription>
-               </CardHeader>
-               <CardFooter>
-                  <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                          <Button variant="destructive" disabled={isDeleting}>
-                              {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                              Delete My Account
-                          </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                          <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
-                              </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDeleteAccount} className={buttonVariants({ variant: 'destructive' })}>
-                                  Delete Account
-                              </AlertDialogAction>
-                          </AlertDialogFooter>
-                      </AlertDialogContent>
-                  </AlertDialog>
-              </CardFooter>
-          </Card>
-        </div>
-
-        {/* Right Column - Deadline Configuration */}
-        {isOwner && (
-          <div className="space-y-6">
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="space-y-6">
+        {/* Verification Section */}
+        {isOwner && userProfile?.status === 'VERIFIED' && (
             <Card>
-                <Form {...deadlineForm}>
-                    <form onSubmit={deadlineForm.handleSubmit(onDeadlineSubmit)}>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Deadline Configuration</CardTitle>
-                                    <CardDescription>
-                                        Set the number of days until a ticket is due for each priority level.
-                                    </CardDescription>
-                                </div>
-                                {!isEditingDeadlines && (
-                                    <Button variant="secondary" size="sm" onClick={() => setIsEditingDeadlines(true)}>
-                                        <Pencil className="mr-2 h-3 w-3" />
-                                        Edit
-                                    </Button>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {isEditingDeadlines ? (
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    <FormField
-                                        control={deadlineForm.control}
-                                        name="Urgent"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Urgent (Days)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={deadlineForm.control}
-                                        name="High"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>High (Days)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={deadlineForm.control}
-                                        name="Medium"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Medium (Days)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={deadlineForm.control}
-                                        name="Low"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Low (Days)</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            ) : (
-                                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-muted-foreground">Urgent:</span>
-                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Urgent ?? 1} days</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-muted-foreground">High:</span>
-                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.High ?? 2} days</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-muted-foreground">Medium:</span>
-                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Medium ?? 3} days</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-muted-foreground">Low:</span>
-                                        <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Low ?? 4} days</span>
-                                    </div>
-                                </div>
-                            )}
-                        </CardContent>
-                        {isEditingDeadlines && (
-                             <CardFooter className="justify-end gap-2">
-                                <Button variant="ghost" type="button" onClick={() => setIsEditingDeadlines(false)}>Cancel</Button>
-                                <Button type="submit" disabled={deadlineForm.formState.isSubmitting}>
-                                    {deadlineForm.formState.isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                    Save Settings
-                                </Button>
-                            </CardFooter>
-                        )}
-                    </form>
-                </Form>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ShieldCheck className="text-green-500" />
+                        Account Verified
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="default" className="border-green-500">
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                        <AlertTitle>Your account is verified.</AlertTitle>
+                        <AlertDescription>
+                        Your new email address is now active and ready to use. You can send and receive tickets through <strong className="font-bold">{userProfile.email}</strong>. After verification, log in to Outlook and set up the authenticator to start receiving tickets.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
             </Card>
-          </div>
         )}
+        
+        {isOwner && <VerificationArea />}
+
+        {/* Deadline Configuration - Below Verification */}
+        {isOwner && (
+          <Card>
+              <Form {...deadlineForm}>
+                  <form onSubmit={deadlineForm.handleSubmit(onDeadlineSubmit)}>
+                      <CardHeader>
+                          <div className="flex justify-between items-center">
+                              <div>
+                                  <CardTitle>Deadline Configuration</CardTitle>
+                                  <CardDescription>
+                                      Set the number of days until a ticket is due for each priority level.
+                                  </CardDescription>
+                              </div>
+                              {!isEditingDeadlines && (
+                                  <Button variant="secondary" size="sm" onClick={() => setIsEditingDeadlines(true)}>
+                                      <Pencil className="mr-2 h-3 w-3" />
+                                      Edit
+                                  </Button>
+                              )}
+                          </div>
+                      </CardHeader>
+                      <CardContent>
+                          {isEditingDeadlines ? (
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                  <FormField
+                                      control={deadlineForm.control}
+                                      name="Urgent"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Urgent (Days)</FormLabel>
+                                              <FormControl>
+                                                  <Input type="number" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={deadlineForm.control}
+                                      name="High"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>High (Days)</FormLabel>
+                                              <FormControl>
+                                                  <Input type="number" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={deadlineForm.control}
+                                      name="Medium"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Medium (Days)</FormLabel>
+                                              <FormControl>
+                                                  <Input type="number" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                                  <FormField
+                                      control={deadlineForm.control}
+                                      name="Low"
+                                      render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Low (Days)</FormLabel>
+                                              <FormControl>
+                                                  <Input type="number" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}
+                                  />
+                              </div>
+                          ) : (
+                              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-muted-foreground">Urgent:</span>
+                                      <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Urgent ?? 1} days</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-muted-foreground">High:</span>
+                                      <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.High ?? 2} days</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-muted-foreground">Medium:</span>
+                                      <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Medium ?? 3} days</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-muted-foreground">Low:</span>
+                                      <span className="text-sm font-semibold">{userProfile?.deadlineSettings?.Low ?? 4} days</span>
+                                  </div>
+                              </div>
+                          )}
+                      </CardContent>
+                      {isEditingDeadlines && (
+                           <CardFooter className="justify-end gap-2">
+                              <Button variant="ghost" type="button" onClick={() => setIsEditingDeadlines(false)}>Cancel</Button>
+                              <Button type="submit" disabled={deadlineForm.formState.isSubmitting}>
+                                  {deadlineForm.formState.isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                                  Save Settings
+                              </Button>
+                          </CardFooter>
+                      )}
+                  </form>
+              </Form>
+          </Card>
+        )}
+
+        {/* Delete Account Section */}
+        <Card className="border-destructive">
+             <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <AlertTriangle className="text-destructive" />
+                        Delete Account
+                    </CardTitle>
+                    <CardDescription>
+                        Permanently delete your account and all associated data.
+                    </CardDescription>
+             </CardHeader>
+             <CardFooter>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={isDeleting}>
+                            {isDeleting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete My Account
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="deleteConfirm" className="text-sm font-medium">
+                                Type <span className="font-bold text-destructive">DELETE MY ACCOUNT</span> to confirm
+                            </Label>
+                            <Input
+                                id="deleteConfirm"
+                                type="text"
+                                placeholder="DELETE MY ACCOUNT"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                className="mt-2"
+                            />
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setDeleteConfirmText('')}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                                onClick={handleDeleteAccount} 
+                                className={buttonVariants({ variant: 'destructive' })}
+                                disabled={deleteConfirmText !== 'DELETE MY ACCOUNT'}
+                            >
+                                Delete Account
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </CardFooter>
+        </Card>
       </div>
     </div>
   );

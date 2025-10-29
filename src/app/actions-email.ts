@@ -595,8 +595,13 @@ export async function forwardEmailAction(
     organizationId: string,
     ticketId: string,
     messageId: string,
-    toRecipients: string[],
-    comment?: string
+    comment: string,
+    toRecipients: string,
+    ccRecipients: string,
+    bccRecipients: string,
+    sender: { name: string; email: string },
+    ticketNumber: number,
+    subject: string
 ): Promise<{ success: boolean; error?: string }> {
     const settings = await getAPISettings(organizationId);
     if (!settings) {
@@ -611,16 +616,45 @@ export async function forwardEmailAction(
 
     // Filter out admin email from forward recipients
     const adminEmail = settings.userId.toLowerCase();
-    const filteredRecipients = toRecipients
+    
+    // Split comma-separated emails and convert to array
+    const toRecipientsArray = toRecipients
+        .split(',')
         .map(email => email.trim())
-        .filter(email => email.toLowerCase() !== adminEmail);
+        .filter(email => email && email.toLowerCase() !== adminEmail);
+    
+    const ccRecipientsArray = ccRecipients
+        .split(',')
+        .map(email => email.trim())
+        .filter(email => email && email.toLowerCase() !== adminEmail);
+    
+    const bccRecipientsArray = bccRecipients
+        .split(',')
+        .map(email => email.trim())
+        .filter(email => email && email.toLowerCase() !== adminEmail);
+    
+    const filteredRecipients = toRecipientsArray;
 
-    const payload = {
+    const payload: any = {
         comment: comment || '',
         toRecipients: filteredRecipients.map(email => ({
             emailAddress: { address: email }
         })),
     };
+    
+    // Add CC recipients if present
+    if (ccRecipientsArray.length > 0) {
+        payload.ccRecipients = ccRecipientsArray.map(email => ({
+            emailAddress: { address: email }
+        }));
+    }
+    
+    // Add BCC recipients if present
+    if (bccRecipientsArray.length > 0) {
+        payload.bccRecipients = bccRecipientsArray.map(email => ({
+            emailAddress: { address: email }
+        }));
+    }
 
     try {
         await axios.post(url, payload, { headers });
@@ -672,15 +706,9 @@ export async function fetchAndStoreFullConversation(
 }
 
 export async function getLatestEmails(organizationId: string, since?: string): Promise<void> {
-    const settings = await getAPISettings(organizationId);
-    if (!settings) {
-        console.log(`[${organizationId}] Skipping email sync: API credentials not configured.`);
-        return;
-    }
-
-    // This function would sync emails from Microsoft 365
-    // Implementation requires database integration
-    console.log(`Syncing emails for org ${organizationId} since ${since}`);
+    // This function now delegates to syncEmailsToTickets in actions-new.ts
+    const { syncEmailsToTickets } = await import('@/app/actions-new');
+    await syncEmailsToTickets(organizationId, since);
 }
 
 export async function sendVerificationEmail(
