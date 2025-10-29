@@ -1,3 +1,6 @@
+# Update Database
+npx prisma db push --force-reset
+
 # 1. Install dependencies
 sudo apt install -y nodejs npm
 
